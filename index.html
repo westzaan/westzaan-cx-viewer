@@ -6,141 +6,278 @@
 <title>Westzaan Cx Viewer</title>
 <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
 <style>
-  :root { --bg:#14181d; --panel:#1c2229; --line:#2b333d; --fg:#e6e9ee; --muted:#8a94a3; --accent:#4cc3ff; --ok:#4db85a; }
-  * { box-sizing:border-box } html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.4 "Segoe UI",system-ui,sans-serif; }
+  /* Design: the model is the content; controls sit on quiet glass layers and appear only when needed.
+     Colour carries status only; one accent (blue) marks what is selected or actionable. */
+  :root {
+    --bg:#1c1c1e; --panel:#242426; --panel2:#2c2c2e; --glass:rgba(30,30,32,.86); --line:rgba(255,255,255,.09);
+    --fg:#f2f2f7; --muted:#98989f; --faint:#6c6c70; --accent:#0a84ff; --ok:#30d158; --fill:rgba(118,118,128,.24);
+    --r:12px; --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  }
+  * { box-sizing:border-box }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.45 var(--font); -webkit-font-smoothing:antialiased }
   button, select, input { font:inherit; color:var(--fg) }
-  #app { display:grid; grid-template-columns:390px 1fr; height:100%; }
+  a { color:var(--accent); text-decoration:none } a:hover { text-decoration:underline }
+  ::-webkit-scrollbar { width:10px; height:10px } ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.14); border-radius:10px; border:3px solid transparent; background-clip:padding-box }
+
+  /* ---------- layout */
+  #app { display:grid; grid-template-columns:348px 1fr; height:100%; transition:grid-template-columns .25s ease }
   #app.collapsed { grid-template-columns:0 1fr } #app.collapsed #side { overflow:hidden; border:0; min-width:0 }
   #side { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; min-width:0 }
-  header { padding:10px 14px 8px; border-bottom:1px solid var(--line); }
-  header h1 { font-size:15px; margin:0; font-weight:600; display:flex; align-items:center; gap:8px }
+  #viewer { position:relative; min-width:0; background:#111 } #fv { position:absolute; inset:0 }
+
+  /* ---------- controls */
+  .btn { background:var(--fill); border:0; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:13px; font-weight:500; line-height:18px; transition:background .15s }
+  .btn:hover { background:rgba(118,118,128,.36) } .btn.on { background:var(--accent); color:#fff }
+  .btn.plain { background:transparent; color:var(--accent); padding:6px 8px } .btn.plain:hover { background:rgba(10,132,255,.12) }
+  .ibtn { width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px }
+  .ibtn svg { width:17px; height:17px }
+  select, input[type=search] { background:var(--fill); border:0; border-radius:8px; padding:7px 10px; font-size:13px; min-width:0; outline:none }
+  select:focus, input[type=search]:focus { box-shadow:0 0 0 3px rgba(10,132,255,.45) }
+  select option { background:#2c2c2e }
+  .meta { color:var(--muted); font-size:11.5px }
+
+  /* ---------- sidebar header */
+  header { padding:16px 16px 10px }
+  header h1 { font-size:20px; letter-spacing:-.01em; margin:0; font-weight:700; display:flex; align-items:center; gap:6px }
   header h1 .sp { flex:1 }
-  .meta { color:var(--muted); font-size:11px }
-  .btn { background:#0f1317; border:1px solid var(--line); border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px }
-  .btn:hover { border-color:var(--accent) } .btn.on { border-color:var(--accent); color:var(--accent) }
-  .row { display:flex; gap:6px; padding:6px 14px; flex-wrap:wrap; align-items:center }
-  select, input[type=search] { background:#0f1317; border:1px solid var(--line); border-radius:4px; padding:4px 6px; font-size:12px; min-width:0 }
-  input[type=search] { flex:1; min-width:120px }
-  .facets { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:4px 14px 6px }
-  .facets label { display:flex; flex-direction:column; font-size:10px; color:var(--muted); gap:2px } .facets select { width:100% }
-  .facets select.set { border-color:var(--accent) }
-  .modes { display:flex; flex-wrap:wrap; gap:4px; padding:4px 14px 6px } .modes .btn { flex:1 0 22%; padding:5px 2px }
-  table.ct { width:100%; border-collapse:collapse; margin-top:6px; font-size:12px } table.ct td { padding:4px 3px; border-bottom:1px solid #222a33 }
-  .tog { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer }
-  #legend { padding:4px 14px 6px; display:flex; flex-wrap:wrap; gap:4px 10px; font-size:11px; color:var(--muted) }
-  #legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; background:var(--c) }
-  #counts { padding:5px 14px; font-size:11px; color:var(--muted); border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
-  #pbi { display:none; gap:8px; align-items:center; padding:6px 14px; background:#22313d; font-size:11px }
-  #list { flex:1; overflow:auto; min-height:0 }
-  .grp { position:sticky; top:0; z-index:1; background:#232a33; padding:6px 14px; cursor:pointer; display:grid; grid-template-columns:14px 1fr auto; gap:6px; align-items:center; border-bottom:1px solid var(--line); font-size:12px }
-  .grp.on { background:#1e3a4a } .grp b { font-weight:600 } .grp .n { color:var(--muted); font-size:11px }
-  .bar { height:4px; background:#2b333d; border-radius:2px; overflow:hidden; margin-top:3px } .bar i { display:block; height:100%; background:var(--ok) }
-  .ss { padding:6px 14px; border-bottom:1px solid #222a33; cursor:pointer; display:grid; grid-template-columns:8px 1fr auto; gap:8px; align-items:center }
-  .ss:hover, .ss.sel { background:#232c36 } .ss .dot { width:8px; height:8px; border-radius:50% }
-  .ss .t { font-weight:600 } .ss .d { color:var(--muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  .ss .v { text-align:right; font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted) } .ss .v b { color:var(--fg); font-size:12px }
+  header .meta { margin-top:4px }
+  #who a { color:var(--muted); text-decoration:underline }
+  .row { display:flex; gap:8px; padding:6px 16px; flex-wrap:wrap; align-items:center }
+
+  /* ---------- search + filters (progressive disclosure) */
+  .search { position:relative; padding:4px 16px 8px } .search svg { position:absolute; left:26px; top:13px; width:14px; height:14px; color:var(--muted) }
+  .search input { width:100%; padding-left:30px }
+  .disc { display:flex; align-items:center; gap:8px; padding:6px 16px }
+  .disc button.open { background:transparent; border:0; padding:4px 0; cursor:pointer; font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px }
+  .disc .chev { width:12px; height:12px; transition:transform .2s; color:var(--muted) } .disc.opened .chev { transform:rotate(90deg) }
+  .badge { background:var(--accent); color:#fff; border-radius:10px; font-size:11px; font-weight:600; padding:0 7px; line-height:18px; display:none }
+  .disc #clear { margin-left:auto }
+  #filters { display:none; padding:0 16px 8px } #filters.show { display:block }
+  .facets { display:grid; grid-template-columns:1fr 1fr; gap:8px 8px }
+  .facets label { display:flex; flex-direction:column; font-size:11px; color:var(--muted); gap:3px } .facets select { width:100% }
+  .facets select.set { box-shadow:inset 0 0 0 1.5px var(--accent) }
+  #pfacets { padding:4px 16px 8px }
+  #pbi { display:none; gap:8px; align-items:center; margin:4px 16px; padding:8px 12px; background:rgba(10,132,255,.14); border-radius:10px; font-size:12px }
+
+  /* ---------- list */
+  #counts { padding:8px 16px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--line) }
+  #list { flex:1; overflow:auto; min-height:0; padding:0 8px 12px }
+  .grp { position:sticky; top:0; z-index:1; background:var(--panel2); margin:6px 0 2px; padding:8px 10px; border-radius:10px; cursor:pointer; display:grid; grid-template-columns:14px 1fr auto; gap:8px; align-items:center; font-size:12.5px }
+  .grp.on { box-shadow:inset 0 0 0 1.5px var(--accent) } .grp b { font-weight:600 } .grp .n { color:var(--muted); font-size:11.5px }
+  .bar { height:4px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; margin-top:4px } .bar i { display:block; height:100%; background:var(--ok) }
+  .ss { padding:8px 10px; border-radius:10px; cursor:pointer; display:grid; grid-template-columns:10px 1fr auto; gap:10px; align-items:center }
+  .ss:hover { background:rgba(255,255,255,.05) } .ss.sel { background:rgba(10,132,255,.22) }
+  .ss .dot { width:10px; height:10px; border-radius:50% }
+  .ss > div { min-width:0 } .ss .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis } .ss .d { color:var(--muted); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .ss .v { text-align:right; font-variant-numeric:tabular-nums; font-size:11.5px; color:var(--muted) } .ss .v b { color:var(--fg); font-size:12.5px }
   .ss.dim { opacity:.4 }
-  #tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px 14px; overflow:auto }
-  .tile { background:#0f1317; border:1px solid var(--line); border-radius:6px; padding:8px 10px; cursor:pointer }
-  .tile:hover { border-color:var(--accent) } .tile.none { opacity:.45; cursor:default }
-  .tile h3 { margin:0; font-size:14px } .tile .k { font-size:11px; color:var(--muted); display:flex; justify-content:space-between }
-  .ph4 { display:flex; height:6px; border-radius:3px; overflow:hidden; margin-top:5px; background:#2b333d } .ph4 i { display:block; height:100% }
-  #info { border-top:1px solid var(--line); padding:10px 14px; max-height:42%; overflow:auto; font-size:12px; display:none }
-  #info h2 { font-size:13px; margin:0 0 6px } #info dl { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; margin:0 } #info dt { color:var(--muted) } #info dd { margin:0 }
-  .ph { display:inline-block; padding:1px 6px; border-radius:3px; font-size:11px; background:#2b333d; margin-right:4px }
-  #viewer { position:relative; min-width:0 } #fv { position:absolute; inset:0 }
-  #status { position:absolute; left:12px; bottom:12px; background:rgba(20,24,29,.85); padding:6px 10px; border-radius:4px; font-size:11px; color:var(--muted); pointer-events:none; z-index:3 }
-  #toggle { position:absolute; left:10px; top:10px; z-index:5 }
+
+  /* ---------- area overview */
+  #ovhint { padding:2px 16px 8px }
+  #tiles { display:grid; grid-template-columns:1fr; gap:6px; padding:4px 16px 16px; overflow:auto; align-content:start }
+  .tile { background:var(--panel2); border-radius:var(--r); padding:10px 12px; cursor:pointer; transition:box-shadow .15s; display:grid; grid-template-columns:64px 1fr; column-gap:12px; align-items:center }
+  .tile > * { grid-column:2 } .tile h3 { grid-column:1; grid-row:1 / span 3 }
+  .tile .k span { white-space:nowrap } .tile h3 small { display:block; font-size:10.5px; font-weight:500 }
+  .tile:hover { box-shadow:0 0 0 1.5px var(--accent) } .tile.none { opacity:.4; cursor:default; box-shadow:none }
+  .tile h3 { margin:0; font-size:20px; font-weight:700; letter-spacing:-.01em } .tile .k { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:6px }
+  .ph4 { display:flex; height:6px; border-radius:3px; overflow:hidden; margin-top:6px; background:rgba(255,255,255,.1) } .ph4 i { display:block; height:100% }
+
+  /* ---------- floating glass layers over the model */
+  .glass { background:var(--glass); -webkit-backdrop-filter:blur(24px) saturate(160%); backdrop-filter:blur(24px) saturate(160%); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 8px 30px rgba(0,0,0,.35) }
+  #toolbar { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:max-content; z-index:7; display:flex; gap:8px; align-items:center; padding:5px; flex-wrap:wrap; justify-content:center; max-width:calc(100% - 120px) }
+  .modes { display:flex; background:var(--fill); border-radius:9px; padding:2px; gap:2px; position:relative }
+  .modes .btn, .modes .more { background:transparent; border-radius:7px; padding:5px 12px; font-size:12.5px; white-space:nowrap }
+  .modes .btn.on { background:#636366; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35) }
+  .modes .more { border:0; cursor:pointer; display:flex; align-items:center; gap:4px } .modes .more.on { background:#636366 }
+  .modes .more svg { width:10px; height:10px }
+  .menu { display:none; background:rgba(44,44,46,.97) !important; position:absolute; top:calc(100% + 8px); right:0; min-width:210px; padding:6px; z-index:8 } .menu.show { display:block }
+  .menu .btn { display:block; width:100%; text-align:left; background:transparent; border-radius:7px; padding:7px 10px }
+  .menu .btn:hover { background:var(--accent); color:#fff } .menu .btn.on { background:rgba(10,132,255,.25); color:#fff }
+  .menu .hint { color:var(--muted); font-size:11px; padding:2px 10px 6px }
+  .tb-sep { width:1px; height:22px; background:var(--line) }
+  #toolbar #views { background:transparent; max-width:170px; padding:6px 8px }
+  .popwrap { position:relative }
+  #display { width:260px; right:-4px }
+  .tog { font-size:13px; color:var(--fg); display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; cursor:pointer; border-radius:7px }
+  .tog:hover { background:rgba(255,255,255,.05) }
+  .tog input { appearance:none; -webkit-appearance:none; width:36px; height:22px; border-radius:11px; background:rgba(120,120,128,.4); position:relative; cursor:pointer; flex:none; margin:0; transition:background .2s }
+  .tog input::after { content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.4); transition:transform .2s }
+  .tog input:checked { background:var(--ok) } .tog input:checked::after { transform:translateX(14px) }
+  .menu h4 { margin:6px 10px 2px; font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em }
+
+  #toggle { position:absolute; left:12px; top:12px; z-index:7 }
+  #legend { position:absolute; left:12px; bottom:52px; z-index:4; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11.5px; color:var(--fg); padding:8px 12px; max-width:min(560px, calc(100% - 400px)) }
+  #legend:empty { display:none }
+  #legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; background:var(--c) }
+  #status { position:absolute; left:12px; bottom:12px; padding:6px 12px; border-radius:10px; font-size:11.5px; color:var(--muted); pointer-events:none; z-index:3 }
+
+  /* inspector: details of what you picked, on the right */
+  #info { position:absolute; right:12px; top:64px; width:340px; max-height:calc(100% - 330px); min-height:120px; overflow:auto; z-index:6; padding:14px 16px; font-size:12.5px; display:none }
+  #info h2 { font-size:15px; margin:0 0 8px; font-weight:700 } #info h3 { font-size:12px; margin:12px 0 4px; color:var(--muted); font-weight:600 }
+  #info dl { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:0 } #info dt { color:var(--muted) } #info dd { margin:0 }
+  #info a#infox { color:var(--muted); font-weight:400 }
+  #info table.ct, table.ct { width:100%; border-collapse:collapse; margin-top:6px; font-size:12px } table.ct td { padding:5px 3px; border-bottom:1px solid var(--line) }
+  .ph { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; background:var(--fill); margin-right:4px }
+  .pr { display:grid; grid-template-columns:auto 1fr; gap:6px; padding:5px 0; border-bottom:1px solid var(--line); font-size:11.5px }
+
   #labels { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:2 }
-  #labels div { position:absolute; transform:translate(-50%,-100%); background:rgba(15,19,23,.85); border:1px solid var(--line); border-left:3px solid var(--c); padding:1px 5px; border-radius:3px; font-size:11px; white-space:nowrap }
-  #labels div.area { border:1px solid var(--accent); border-left:1px solid var(--accent); font-size:16px; font-weight:700; padding:2px 10px; background:rgba(20,40,55,.85); color:#fff }
-  #map { display:none; position:absolute; right:12px; bottom:12px; width:340px; background:rgba(28,34,41,.95); border:1px solid var(--line); border-radius:6px; z-index:4; overflow:hidden }
-  #map.big { width:min(72%, 1100px); right:50%; transform:translateX(50%); bottom:auto; top:40px }
-  #map.min .mb { display:none } #map .mh { display:flex; gap:8px; align-items:center; padding:5px 8px } #map .mh .meta { flex:1 }
+  #labels div { position:absolute; transform:translate(-50%,-100%); background:rgba(28,28,30,.85); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border-left:3px solid var(--c); padding:1px 6px; border-radius:5px; font-size:11px; white-space:nowrap }
+  #labels div.area { border:0; font-size:15px; font-weight:700; padding:3px 12px; border-radius:9px; background:rgba(10,132,255,.85); color:#fff }
+  #labels div.pin { border:0; border-radius:10px; padding:1px 7px; font-weight:700; font-size:11px; color:#fff; background:#ff453a; box-shadow:0 0 0 2px rgba(255,255,255,.8) }
+  #labels div.pinA { animation:pulse 1.6s infinite } #labels div.pinB { background:#ff9f0a; color:#000 }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(255,69,58,.8) } 70% { box-shadow:0 0 0 10px rgba(255,69,58,0) } 100% { box-shadow:0 0 0 0 rgba(255,69,58,0) } }
+  .pb { display:inline-block; min-width:18px; padding:0 6px; border-radius:6px; font-size:10.5px; font-weight:700; color:#000; margin-right:4px; text-align:center }
+  .pbA { background:#ff453a; color:#fff } .pbB { background:#ff9f0a } .pbC { background:#ffd60a } .pb0 { background:var(--fill); color:var(--muted); font-weight:400 }
+
+  #map { display:none; position:absolute; right:12px; bottom:12px; width:320px; overflow:hidden; z-index:4; background:var(--glass); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 8px 30px rgba(0,0,0,.35) }
+  #map.big { width:min(72%, 1100px); right:50%; transform:translateX(50%); bottom:auto; top:64px }
+  #map.min .mb { display:none } #map .mh { display:flex; gap:8px; align-items:center; padding:6px 8px 6px 12px } #map .mh .meta { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  #map .mh .btn { padding:2px 10px }
   #map .mb svg { display:block; width:100%; height:auto; background:#fff } #map .ar { cursor:pointer } #map .ar:hover rect { fill-opacity:.45 }
-  .pb { display:inline-block; min-width:18px; padding:0 5px; border-radius:3px; font-size:10px; font-weight:700; color:#000; margin-right:4px; text-align:center }
-  .pbA { background:#db3832; color:#fff } .pbB { background:#f28c26 } .pbC { background:#edd433 } .pb0 { background:#2b333d; color:var(--muted); font-weight:400 }
-  .pr { display:grid; grid-template-columns:auto 1fr; gap:6px; padding:4px 0; border-bottom:1px solid #222a33; font-size:11px } #info h3 { font-size:12px; margin:10px 0 4px }
-  #hcard { display:none; position:absolute; z-index:6; width:290px; pointer-events:none; background:rgba(15,19,23,.94); border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:12px; box-shadow:0 6px 18px rgba(0,0,0,.4) }
-  #hcard .ht { font-weight:700; font-size:13px } #hcard .hrow { display:flex; gap:6px; align-items:center; margin-top:4px } #hcard .hp { font-size:11px; margin-top:3px }
-  #labels div.pin { border:0; border-radius:10px; padding:1px 7px; font-weight:700; font-size:11px; color:#fff; background:#db3832; box-shadow:0 0 0 2px rgba(255,255,255,.7) }
-  #labels div.pinA { animation:pulse 1.6s infinite } #labels div.pinB { background:#f28c26; color:#000 }
-  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(219,56,50,.8) } 70% { box-shadow:0 0 0 10px rgba(219,56,50,0) } 100% { box-shadow:0 0 0 0 rgba(219,56,50,0) } }
-  #gate { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:10 }
-  #gate .box { max-width:440px; padding:28px; background:var(--panel); border:1px solid var(--line); border-radius:8px }
-  #gate h2 { margin:0 0 8px } #gate p { color:var(--muted) } #gate .btn { font-size:14px; padding:8px 14px; margin-top:6px }
-  a { color:var(--accent) }
-  @media (max-width:900px) { #app { grid-template-columns:320px 1fr } }
+
+  #hcard { display:none; position:absolute; z-index:6; width:290px; pointer-events:none; background:var(--glass); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border:1px solid var(--line); border-radius:var(--r); padding:10px 12px; font-size:12px; box-shadow:0 8px 30px rgba(0,0,0,.4) }
+  #hcard .ht { font-weight:700; font-size:13.5px } #hcard .hrow { display:flex; gap:6px; align-items:center; margin-top:4px } #hcard .hp { font-size:11.5px; margin-top:3px }
+
+  /* sign-in */
+  #gate { position:fixed; inset:0; background:radial-gradient(1200px 600px at 50% 30%, #2a3442, var(--bg)); display:flex; align-items:center; justify-content:center; z-index:10 }
+  #gate .box { width:min(420px, 92vw); padding:36px 32px; background:var(--glass); -webkit-backdrop-filter:blur(30px); backdrop-filter:blur(30px); border:1px solid var(--line); border-radius:20px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45) }
+  #gate .logo { width:56px; height:56px; border-radius:14px; margin:0 auto 14px; background:linear-gradient(145deg,#0a84ff,#5e5ce6); display:flex; align-items:center; justify-content:center }
+  #gate h2 { margin:0 0 6px; font-size:22px; letter-spacing:-.01em } #gate p { color:var(--muted); margin:0 0 18px }
+  #gate .btn { font-size:15px; padding:10px 22px; background:var(--accent); color:#fff; border-radius:10px }
+
+  /* Autodesk viewer toolbar: match the glass look */
+  .adsk-viewing-viewer .adsk-toolbar { background:var(--glass) !important; -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border-radius:var(--r) !important; border:1px solid var(--line) }
+
+  @media (max-width:1100px) { #toolbar { left:auto; right:12px; transform:none; max-width:calc(100% - 70px) } #legend { max-width:calc(100% - 360px) } }
+  @media (max-width:900px) { #app { grid-template-columns:300px 1fr } #info { width:290px } }
 </style>
 </head>
 <body>
-<div id="gate"><div class="box"><h2>Westzaan Cx Viewer</h2><p id="gatemsg">Checking your session…</p><div id="gatebtn"></div></div></div>
+<div id="gate"><div class="box">
+  <div class="logo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg></div>
+  <h2>Westzaan Cx Viewer</h2><p id="gatemsg">Checking your session…</p><div id="gatebtn"></div></div></div>
 <div id="app">
   <aside id="side">
     <header>
-      <h1>Westzaan Cx Viewer <span class="sp"></span>
-        <button class="btn" id="home" title="Project overview">Areas</button>
-        <button class="btn" id="copy" title="Copy a link to exactly this view">Copy link</button></h1>
+      <h1>Cx Viewer <span class="sp"></span>
+        <button class="btn ibtn" id="home" title="All areas"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="2"/><rect x="11" y="2" width="7" height="7" rx="2"/><rect x="2" y="11" width="7" height="7" rx="2"/><rect x="11" y="11" width="7" height="7" rx="2"/></svg></button>
+        <button class="btn" id="copy" title="Copy a link to exactly this view, to share">Copy link</button></h1>
       <div class="meta" id="meta">loading…</div>
       <div class="meta" id="who"></div>
     </header>
+
     <div id="overview" style="display:flex;flex-direction:column;min-height:0;flex:1">
-      <div class="row meta" id="ovhint">Pick an area to load its models. Numbers come from the data set, no model is loaded yet.</div>
+      <div class="meta" id="ovhint">Pick an area to start.</div>
       <div id="tiles"></div>
     </div>
+
     <div id="work" style="display:none;flex-direction:column;min-height:0;flex:1">
       <div class="row">
-        <select id="area" title="Switch area (shows only that area)"></select>
-        <button class="btn" id="addarea" title="Add another area to the ones already shown">+ Add area</button>
-        <input id="q" type="search" placeholder="search tag / subsystem / line">
+        <select id="area" title="Switch area" style="flex:1"></select>
+        <button class="btn plain" id="addarea" title="Show another area next to this one">+ Add area</button>
       </div>
-      <div class="facets">
-        <label>Priority<select id="f_prio"></select></label>
-        <label>Sprint<select id="f_sprint"></select></label>
-        <label>Subsystem type<select id="f_typ"></select></label>
-        <label>System / fluid code<select id="f_fluid"></select></label>
-        <label>Cx phase<select id="f_phase"></select></label>
-        <label>Model link<select id="f_link"></select></label>
-        <label>Group list by<select id="group">
-          <option value="">no grouping</option><option value="fluid">System / fluid code</option><option value="sprint">Sprint</option>
-          <option value="prio">Priority</option><option value="phase">Cx phase</option><option value="typ">Subsystem type</option><option value="area">Area</option><option value="link">Model link</option></select></label>
+      <div class="search"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5" stroke-linecap="round"/></svg>
+        <input id="q" type="search" placeholder="Search tag, subsystem or line"></div>
+      <div class="disc" id="disc">
+        <button class="open" id="discbtn"><svg class="chev" viewBox="0 0 12 12" fill="currentColor"><path d="M4 2l5 4-5 4z"/></svg>Filters <span class="badge" id="fbadge"></span></button>
+        <button class="btn plain" id="clear">Clear</button>
       </div>
-      <div class="modes">
-        <button class="btn on" data-mode="mc" title="QCR sheets checked → then commissioning phase">MC readiness</button>
-        <button class="btn" data-mode="phase">Cx phase</button>
-        <button class="btn" data-mode="spool" title="Spool installation % per line">Spools</button>
-        <button class="btn" data-mode="sprint">Sprint</button>
-        <button class="btn" data-mode="punch" title="Co-Consol punches on the elements they belong to">Punches</button>
-        <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Cleared</button>
-        <button class="btn" data-mode="qcr" title="QCR sheets checked per line / equipment">QCR</button>
-        <button class="btn" data-mode="ready" title="Ready for MC? A-punches, spools and QCR combined">Ready</button>
+      <div id="filters">
+        <div class="facets">
+          <label>Priority<select id="f_prio"></select></label>
+          <label>Sprint<select id="f_sprint"></select></label>
+          <label>Type<select id="f_typ"></select></label>
+          <label>System<select id="f_fluid"></select></label>
+          <label>Phase<select id="f_phase"></select></label>
+          <label>In model<select id="f_link"></select></label>
+          <label style="grid-column:1 / -1">Group the list by<select id="group">
+            <option value="">No grouping</option><option value="fluid">System</option><option value="sprint">Sprint</option>
+            <option value="prio">Priority</option><option value="phase">Phase</option><option value="typ">Type</option><option value="area">Area</option><option value="link">In model</option></select></label>
+        </div>
       </div>
       <div class="facets" id="pfacets" style="display:none"></div>
-      <div class="row" style="padding-top:0">
-        <label class="tog" title="Card under the mouse in 3D"><input type="checkbox" id="hov"> hover card</label>
-        <label class="tog" title="Badges on elements with open A/B punches (Punches mode)"><input type="checkbox" id="pins"> punch pins</label>
-        <label class="tog"><input type="checkbox" id="inm"> linked only</label>
-        <label class="tog"><input type="checkbox" id="lbl"> tag labels</label>
-        <label class="tog"><input type="checkbox" id="ctx"> structure context</label>
-        <label class="tog"><input type="checkbox" id="alb"> area labels</label>
-        <label class="tog" title="Electrical & instrumentation models of the open areas (panels are not tagged yet, so not coloured)"><input type="checkbox" id="ei"> E&amp;I models</label>
-        <select id="views" title="Jump to a saved viewpoint"></select>
-        <button class="btn" id="clear" style="margin-left:auto">Clear filters</button>
-      </div>
-      <div id="legend"></div>
-      <div id="pbi"><span></span><button class="btn" style="margin-left:auto">clear</button></div>
+      <div id="pbi"><span></span><button class="btn plain" style="margin-left:auto">Clear</button></div>
       <div id="counts"></div>
       <div id="list"></div>
     </div>
-    <div id="info"></div>
   </aside>
-  <main id="viewer"><button class="btn" id="toggle" title="Show/hide panel">☰</button><div id="fv"></div><div id="labels"></div><div id="map"></div><div id="status">starting…</div></main>
+
+  <main id="viewer">
+    <button class="btn ibtn glass" id="toggle" title="Show or hide the side panel"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="3.5" width="15" height="13" rx="3"/><path d="M8 3.5v13"/></svg></button>
+    <div id="fv"></div><div id="labels"></div>
+
+    <div id="toolbar" class="glass">
+      <div class="modes" title="Colour the model by">
+        <button class="btn on" data-mode="mc" title="Mechanical completion readiness: QCR sheets checked, then commissioning phase">Readiness</button>
+        <button class="btn" data-mode="phase" title="Commissioning phase per subsystem">Phase</button>
+        <button class="btn" data-mode="punch" title="Open Co-Consol punches on the elements they belong to">Punches</button>
+        <button class="btn" data-mode="ready" title="Ready for MC? A-punches, spools and QCR combined">Ready for MC</button>
+        <button class="more" id="morebtn">More <svg viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></button>
+        <div class="menu glass" id="moremenu">
+          <div class="hint">Colour the model by</div>
+          <button class="btn" data-mode="spool" title="Spool installation % per line">Spool installation</button>
+          <button class="btn" data-mode="sprint">Sprint</button>
+          <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Recently cleared punches</button>
+          <button class="btn" data-mode="qcr" title="QCR sheets checked per line and equipment">QCR sheets</button>
+        </div>
+      </div>
+      <span class="tb-sep"></span>
+      <select id="views" title="Go to a saved viewpoint"></select>
+      <div class="popwrap">
+        <button class="btn ibtn" id="dispbtn" title="What to show"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 6h9M15 6h2M3 14h2M8 14h9"/><circle cx="13.5" cy="6" r="1.8"/><circle cx="6.5" cy="14" r="1.8"/></svg></button>
+        <div class="menu glass" id="display">
+          <h4>Show in 3D</h4>
+          <label class="tog" title="Walls and steel as see-through context">Structure &amp; architecture<input type="checkbox" id="ctx"></label>
+          <label class="tog" title="Electrical and instrumentation models (panels are not tagged yet, so not coloured)">E&amp;I models<input type="checkbox" id="ei"></label>
+          <label class="tog">Area names<input type="checkbox" id="alb"></label>
+          <label class="tog">Tag labels<input type="checkbox" id="lbl"></label>
+          <label class="tog" title="Badges on elements with open A/B punches (Punches colouring)">Punch badges<input type="checkbox" id="pins"></label>
+          <h4>Interaction</h4>
+          <label class="tog" title="Details card under the mouse">Details on hover<input type="checkbox" id="hov"></label>
+          <label class="tog" title="Hide subsystems that have no elements in the model">Only what is in the model<input type="checkbox" id="inm"></label>
+        </div>
+      </div>
+    </div>
+
+    <div id="legend" class="glass"></div>
+    <div id="info" class="glass"></div>
+    <div id="map"></div>
+    <div id="status" class="glass">starting…</div>
+  </main>
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
-<script>window.CX_VERSION = "2026-09-29c";</script>
-<script src="config.js?v=2026-09-29c"></script>
-<script src="auth.js?v=2026-09-29c"></script>
-<script src="harvest.js?v=2026-09-29c"></script>
-<script src="app.js?v=2026-09-29c"></script>
+<script>window.CX_VERSION = "2026-09-29d";</script>
+<script src="config.js?v=2026-09-29d"></script>
+<script src="auth.js?v=2026-09-29d"></script>
+<script src="harvest.js?v=2026-09-29d"></script>
+<script src="app.js?v=2026-09-29d"></script>
+<script>
+/* interface only: popovers, filter disclosure, badge; the viewer logic stays in app.js */
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const pops = [['#morebtn', '#moremenu'], ['#dispbtn', '#display']];
+  const closeAll = (except) => pops.forEach(([, m]) => { const el = $(m); if (el && el !== except) el.classList.remove('show'); });
+  pops.forEach(([b, m]) => { const btn = $(b), menu = $(m); if (!btn) return;
+    btn.addEventListener('click', (e) => { e.stopPropagation(); const on = !menu.classList.contains('show'); closeAll(); menu.classList.toggle('show', on); }); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) closeAll(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+  // a colour mode picked from "More" closes the menu and names itself on the button
+  const moreBtn = $('#morebtn'), moreLabel = moreBtn.firstChild;
+  function syncMore() { const on = document.querySelector('#moremenu .btn.on'); moreBtn.classList.toggle('on', !!on); moreLabel.textContent = on ? on.textContent + ' ' : 'More '; }
+  $('#moremenu').addEventListener('click', (e) => { if (e.target.closest('.btn')) setTimeout(() => { closeAll(); syncMore(); }, 0); });
+  document.querySelector('.modes').addEventListener('click', () => setTimeout(syncMore, 0));
+  // filters: folded away until needed; the badge counts the active ones
+  const disc = $('#disc'), box = $('#filters');
+  const setOpen = (on) => { box.classList.toggle('show', on); disc.classList.toggle('opened', on); };
+  $('#discbtn').onclick = () => setOpen(!box.classList.contains('show'));
+  let opened = false;
+  setInterval(() => {
+    const n = document.querySelectorAll('#filters select.set').length + (($('#group') || {}).value ? 1 : 0);
+    const b = $('#fbadge'); b.textContent = n; b.style.display = n ? 'inline-block' : 'none';
+    if (n && !opened) { opened = true; setOpen(true); }             // a shared link with filters shows them
+    syncMore();
+  }, 600);
+})();
+</script>
 </body>
 </html>

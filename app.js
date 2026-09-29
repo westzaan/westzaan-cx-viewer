@@ -40,7 +40,7 @@
   const LN = Object.fromEntries(lines.map((l) => [l.line, l]));
   const ssLines = {}; for (const l of lines) for (const s of l.subsystems || []) (ssLines[s] ||= []).push(l);
   const linesOf = (s) => ssLines[s.ss] || [];
-  $('#meta').textContent = `app ${window.CX_VERSION || '?'} · Subsystems ${meta.subsystem_data_date || '?'} · spools wk ${meta.spool_week || '?'} · models v${index.modelset_version} · data built ${index.built}`;
+  $('#meta').textContent = `Status ${meta.subsystem_data_date || '?'} · spools week ${meta.spool_week || '?'}`; $('#meta').title = `app ${window.CX_VERSION || '?'} · models v${index.modelset_version} · data built ${index.built}`;
 
   // ------------------------------------------------------------------ state + URL
   const P = new URLSearchParams(location.search);
