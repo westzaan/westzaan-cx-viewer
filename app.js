@@ -327,15 +327,18 @@
   viewer.start(); viewer.setTheme('dark-theme'); viewer.setGhosting(true); viewer.setGroundShadow(false); viewer.setLightPreset(1);
   viewer.setQualityLevel(false, true);            // no ambient occlusion (expensive on big plant models), keep anti-aliasing
   viewer.setOptimizeNavigation(true);             // lighter rendering while orbiting/zooming
-  // Shift + drag (left or middle button) = orbit the way Revit / Navisworks / ACC do it: the model follows the mouse.
+  // Orbit the way Revit / Navisworks / ACC do it: the model follows the mouse (turntable).
   // CX_CONFIG.orbitSign = -1 flips it if a team prefers the other convention.
   const shiftOrbit = {
     names: ['cx-shift-orbit'], getNames() { return this.names; }, getName() { return this.names[0]; }, getPriority() { return 1000; },
     activate() {}, deactivate() {}, drag: false,
-    handleButtonDown(e, button) { if (e.shiftKey && (button === 0 || button === 1)) { this.drag = true; this.x = e.canvasX; this.y = e.canvasY; return true; } return false; },
-    handleButtonUp() { if (this.drag) { this.drag = false; return true; } return false; },
+    // left drag (and Shift + left / Shift + middle) = turntable orbit: left/right turns the plant around the vertical axis,
+    // up/down tilts it. No roll, never upside down. A click without movement still selects.
+    handleButtonDown(e, button) { if (button === 0 || (e.shiftKey && button === 1)) { this.drag = true; this.moved = false; this.x = this.x0 = e.canvasX; this.y = this.y0 = e.canvasY; return true; } return false; },
+    handleButtonUp() { if (this.drag) { this.drag = false; return this.moved; } return false; },
     handleMouseMove(e) {
       if (!this.drag) return false;
+      if (!this.moved) { if (Math.abs(e.canvasX - this.x0) + Math.abs(e.canvasY - this.y0) < 4) return true; this.moved = true; }
       const dx = e.canvasX - this.x, dy = e.canvasY - this.y; this.x = e.canvasX; this.y = e.canvasY;
       const k = 0.006 * (CFG.orbitSign || 1), nav = viewer.navigation, up = new THREE.Vector3(0, 0, 1);
       const piv = nav.getPivotPoint(), eye = nav.getPosition().clone(), tgt = nav.getTarget().clone();
