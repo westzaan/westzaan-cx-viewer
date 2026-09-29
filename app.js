@@ -364,12 +364,21 @@
   viewer.setOptimizeNavigation(true);             // lighter rendering while orbiting/zooming
   // Orbit the way Revit / Navisworks / ACC do it: the model follows the mouse (turntable).
   // CX_CONFIG.orbitSign = -1 flips it if a team prefers the other convention.
+  const BUSY_EXT = ['Autodesk.Section', 'Autodesk.Measure', 'Autodesk.Viewing.MarkupsCore', 'Autodesk.BoxSelection', 'Autodesk.Explode', 'Autodesk.BimWalk'];
+  function ownsOrbit() {
+    const tc = viewer.toolController;
+    const nav = tc.getActiveToolName ? tc.getActiveToolName() : '';
+    if (nav && !/orbit/i.test(nav)) return false;                            // pan, zoom, walk, fly … belong to the viewer
+    for (const id of BUSY_EXT) { const x = viewer.getExtension && viewer.getExtension(id); if (x && x.isActive && x.isActive()) return false; }
+    const act = (tc.getActiveTools ? tc.getActiveTools() : []).map((t) => (t.getName ? t.getName() : '') || '');
+    return !act.some((n) => /measure|calibrat|section|markup|box-?select|gizmo/i.test(n));
+  }
   const shiftOrbit = {
     names: ['cx-shift-orbit'], getNames() { return this.names; }, getName() { return this.names[0]; }, getPriority() { return 1000; },
     activate() {}, deactivate() {}, drag: false,
     // left drag (and Shift + left / Shift + middle) = turntable orbit: left/right turns the plant around the vertical axis,
     // up/down tilts it. No roll, never upside down. A click without movement still selects.
-    handleButtonDown(e, button) { if (button === 0 || (e.shiftKey && button === 1)) { this.drag = true; this.moved = false; this.x = this.x0 = e.canvasX; this.y = this.y0 = e.canvasY; return true; } return false; },
+    handleButtonDown(e, button) { if (!ownsOrbit()) return false; if (button === 0 || (e.shiftKey && button === 1)) { this.drag = true; this.moved = false; this.x = this.x0 = e.canvasX; this.y = this.y0 = e.canvasY; return true; } return false; },
     handleButtonUp() { if (this.drag) { this.drag = false; return this.moved; } return false; },
     handleMouseMove(e) {
       if (!this.drag) return false;
@@ -416,7 +425,7 @@
         const g = doc.getRoot().search({ type: 'geometry', role: '3d' })[0]; if (!g) { done(); return; }
         const opts = { keepCurrentModels: true, applyRefPoint: true, preserveView: true }; if (globalOffset) opts.globalOffset = globalOffset;
         // the property database is only needed to re-map a newer model version or for E&I handles; skipping it saves a lot of load time
-        if (!needProps && urn === docKey) opts.skipPropertyDb = true;
+        if (CFG.fastLoad && !needProps && urn === docKey) opts.skipPropertyDb = true;   // fastLoad: no Properties panel / Model Browser
         try {
           const m = await viewer.loadDocumentNode(doc, g, opts); if (!globalOffset) globalOffset = m.getData().globalOffset; m._cxName = name; m._cxKey = docKey;
           zUp();

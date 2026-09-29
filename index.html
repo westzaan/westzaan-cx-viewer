@@ -84,9 +84,11 @@
 
   /* ---------- floating glass layers over the model */
   .glass { background:var(--glass); -webkit-backdrop-filter:blur(24px) saturate(160%); backdrop-filter:blur(24px) saturate(160%); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 8px 30px rgba(0,0,0,.35) }
-  #toolbar { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:max-content; z-index:7; display:flex; gap:8px; align-items:center; padding:5px; flex-wrap:wrap; justify-content:center; max-width:calc(100% - 80px) }
+  #topbars { position:absolute; top:12px; left:52px; right:8px; z-index:7; display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start; gap:8px; pointer-events:none }
+  #topbars > * { pointer-events:auto } #topbars .tb-sep { height:16px }
+  #toolbar { display:flex; gap:6px; align-items:center; padding:4px }
   .modes { display:flex; background:var(--fill); border-radius:9px; padding:2px; gap:2px; position:relative }
-  .modes .btn, .modes .more { background:transparent; border-radius:7px; padding:5px 12px; font-size:12.5px; white-space:nowrap }
+  .modes .btn, .modes .more { background:transparent; border-radius:7px; padding:4px 8px; font-size:11.5px; white-space:nowrap }
   .modes .btn.on { background:#636366; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35) }
   .modes .more { border:0; cursor:pointer; display:flex; align-items:center; gap:4px } .modes .more.on { background:#636366 }
   .modes .more svg { width:10px; height:10px }
@@ -168,14 +170,15 @@
   #areamenu .amhead .btn:hover { background:rgba(10,132,255,.12); color:var(--accent) }
   #aapply, #aapply:hover { background:var(--accent) !important; color:#fff; padding:6px 20px; font-weight:600 }
   /* always-visible "Show" bar under the colour modes */
-  #showbar { position:absolute; top:60px; left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100% - 80px); z-index:6; display:flex; flex-wrap:wrap; justify-content:center; gap:6px; align-items:center; padding:5px 8px }
-  .sb-h { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:0 4px }
-  .chip { display:inline-flex; flex-direction:row-reverse; align-items:center; gap:7px; padding:5px 12px 5px 9px; border-radius:16px; background:var(--fill); font-size:12.5px; cursor:pointer; user-select:none; transition:background .15s }
+  #showbar { display:flex; gap:3px; align-items:center; padding:4px 6px }
+  .sb-h { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:0 4px }
+  .chip { display:inline-flex; flex-direction:row-reverse; align-items:center; gap:4px; padding:3px 8px 3px 6px; border-radius:14px; background:var(--fill); font-size:11.5px; white-space:nowrap; cursor:pointer; user-select:none; transition:background .15s }
   .chip:hover { background:rgba(118,118,128,.36) }
-  .chip input { appearance:none; -webkit-appearance:none; width:14px; height:14px; border-radius:50%; border:1.5px solid var(--muted); margin:0; flex:none; cursor:pointer }
+  .chip input { appearance:none; -webkit-appearance:none; width:11px; height:11px; border-radius:50%; border:1.5px solid var(--muted); margin:0; flex:none; cursor:pointer }
   .chip:has(input:checked) { background:var(--accent); color:#fff }
   .chip input:checked { border-color:#fff; background:#fff; box-shadow:inset 0 0 0 3px var(--accent) }
-  @media (max-width:1100px) { #toolbar, #showbar { left:auto; right:12px; transform:none; max-width:calc(100% - 70px) } #legend { max-width:calc(100% - 360px) } }
+  .adsk-viewing-viewer .viewcube, .adsk-viewing-viewer .viewcubeWrapper { margin-top:44px }
+  @media (max-width:1100px) { #legend { max-width:calc(100% - 360px) } }
   @media (max-width:900px) { #app { grid-template-columns:300px 1fr } #info { width:290px } }
 </style>
 </head>
@@ -238,6 +241,7 @@
     <button class="btn ibtn glass" id="toggle" title="Show or hide the side panel"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="3.5" width="15" height="13" rx="3"/><path d="M8 3.5v13"/></svg></button>
     <div id="fv"></div><div id="labels"></div>
 
+    <div id="topbars">
     <div id="toolbar" class="glass">
       <div class="modes" title="Colour the model by">
         <button class="btn on" data-mode="mc" title="Mechanical completion readiness: QCR sheets checked, then commissioning phase">Readiness</button>
@@ -246,21 +250,22 @@
         <button class="btn" data-mode="ready" title="Ready for MC? A-punches, spools and QCR combined">Ready for MC</button>
         <button class="btn" data-mode="spool" title="Spool installation % per line">Spools</button>
         <button class="btn" data-mode="sprint" title="Colour by sprint">Sprint</button>
-        <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Cleared punches</button>
-        <button class="btn" data-mode="qcr" title="QCR sheets checked per line and equipment">QCR sheets</button>
+        <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Cleared</button>
+        <button class="btn" data-mode="qcr" title="QCR sheets checked per line and equipment">QCR</button>
       </div>
     </div>
 
     <div id="showbar" class="glass">
       <span class="sb-h">Show</span>
-      <label class="chip" title="Walls and steel as see-through context">Structure &amp; architecture<input type="checkbox" id="ctx"></label>
-      <label class="chip" title="Electrical and instrumentation models (panels are not tagged yet, so not coloured)">E&amp;I models<input type="checkbox" id="ei"></label>
+      <label class="chip" title="Walls and steel as see-through context">Structure<input type="checkbox" id="ctx"></label>
+      <label class="chip" title="Electrical and instrumentation models (panels are not tagged yet, so not coloured)">E&amp;I<input type="checkbox" id="ei"></label>
       <label class="chip">Area names<input type="checkbox" id="alb"></label>
-      <label class="chip">Tag labels<input type="checkbox" id="lbl"></label>
-      <label class="chip" title="Badges on elements with open A/B punches (Punches colouring)">Punch badges<input type="checkbox" id="pins"></label>
+      <label class="chip">Tags<input type="checkbox" id="lbl"></label>
+      <label class="chip" title="Badges on elements with open A/B punches (Punches colouring)">Punch pins<input type="checkbox" id="pins"></label>
       <span class="tb-sep"></span>
-      <label class="chip" title="Details card under the mouse">Details on hover<input type="checkbox" id="hov"></label>
-      <label class="chip" title="Hide subsystems that have no elements in the model">Only what is in the model<input type="checkbox" id="inm"></label>
+      <label class="chip" title="Details card under the mouse">Hover card<input type="checkbox" id="hov"></label>
+      <label class="chip" title="Hide subsystems that have no elements in the model">Linked only<input type="checkbox" id="inm"></label>
+    </div>
     </div>
 
     <div id="legend" class="glass"></div>
@@ -270,11 +275,11 @@
   </main>
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
-<script>window.CX_VERSION = "2026-09-29g";</script>
-<script src="config.js?v=2026-09-29g"></script>
-<script src="auth.js?v=2026-09-29g"></script>
-<script src="harvest.js?v=2026-09-29g"></script>
-<script src="app.js?v=2026-09-29g"></script>
+<script>window.CX_VERSION = "2026-09-29h";</script>
+<script src="config.js?v=2026-09-29h"></script>
+<script src="auth.js?v=2026-09-29h"></script>
+<script src="harvest.js?v=2026-09-29h"></script>
+<script src="app.js?v=2026-09-29h"></script>
 <script>
 /* interface only: popovers, filter disclosure, badge; the viewer logic stays in app.js */
 (function () {
