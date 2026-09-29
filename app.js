@@ -390,6 +390,15 @@
     handleKeyDown() { return false; }, handleKeyUp() { return false; }, handleGesture() { return false; }, handleBlur() { return false; }, handleResize() {},
   };
   try { viewer.toolController.registerTool(shiftOrbit); viewer.toolController.activateTool('cx-shift-orbit'); } catch (e) { console.warn('shift orbit', e); }
+  // plant models are Z-up: tell the navigation and the ViewCube, so the cube reads TOP when looking down
+  function zUp() {
+    try {
+      const up = new THREE.Vector3(0, 0, 1);
+      viewer.navigation.setWorldUpVector(up, false, true);
+      if (viewer.autocam && viewer.autocam.setWorldUpVector) viewer.autocam.setWorldUpVector(up.clone());
+    } catch (e) { console.warn('[cx] world up', e); }
+  }
+  zUp();
   applyFormaNavigation(); console.info('[cx] navigation profile', P_AEC ? 'AEC' : 'default', NAV_KEYS.map((k) => k + '=' + viewer.prefs?.get?.(k)).join(' '));
   viewer.setGroundReflection(false); viewer.setEnvMapBackground(false);
   window.viewer = viewer;
@@ -410,6 +419,7 @@
         if (!needProps && urn === docKey) opts.skipPropertyDb = true;
         try {
           const m = await viewer.loadDocumentNode(doc, g, opts); if (!globalOffset) globalOffset = m.getData().globalOffset; m._cxName = name; m._cxKey = docKey;
+          zUp();
           if (isCtx) { ctxModels[docKey] = m; ghostModel(m); }
           else { models[docKey] = m; idx[docKey] = urn === docKey ? rawIdx[docKey] || new Map() : await remap(docKey, m); }
         } catch (e) { failed++; console.warn('load failed', name, e); }
