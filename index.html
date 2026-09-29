@@ -84,7 +84,7 @@
 
   /* ---------- floating glass layers over the model */
   .glass { background:var(--glass); -webkit-backdrop-filter:blur(24px) saturate(160%); backdrop-filter:blur(24px) saturate(160%); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 8px 30px rgba(0,0,0,.35) }
-  #toolbar { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:max-content; z-index:7; display:flex; gap:8px; align-items:center; padding:5px; flex-wrap:wrap; justify-content:center; max-width:calc(100% - 120px) }
+  #toolbar { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:max-content; z-index:7; display:flex; gap:8px; align-items:center; padding:5px; flex-wrap:wrap; justify-content:center; max-width:calc(100% - 80px) }
   .modes { display:flex; background:var(--fill); border-radius:9px; padding:2px; gap:2px; position:relative }
   .modes .btn, .modes .more { background:transparent; border-radius:7px; padding:5px 12px; font-size:12.5px; white-space:nowrap }
   .modes .btn.on { background:#636366; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35) }
@@ -236,17 +236,11 @@
         <button class="btn" data-mode="phase" title="Commissioning phase per subsystem">Phase</button>
         <button class="btn" data-mode="punch" title="Open Co-Consol punches on the elements they belong to">Punches</button>
         <button class="btn" data-mode="ready" title="Ready for MC? A-punches, spools and QCR combined">Ready for MC</button>
-        <button class="more" id="morebtn">More <svg viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></button>
-        <div class="menu glass" id="moremenu">
-          <div class="hint">Colour the model by</div>
-          <button class="btn" data-mode="spool" title="Spool installation % per line">Spool installation</button>
-          <button class="btn" data-mode="sprint">Sprint</button>
-          <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Recently cleared punches</button>
-          <button class="btn" data-mode="qcr" title="QCR sheets checked per line and equipment">QCR sheets</button>
-        </div>
+        <button class="btn" data-mode="spool" title="Spool installation % per line">Spools</button>
+        <button class="btn" data-mode="sprint" title="Colour by sprint">Sprint</button>
+        <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Cleared punches</button>
+        <button class="btn" data-mode="qcr" title="QCR sheets checked per line and equipment">QCR sheets</button>
       </div>
-      <span class="tb-sep"></span>
-      <select id="views" title="Go to a saved viewpoint"></select>
       <div class="popwrap">
         <button class="btn ibtn" id="dispbtn" title="What to show"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 6h9M15 6h2M3 14h2M8 14h9"/><circle cx="13.5" cy="6" r="1.8"/><circle cx="6.5" cy="14" r="1.8"/></svg></button>
         <div class="menu glass" id="display">
@@ -270,26 +264,21 @@
   </main>
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
-<script>window.CX_VERSION = "2026-09-29e";</script>
-<script src="config.js?v=2026-09-29e"></script>
-<script src="auth.js?v=2026-09-29e"></script>
-<script src="harvest.js?v=2026-09-29e"></script>
-<script src="app.js?v=2026-09-29e"></script>
+<script>window.CX_VERSION = "2026-09-29f";</script>
+<script src="config.js?v=2026-09-29f"></script>
+<script src="auth.js?v=2026-09-29f"></script>
+<script src="harvest.js?v=2026-09-29f"></script>
+<script src="app.js?v=2026-09-29f"></script>
 <script>
 /* interface only: popovers, filter disclosure, badge; the viewer logic stays in app.js */
 (function () {
   const $ = (s) => document.querySelector(s);
-  const pops = [['#morebtn', '#moremenu'], ['#dispbtn', '#display']];
+  const pops = [['#dispbtn', '#display']];
   const closeAll = (except) => pops.forEach(([, m]) => { const el = $(m); if (el && el !== except) el.classList.remove('show'); });
   pops.forEach(([b, m]) => { const btn = $(b), menu = $(m); if (!btn) return;
     btn.addEventListener('click', (e) => { e.stopPropagation(); const on = !menu.classList.contains('show'); closeAll(); menu.classList.toggle('show', on); }); });
   document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) closeAll(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
-  // a colour mode picked from "More" closes the menu and names itself on the button
-  const moreBtn = $('#morebtn'), moreLabel = moreBtn.firstChild;
-  function syncMore() { const on = document.querySelector('#moremenu .btn.on'); moreBtn.classList.toggle('on', !!on); moreLabel.textContent = on ? on.textContent + ' ' : 'More '; }
-  $('#moremenu').addEventListener('click', (e) => { if (e.target.closest('.btn')) setTimeout(() => { closeAll(); syncMore(); }, 0); });
-  document.querySelector('.modes').addEventListener('click', () => setTimeout(syncMore, 0));
   // filters: folded away until needed; the badge counts the active ones
   const disc = $('#disc'), box = $('#filters');
   const setOpen = (on) => { box.classList.toggle('show', on); disc.classList.toggle('opened', on); };
@@ -299,7 +288,6 @@
     const n = document.querySelectorAll('#filters select.set').length + (($('#group') || {}).value ? 1 : 0);
     const b = $('#fbadge'); b.textContent = n; b.style.display = n ? 'inline-block' : 'none';
     if (n && !opened) { opened = true; setOpen(true); }             // a shared link with filters shows them
-    syncMore();
   }, 600);
 })();
 </script>
