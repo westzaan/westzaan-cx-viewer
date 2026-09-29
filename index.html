@@ -85,12 +85,13 @@
       <div class="meta" id="who"></div>
     </header>
     <div id="overview" style="display:flex;flex-direction:column;min-height:0;flex:1">
-      <div class="row meta">Pick an area to load its models. Numbers come from the data set, no model is loaded yet.</div>
+      <div class="row meta" id="ovhint">Pick an area to load its models. Numbers come from the data set, no model is loaded yet.</div>
       <div id="tiles"></div>
     </div>
     <div id="work" style="display:none;flex-direction:column;min-height:0;flex:1">
       <div class="row">
-        <select id="area" title="Areas loaded in the viewer"></select>
+        <select id="area" title="Switch area (shows only that area)"></select>
+        <button class="btn" id="addarea" title="Add another area to the ones already shown">+ Add area</button>
         <input id="q" type="search" placeholder="search tag / subsystem / line">
       </div>
       <div class="facets">

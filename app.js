@@ -240,8 +240,15 @@
         <div class="ph4" title="MC / Pre-Cx / Cold Cx / Hot Cx">${seg}</div></div>`;
     }).join('');
   }
-  $('#tiles').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t && !t.classList.contains('none')) openArea(t.dataset.a, true); });
-  function showOverview(on) { $('#overview').style.display = on ? 'flex' : 'none'; $('#work').style.display = on ? 'none' : 'flex'; if (on) renderTiles(); }
+  // click = show only that area; "+ Add area" = next click adds it to what is already shown
+  let addMode = false;
+  $('#tiles').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t && !t.classList.contains('none')) { const add = addMode; addMode = false; openArea(t.dataset.a, true, add); } });
+  function showOverview(on, add) {
+    addMode = !!(on && add);
+    $('#ovhint').innerHTML = addMode ? '<b style="color:var(--accent)">Add mode:</b> the area you pick is added to the ones already shown.'
+      : 'Pick an area. Only that area is shown; use <b>+ Add area</b> to combine areas.';
+    $('#overview').style.display = on ? 'flex' : 'none'; $('#work').style.display = on ? 'none' : 'flex'; if (on) renderTiles();
+  }
   $('#home').onclick = () => showOverview($('#overview').style.display === 'none');
 
   // ------------------------------------------------------------------ filters + list
@@ -264,7 +271,7 @@
     }
   }
   function renderAreaSelect() {
-    $('#area').innerHTML = `<option value="">all loaded (${S.open.size})</option>` + [...S.open].sort().map((a) => `<option ${a === S.area ? 'selected' : ''}>${a}</option>`).join('') + `<option value="+">+ open another area…</option>`;
+    $('#area').innerHTML = `<option value="">all loaded (${S.open.size})</option>` + [...S.open].sort().map((a) => `<option ${a === S.area ? 'selected' : ''}>${a}</option>`).join('') + `<option value="+">+ add another area…</option>`;
   }
   function renderLegend() { const L = MODES[S.mode].legend; $('#legend').innerHTML = (typeof L === 'function' ? L() : L).map(([n, c]) => `<span style="--c:${rgb(c)}">${esc(n)}</span>`).join(''); }
   const collapsed = new Set();
@@ -302,7 +309,11 @@
   $('#alb').checked = S.alb; $('#alb').onchange = (e) => { S.alb = e.target.checked; pushUrl(); updateAreaLabels(); };
   $('#ei').checked = S.ei; $('#ei').onchange = (e) => { S.ei = e.target.checked; pushUrl(); syncEI(); };
   $('#clear').onclick = () => { for (const k in S.f) S.f[k] = ''; S.q = ''; $('#q').value = ''; S.sel = null; S.gsel = null; S.inm = false; $('#inm').checked = false; $('#info').style.display = 'none'; refresh(true); };
-  $('#area').onchange = async (e) => { if (e.target.value === '+') { e.target.value = S.area; showOverview(true); return; } S.area = e.target.value; S.gsel = null; refresh(true); };
+  $('#area').onchange = async (e) => { const v = e.target.value;
+    if (v === '+') { e.target.value = S.area; showOverview(true, true); return; }
+    if (!v) { S.area = ''; S.gsel = null; refresh(true); return; }          // "all loaded": show the combined set
+    S.area = v; S.gsel = null; refresh(true); };
+  $('#addarea').onclick = () => showOverview(true, true);
   $$('.modes .btn').forEach((b) => { b.classList.toggle('on', b.dataset.mode === S.mode); b.onclick = () => { $$('.modes .btn').forEach((x) => x.classList.toggle('on', x === b)); S.mode = b.dataset.mode; refresh(false); colorAll(); updatePins(); }; });
   if (S.sub.size) {
     $('#pbi').style.display = 'flex'; $('#pbi span').textContent = `Shared selection: ${S.sub.size} subsystem${S.sub.size > 1 ? 's' : ''}`;
@@ -375,12 +386,29 @@
         if (!needProps && urn === docKey) opts.skipPropertyDb = true;
         try {
           const m = await viewer.loadDocumentNode(doc, g, opts); if (!globalOffset) globalOffset = m.getData().globalOffset; m._cxName = name; m._cxKey = docKey;
-          if (isCtx) { ctxModels[docKey] = m; viewer.hide(m.getRootId(), m); }
+          if (isCtx) { ctxModels[docKey] = m; ghostModel(m); }
           else { models[docKey] = m; idx[docKey] = urn === docKey ? rawIdx[docKey] || new Map() : await remap(docKey, m); }
         } catch (e) { failed++; console.warn('load failed', name, e); }
         done();
       }, () => { if (urn !== docKey) { console.warn('latest version not viewable, using mapped version', name); } failed++; done(); });
     });
+  }
+  // context (architecture / structure): see-through glass-like material on every fragment, not pickable by hover.
+  // Works without the property database, and is re-applied when streaming geometry finishes.
+  let ghostMat = null;
+  function ghostModel(m) {
+    if (!ghostMat) {
+      ghostMat = new THREE.MeshPhongMaterial({ color: 0xaab4bf, opacity: 0.1, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+      viewer.impl.matman().addMaterial('cx-context-ghost', ghostMat, true);
+    }
+    const apply = () => { const fl = m.getFragmentList(); if (!fl) return; const n = fl.getCount ? fl.getCount() : 0;
+      for (let f = 0; f < n; f++) fl.setMaterial(f, ghostMat);
+      viewer.impl.invalidate(true, true, true); };
+    apply();
+    if (!(m.isLoadDone && m.isLoadDone())) {
+      const h = (e) => { if (e.model === m) { viewer.removeEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, h); apply(); } };
+      viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, h);
+    }
   }
   // newer model version: translate mapped dbIds through the DWG handles (externalId)
   async function remap(docKey, m) {
@@ -399,7 +427,17 @@
     updateAreaLabels(); renderViews(); renderMap();
     status(`${Object.keys(models).length} models${Object.keys(ctxModels).length ? ` + ${Object.keys(ctxModels).length} context` : ''} · data ${meta.subsystem_data_date || ''}${failed ? ` · ${failed} not accessible` : ''}`);
   }
-  async function openArea(a, focus) {
+  // show only area a: unload models of all other areas (their data stays cached, so switching back is fast)
+  function unloadOtherAreas(a) {
+    const keep = new Set((index.areas[a]?.docs || []).map((d) => d.urn));
+    for (const [k, m] of Object.entries(models)) if (!keep.has(k)) { viewer.unloadModel(m); delete models[k]; delete idx[k]; delete eiModels[k]; }
+    const ctxKeep = new Set((CFG.contextAreas[a] || [a]).flatMap((x) => (index.areas[x]?.context || []).map((d) => d.urn)));
+    for (const [k, m] of Object.entries(ctxModels)) if (!ctxKeep.has(k)) { viewer.unloadModel(m); delete ctxModels[k]; }
+    S.open = new Set([a]); S.sub.clear(); S.sel = null; $('#info').style.display = 'none';
+    nLoaded = 0; nWanted = 0; failed = 0;
+  }
+  async function openArea(a, focus, add = true) {
+    if (!add) unloadOtherAreas(a);
     showOverview(false); S.open.add(a); if (focus) { S.area = a; S.gsel = null; }
     status(`loading ${a} mapping…`); await loadAreaData(a); refresh(false);
     await loadDocs(index.areas[a]?.docs || [], false);
@@ -517,8 +555,8 @@
     el.innerHTML = `<option value="">Viewpoints…</option>` + list.map((v, i) => `<option value="${i}">${esc(v.name)}</option>`).join('');
     el.onchange = async () => {
       const v = list[+el.value]; el.value = ''; if (!v) return;
-      if (v.cam) { if (v.area && !S.open.has(v.area)) await openArea(v.area, false); applyCam(v.cam); }
-      else if (v.area) { if (!S.open.has(v.area)) await openArea(v.area, false); fitArea(v.area, v.mode || 'iso'); }
+      if (v.cam) { if (v.area && !S.open.has(v.area)) await openArea(v.area, true, false); applyCam(v.cam); }
+      else if (v.area) { if (!S.open.has(v.area)) await openArea(v.area, true, false); fitArea(v.area, v.mode || 'iso'); }
     };
   }
   const docAreaOf = (m) => docArea[m._cxKey] || index.docArea?.[m._cxKey] || Object.keys(index.areas).find((a) => (index.areas[a].docs || []).some((d) => d.urn === m._cxKey) || (index.areas[a].ei || []).some((d) => d.urn === m._cxKey));
@@ -543,7 +581,7 @@
     }).join('');
     m.innerHTML = `<div class="mh"><b>Site plan</b><span class="meta">colour = % subsystems MC or beyond · click an area to open</span><button class="btn" id="mapx">–</button></div>
       <div class="mb"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><image href="${plan.url}" width="${W}" height="${H}"/>${rects}<circle id="mcam" r="${W / 90}" fill="#4cc3ff" stroke="#fff" stroke-width="4" style="display:none"/></svg></div>`;
-    m.querySelectorAll('.ar').forEach((g) => (g.onclick = () => openArea(g.dataset.a, true)));
+    m.querySelectorAll('.ar').forEach((g) => (g.onclick = (ev) => openArea(g.dataset.a, true, ev.shiftKey || ev.ctrlKey)));
     $('#mapx').onclick = () => { m.classList.toggle('min'); $('#mapx').textContent = m.classList.contains('min') ? '+' : '–'; };
     m.classList.toggle('big', !Object.keys(models).length); placeCamOnMap();
     plan._sx = sx; plan._sy = sy;
