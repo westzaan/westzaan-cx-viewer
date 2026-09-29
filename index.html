@@ -148,6 +148,25 @@
   /* Autodesk viewer toolbar: match the glass look */
   .adsk-viewing-viewer .adsk-toolbar { background:var(--glass) !important; -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border-radius:var(--r) !important; border:1px solid var(--line) }
 
+  /* areas menu: tick boxes, like the ACC model browser */
+  .apick { position:relative; padding:0 16px 8px }
+  #areabtn { width:100%; display:flex; align-items:center; gap:8px; padding:9px 12px; font-weight:600; font-size:14px }
+  #areabtn svg { width:17px; height:17px; flex:none } #areabtn .chev { width:10px; height:10px; margin-left:auto; color:var(--muted) }
+  #arealbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  #areamenu { left:16px; right:auto; width:440px; max-width:calc(100vw - 32px); top:calc(100% - 2px); min-width:0; padding:8px; z-index:20 }
+  .amhead { display:flex; justify-content:space-between; padding:0 2px 4px; border-bottom:1px solid var(--line) }
+  #alist { max-height:min(56vh, 460px); overflow:auto; padding:4px 0 }
+  .arow { display:grid; grid-template-columns:18px 44px 1fr auto; align-items:center; gap:8px; padding:6px 8px; border-radius:7px; cursor:pointer }
+  .arow:hover { background:rgba(255,255,255,.06) } .arow.none { opacity:.4; cursor:default }
+  .arow input { width:16px; height:16px; margin:0; accent-color:var(--accent); cursor:pointer }
+  .arow b { font-size:13.5px } .arow .meta { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .arow .only { visibility:hidden; background:transparent; border:0; color:var(--accent); font-size:12px; cursor:pointer; padding:2px 4px }
+  .arow:hover .only { visibility:visible }
+  .amfoot { display:flex; align-items:center; gap:8px; padding:8px 2px 0; border-top:1px solid var(--line) } .amfoot .meta { flex:1 }
+  #aapply:disabled { opacity:.4; cursor:default }
+  #areamenu .amhead .btn, #areamenu .amfoot .btn { display:inline-block; width:auto }
+  #areamenu .amhead .btn:hover { background:rgba(10,132,255,.12); color:var(--accent) }
+  #aapply, #aapply:hover { background:var(--accent) !important; color:#fff; padding:6px 20px; font-weight:600 }
   @media (max-width:1100px) { #toolbar { left:auto; right:12px; transform:none; max-width:calc(100% - 70px) } #legend { max-width:calc(100% - 360px) } }
   @media (max-width:900px) { #app { grid-template-columns:300px 1fr } #info { width:290px } }
 </style>
@@ -165,17 +184,22 @@
       <div class="meta" id="meta">loading…</div>
       <div class="meta" id="who"></div>
     </header>
+    <div class="apick">
+      <button class="btn" id="areabtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 5.5l7-3 7 3-7 3z"/><path d="M3 10l7 3 7-3M3 14.5l7 3 7-3"/></svg><span id="arealbl">Choose areas</span><svg class="chev" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></button>
+      <div class="menu glass" id="areamenu">
+        <div class="search" style="padding:4px 4px 6px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="left:14px;top:13px"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5" stroke-linecap="round"/></svg><input id="areaq" type="search" placeholder="Find area"></div>
+        <div class="amhead"><button class="btn plain" id="aall">Select all</button><button class="btn plain" id="anone">Clear</button></div>
+        <div id="alist"></div>
+        <div class="amfoot"><span class="meta" id="acount"></span><button class="btn on" id="aapply">Show</button></div>
+      </div>
+    </div>
 
     <div id="overview" style="display:flex;flex-direction:column;min-height:0;flex:1">
-      <div class="meta" id="ovhint">Pick an area to start.</div>
+      <div class="meta" id="ovhint">Pick an area below, or tick several in the <b>Areas</b> menu above.</div>
       <div id="tiles"></div>
     </div>
 
     <div id="work" style="display:none;flex-direction:column;min-height:0;flex:1">
-      <div class="row">
-        <select id="area" title="Switch area" style="flex:1"></select>
-        <button class="btn plain" id="addarea" title="Show another area next to this one">+ Add area</button>
-      </div>
       <div class="search"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5" stroke-linecap="round"/></svg>
         <input id="q" type="search" placeholder="Search tag, subsystem or line"></div>
       <div class="disc" id="disc">
@@ -246,11 +270,11 @@
   </main>
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
-<script>window.CX_VERSION = "2026-09-29d";</script>
-<script src="config.js?v=2026-09-29d"></script>
-<script src="auth.js?v=2026-09-29d"></script>
-<script src="harvest.js?v=2026-09-29d"></script>
-<script src="app.js?v=2026-09-29d"></script>
+<script>window.CX_VERSION = "2026-09-29e";</script>
+<script src="config.js?v=2026-09-29e"></script>
+<script src="auth.js?v=2026-09-29e"></script>
+<script src="harvest.js?v=2026-09-29e"></script>
+<script src="app.js?v=2026-09-29e"></script>
 <script>
 /* interface only: popovers, filter disclosure, badge; the viewer logic stays in app.js */
 (function () {

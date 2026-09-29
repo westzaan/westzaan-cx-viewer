@@ -240,15 +240,42 @@
         <div class="ph4" title="MC / Pre-Cx / Cold Cx / Hot Cx">${seg}</div></div>`;
     }).join('');
   }
-  // click = show only that area; "+ Add area" = next click adds it to what is already shown
-  let addMode = false;
-  $('#tiles').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t && !t.classList.contains('none')) { const add = addMode; addMode = false; openArea(t.dataset.a, true, add); } });
-  function showOverview(on, add) {
-    addMode = !!(on && add);
-    $('#ovhint').innerHTML = addMode ? '<b style="color:var(--accent)">Add mode:</b> the area you pick is added to the ones already shown.'
-      : 'Pick an area. Only that area is shown; use <b>+ Add area</b> to combine areas.';
+  // tile click = show only that area; several areas at once = the Areas menu (tick boxes)
+  $('#tiles').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t && !t.classList.contains('none')) setAreas([t.dataset.a]); });
+  function showOverview(on) {
+    $('#ovhint').innerHTML = 'Pick an area below, or tick several in the <b>Areas</b> menu above.';
     $('#overview').style.display = on ? 'flex' : 'none'; $('#work').style.display = on ? 'none' : 'flex'; if (on) renderTiles();
   }
+  // ---------------------------------------------------------------- Areas menu: tick boxes, like the ACC model browser
+  const pickable = () => Object.entries(index.areas).filter(([a, v]) => /^\d\d[A-Z]$/.test(a) && v.subsystems > 0).sort();
+  let pick = new Set();
+  function renderAreaMenu() {
+    const q = ($('#areaq').value || '').trim().toUpperCase();
+    $('#alist').innerHTML = pickable().filter(([a, v]) => !q || a.includes(q)).map(([a, v]) => {
+      const can = (v.docs || []).length > 0, pct = v.subsystems ? Math.round(100 * v.in_model / v.subsystems) : 0;
+      return `<label class="arow ${can ? '' : 'none'}" title="${can ? '' : 'No mapped models for this area'}"><input type="checkbox" data-a="${a}" ${pick.has(a) ? 'checked' : ''} ${can ? '' : 'disabled'}>
+        <b>${a}</b><span class="meta">${v.subsystems} subsystems · ${(v.docs || []).length} models · ${pct}% linked</span>${can ? `<button class="only" data-only="${a}" title="Show only ${a}">only</button>` : ''}</label>`;
+    }).join('');
+    const nm = [...pick].reduce((n, a) => n + (index.areas[a]?.docs || []).length, 0);
+    $('#acount').textContent = pick.size ? `${pick.size} area${pick.size > 1 ? 's' : ''} · ${nm} models${nm > 90 ? ' · large, loading takes a while' : ''}` : 'Nothing selected';
+    $('#aapply').disabled = !pick.size;
+  }
+  function openAreaMenu(on) {
+    const m = $('#areamenu'); if (on === undefined) on = !m.classList.contains('show');
+    if (on) { pick = new Set(S.open); $('#areaq').value = ''; renderAreaMenu(); }
+    m.classList.toggle('show', on); if (on) setTimeout(() => $('#areaq').focus(), 0);
+  }
+  $('#areabtn').onclick = (e) => { e.stopPropagation(); openAreaMenu(); };
+  $('#areamenu').addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', () => openAreaMenu(false));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openAreaMenu(false); });
+  $('#areaq').oninput = renderAreaMenu;
+  $('#areaq').onkeydown = (e) => { if (e.key === 'Enter' && pick.size) { openAreaMenu(false); setAreas([...pick]); } };
+  $('#alist').addEventListener('change', (e) => { const c = e.target.closest('input[data-a]'); if (!c) return; c.checked ? pick.add(c.dataset.a) : pick.delete(c.dataset.a); renderAreaMenu(); });
+  $('#alist').addEventListener('click', (e) => { const o = e.target.closest('[data-only]'); if (!o) return; e.preventDefault(); openAreaMenu(false); setAreas([o.dataset.only]); });
+  $('#aall').onclick = () => { $$('#alist input[data-a]:not(:disabled)').forEach((c) => pick.add(c.dataset.a)); renderAreaMenu(); };
+  $('#anone').onclick = () => { pick.clear(); renderAreaMenu(); };
+  $('#aapply').onclick = () => { openAreaMenu(false); setAreas([...pick]); };
   $('#home').onclick = () => showOverview($('#overview').style.display === 'none');
 
   // ------------------------------------------------------------------ filters + list
@@ -271,7 +298,9 @@
     }
   }
   function renderAreaSelect() {
-    $('#area').innerHTML = `<option value="">all loaded (${S.open.size})</option>` + [...S.open].sort().map((a) => `<option ${a === S.area ? 'selected' : ''}>${a}</option>`).join('') + `<option value="+">+ add another area…</option>`;
+    const l = [...S.open].sort();
+    $('#arealbl').textContent = !l.length ? 'Choose areas' : l.length === 1 ? `Area ${l[0]}` : l.length <= 4 ? `Areas ${l.join(', ')}` : `${l.length} areas`;
+    $('#areabtn').title = l.length ? 'Shown: ' + l.join(', ') : 'Choose which areas to show';
   }
   function renderLegend() { const L = MODES[S.mode].legend; $('#legend').innerHTML = (typeof L === 'function' ? L() : L).map(([n, c]) => `<span style="--c:${rgb(c)}">${esc(n)}</span>`).join(''); }
   const collapsed = new Set();
@@ -309,11 +338,6 @@
   $('#alb').checked = S.alb; $('#alb').onchange = (e) => { S.alb = e.target.checked; pushUrl(); updateAreaLabels(); };
   $('#ei').checked = S.ei; $('#ei').onchange = (e) => { S.ei = e.target.checked; pushUrl(); syncEI(); };
   $('#clear').onclick = () => { for (const k in S.f) S.f[k] = ''; S.q = ''; $('#q').value = ''; S.sel = null; S.gsel = null; S.inm = false; $('#inm').checked = false; $('#info').style.display = 'none'; refresh(true); };
-  $('#area').onchange = async (e) => { const v = e.target.value;
-    if (v === '+') { e.target.value = S.area; showOverview(true, true); return; }
-    if (!v) { S.area = ''; S.gsel = null; refresh(true); return; }          // "all loaded": show the combined set
-    S.area = v; S.gsel = null; refresh(true); };
-  $('#addarea').onclick = () => showOverview(true, true);
   $$('.modes .btn').forEach((b) => { b.classList.toggle('on', b.dataset.mode === S.mode); b.onclick = () => { $$('.modes .btn').forEach((x) => x.classList.toggle('on', x === b)); S.mode = b.dataset.mode; refresh(false); colorAll(); updatePins(); }; });
   if (S.sub.size) {
     $('#pbi').style.display = 'flex'; $('#pbi span').textContent = `Shared selection: ${S.sub.size} subsystem${S.sub.size > 1 ? 's' : ''}`;
@@ -446,8 +470,29 @@
     S.open = new Set([a]); S.sub.clear(); S.sel = null; $('#info').style.display = 'none';
     nLoaded = 0; nWanted = 0; failed = 0;
   }
+  // show exactly these areas: unload the rest, load what is missing, frame them all
+  let setBusy = null;
+  async function setAreas(list) {
+    const T = new Set(list.filter((a) => (index.areas[a]?.docs || []).length)); if (!T.size) return;
+    if (setBusy) await setBusy;
+    let done; setBusy = new Promise((r) => (done = r));
+    try {
+      const keep = new Set([...T].flatMap((a) => [...(index.areas[a]?.docs || []), ...(index.areas[a]?.ei || [])].map((d) => d.urn)));
+      for (const [k, m] of Object.entries(models)) if (!keep.has(k)) { viewer.unloadModel(m); delete models[k]; delete idx[k]; delete eiModels[k]; }
+      const ctxKeep = new Set([...T].flatMap((a) => CFG.contextAreas[a] || [a]).flatMap((x) => (index.areas[x]?.context || []).map((d) => d.urn)));
+      for (const [k, m] of Object.entries(ctxModels)) if (!ctxKeep.has(k)) { viewer.unloadModel(m); delete ctxModels[k]; }
+      S.open = new Set(T); S.area = T.size === 1 ? [...T][0] : ''; S.sub.clear(); S.sel = null; S.gsel = null; $('#info').style.display = 'none';
+      nLoaded = 0; nWanted = 0; failed = 0;
+      showOverview(false); status(`loading ${[...T].sort().join(', ')}…`);
+      await Promise.all([...T].map(loadAreaData)); refresh(false);
+      await loadDocs([...T].flatMap((a) => index.areas[a]?.docs || []), false);
+      if (S.ctx) await syncContext();
+      if (S.ei) await syncEI();
+      colorAll(); fitArea(T.size === 1 ? [...T][0] : null);
+    } finally { done(); setBusy = null; }
+  }
   async function openArea(a, focus, add = true) {
-    if (!add) unloadOtherAreas(a);
+    if (!add) return setAreas([a]);
     showOverview(false); S.open.add(a); if (focus) { S.area = a; S.gsel = null; }
     status(`loading ${a} mapping…`); await loadAreaData(a); refresh(false);
     await loadDocs(index.areas[a]?.docs || [], false);
