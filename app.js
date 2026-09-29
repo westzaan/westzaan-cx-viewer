@@ -40,7 +40,7 @@
   const LN = Object.fromEntries(lines.map((l) => [l.line, l]));
   const ssLines = {}; for (const l of lines) for (const s of l.subsystems || []) (ssLines[s] ||= []).push(l);
   const linesOf = (s) => ssLines[s.ss] || [];
-  $('#meta').textContent = `Subsystems ${meta.subsystem_data_date || '?'} · spools wk ${meta.spool_week || '?'} · models v${index.modelset_version} · data built ${index.built}`;
+  $('#meta').textContent = `app ${window.CX_VERSION || '?'} · Subsystems ${meta.subsystem_data_date || '?'} · spools wk ${meta.spool_week || '?'} · models v${index.modelset_version} · data built ${index.built}`;
 
   // ------------------------------------------------------------------ state + URL
   const P = new URLSearchParams(location.search);
@@ -393,22 +393,32 @@
       }, () => { if (urn !== docKey) { console.warn('latest version not viewable, using mapped version', name); } failed++; done(); });
     });
   }
-  // context (architecture / structure): see-through glass-like material on every fragment, not pickable by hover.
-  // Works without the property database, and is re-applied when streaming geometry finishes.
-  let ghostMat = null;
-  function ghostModel(m) {
-    if (!ghostMat) {
-      ghostMat = new THREE.MeshPhongMaterial({ color: 0xaab4bf, opacity: 0.1, transparent: true, depthWrite: false, side: THREE.DoubleSide });
-      viewer.impl.matman().addMaterial('cx-context-ghost', ghostMat, true);
+  // context (architecture / structure): shown as the viewer's own ghost (see-through, not clickable).
+  // Ghosting needs the object tree, so context models load with their property database;
+  // if a tree is not available, a transparent material on every fragment is the fallback.
+  const ghostMats = {};
+  function ghostMaterial(m) {
+    const otg = !!(m.isOTG && m.isOTG()), k = otg ? 'otg' : 'svf';
+    if (!ghostMats[k]) {
+      const mat = new THREE.MeshPhongMaterial({ color: 0xaab4bf, opacity: 0.12, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+      if (otg) mat.packedNormals = true;
+      viewer.impl.matman().addMaterial('cx-context-ghost-' + k, mat, true); ghostMats[k] = mat;
     }
     const apply = () => { const fl = m.getFragmentList(); if (!fl) return; const n = fl.getCount ? fl.getCount() : 0;
-      for (let f = 0; f < n; f++) fl.setMaterial(f, ghostMat);
+      for (let f = 0; f < n; f++) fl.setMaterial(f, ghostMats[k]);
       viewer.impl.invalidate(true, true, true); };
     apply();
     if (!(m.isLoadDone && m.isLoadDone())) {
       const h = (e) => { if (e.model === m) { viewer.removeEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, h); apply(); } };
       viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT, h);
     }
+  }
+  function ghostModel(m) {
+    let done = false; const fallback = () => { if (!done) { done = true; console.info('[cx] context ghost via material', m._cxName); ghostMaterial(m); } };
+    const t = setTimeout(fallback, 60000);
+    if (!m.getObjectTree) { clearTimeout(t); fallback(); return; }
+    m.getObjectTree((tree) => { if (done) return; done = true; clearTimeout(t);
+      viewer.hide(tree.getRootId(), m); viewer.impl.invalidate(true, true, true); }, () => { clearTimeout(t); fallback(); });
   }
   // newer model version: translate mapped dbIds through the DWG handles (externalId)
   async function remap(docKey, m) {
@@ -448,7 +458,7 @@
   async function syncContext() {
     if (!S.ctx) { for (const [k, m] of Object.entries(ctxModels)) { viewer.unloadModel(m); delete ctxModels[k]; } return; }
     const areas = new Set([...S.open].flatMap((a) => CFG.contextAreas[a] || [a]));
-    await loadDocs([...areas].flatMap((a) => index.areas[a]?.context || []), true);
+    await loadDocs([...areas].flatMap((a) => index.areas[a]?.context || []), true, true);   // with properties: needed for ghosting
   }
 
   const eiModels = {};
