@@ -622,6 +622,27 @@
   // named viewpoints: views.json in the ACC data folder (from the "Views" sheet of Cx manual links.xlsx)
   let views = [];
   A.readDataFile('views.json').then((v) => { views = v || []; renderViews(); }).catch(() => {});
+  // ---------------------------------------------------------------- documents in ACC (docs.json: tag / line / P&ID -> files with ACC links)
+  const DOCS = { ready: false, byTag: {}, byLine: {}, byPid: {} };
+  A.readDataFile('docs.json').then((d) => { if (d) { Object.assign(DOCS, d, { ready: true }); if (S.sel && SS[S.sel]) showInfo(SS[S.sel]); } }).catch(() => {});
+  const KIND_TXT = { vendor: 'Vendor', pid: 'P&ID', iso: 'Isometric', mech: 'Mechanical', ei: 'E&I', csa: 'CSA', other: 'Other' };
+  // documents of a subsystem (+ the clicked element's line): equipment tag, P&ID, lines
+  function docsFor(s, o) {
+    if (!DOCS.ready) return [];
+    const out = [], seen = new Set(), add = (list, via) => { for (const d of list || []) if (!seen.has(d.u)) { seen.add(d.u); out.push({ ...d, via }); } };
+    const eq = s && ssEq[s.ss]; if (eq) add(DOCS.byTag[eq], eq);
+    if (o?.line) add(DOCS.byLine[o.line], o.line);
+    if (s?.pid) for (const [k, v] of Object.entries(DOCS.byPid)) if (String(s.pid).includes(k) || k.includes(String(s.pid))) add(v, k);
+    if (s) for (const l of linesOf(s).slice(0, 30)) add(DOCS.byLine[l.line], l.line);
+    return out;
+  }
+  function docRows(list, max = 40) {
+    const groups = {}; for (const d of list) (groups[d.k] ||= []).push(d);
+    const order = ['pid', 'vendor', 'mech', 'iso', 'ei', 'csa', 'other'];
+    return order.filter((k) => groups[k]).map((k) => `<div class="meta" style="margin-top:6px"><b>${KIND_TXT[k]}</b> · ${groups[k].length}</div>` +
+      groups[k].slice(0, max).map((d) => `<div class="pr"><span class="pb pb0">${esc(d.d ? d.d.slice(0, 7) : '')}</span><div><a href="${d.u}" target="_blank" rel="noopener">${esc(d.n)}</a> <span class="meta">${esc(d.f)}</span></div></div>`).join('') +
+      (groups[k].length > max ? `<div class="meta">… +${groups[k].length - max} more</div>` : '')).join('');
+  }
   function renderViews() {
     const el = $('#views'); if (!el) return;
     const areaViews = [...S.open].sort().flatMap((a) => [{ name: `Area ${a} – 3D overview`, area: a, mode: 'iso' }, { name: `Area ${a} – top view`, area: a, mode: 'top' }]);
@@ -738,6 +759,7 @@
           ${S.mode === 'ready' ? (() => { const r = readiness(o); return `<div class="hrow"><span class="pb" style="background:${rgb(RDY[r.k])}">${r.k}</span><span class="meta">${esc(r.why.join(' · '))}</span></div>`; })() : ''}
           ${S.mode === 'cleared' && elemCleared(o) ? `<div class="hrow" style="color:#27f273">✓ ${elemCleared(o)} punches cleared in last ${S.cd} days</div>` : ''}
           ${top.map((p) => `<div class="hp"><span class="pb pb${p.s}">${p.s}</span>${esc(p.d.slice(0, 70))} <span class="meta">→ ${esc(p.by || '')}</span></div>`).join('')}` : ''}
+          ${DOCS.ready ? (() => { const n = docsFor(s, o).length; return n ? `<div class="hrow"><span class="meta">documents</span><b>${n}</b> in ACC</div>` : ''; })() : ''}
           <div class="meta" style="margin-top:3px">click for details</div>`;
       }
       const vw = $('#viewer').clientWidth; card.style.display = 'block';
@@ -794,7 +816,8 @@
       ${QC.ready && extra.o && elemQcr(extra.o) ? (() => { const e = elemQcr(extra.o); return `<h3>QCR sheets on this element: ${e[1]}/${e[0]} checked</h3>` + e[2].map((q) => `<div class="pr"><span class="pb pb0">${esc(q[2] || '')}</span><div>${esc(q[0])} <span class="meta">${esc(q[1])}</span></div></div>`).join(''); })() : ''}
       ${QC.ready && QC.bySs[s.ss] ? `<h3>QCR of ${esc(s.ss)} by object type</h3><div class="meta">${Object.entries(QC.bySs[s.ss]).map(([t, v]) => `${esc(t)} ${v[1]}/${v[0]}`).join(' · ')}</div>` : ''}
       ${extra.elemP ? `<h3>Punches on this element <small class="meta">${esc(extra.elemKey || '')}</small></h3>${pRows(extra.elemP) || '<div class="meta">none open</div>'}` : ''}
-      ${PU.ready ? `<h3>All open punches of ${esc(s.ss)}</h3>${pRows(PU.bySs[s.ss] || [], extra.elemP ? 15 : 60) || '<div class="meta">none open</div>'}` : ''}`;
+      ${PU.ready ? `<h3>All open punches of ${esc(s.ss)}</h3>${pRows(PU.bySs[s.ss] || [], extra.elemP ? 15 : 60) || '<div class="meta">none open</div>'}` : ''}
+      ${DOCS.ready ? (() => { const dl = docsFor(s, extra.o); return `<h3>Documents in ACC <small class="meta">${dl.length}${ssEq[s.ss] ? ' · ' + esc(ssEq[s.ss]) : ''}</small></h3>${docRows(dl) || '<div class="meta">none found by tag, line or P&amp;ID</div>'}`; })() : ''}`;
     $('#infox').onclick = (e) => { e.preventDefault(); if (S.sel) selectSubsystem(S.sel); else $('#info').style.display = 'none'; };
   }
   viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT, (ev) => {
