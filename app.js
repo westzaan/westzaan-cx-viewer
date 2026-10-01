@@ -893,4 +893,5 @@
   } else { showOverview(true); status('pick an area'); }
   if (S.cam) { applyCam(S.cam); S.cam = ''; }
   window.__cxUp = true; if (PU.ready) { renderPunchFacets(); refresh(false); if (S.mode === 'punch') colorAll(); }
+  if (EQ_RE.test(S.q || '')) findEquipment(S.q);   // deep link: ?q=20D-XP2601 opens the area and isolates that element
 })();
