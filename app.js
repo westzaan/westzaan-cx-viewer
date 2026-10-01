@@ -1,4 +1,4 @@
-/* Westzaan Cx Viewer v5 — ACC-native: Autodesk login, data + models straight from ACC, nothing on a server.
+/* Westzaan Asset Thread (formerly Cx Viewer) v5 — ACC-native: Autodesk login, data + models straight from ACC, nothing on a server.
    Data set (published weekly into ACC › Internal Check › Cx Viewer data):
      index.json            areas → models, KPIs (small, loads first)
      subsystems.json       status per subsystem (Subsystems Master, Data Hub)
@@ -329,7 +329,43 @@
   });
   for (const k of Object.keys(S.f)) $('#f_' + k).addEventListener('change', (e) => { S.f[k] = e.target.value; S.gsel = null; refresh(true); });
   $('#group').value = S.group; $('#group').onchange = (e) => { S.group = e.target.value; S.gsel = null; collapsed.clear(); refresh(false); };
-  $('#q').value = S.q; $('#q').addEventListener('input', (e) => { S.q = e.target.value; refresh(true); });
+  $('#q').value = S.q; $('#q').addEventListener('input', (e) => { S.q = e.target.value; refresh(true); clearTimeout(eqTimer); eqTimer = setTimeout(() => findEquipment(S.q), 500); });
+  // ---- equipment search: an exact equipment tag (e.g. 20D-XP2601) isolates that one model element
+  let eqTimer = null, eqRun = 0;
+  const EQ_RE = /^\s*(\d{2}[A-Z])\s*-?\s*([A-Z]{1,4})\s*-?\s*(\d{3,5}[A-Z]?)\s*$/i;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const searchModel = (m, tag) => new Promise((res) => {
+    try { m.search(tag, (ids) => res(ids || []), () => res(null), ['Tag'], { searchHidden: true }); } catch { res(null); }
+  });
+  const exactTag = (m, ids, tag) => new Promise((res) => {
+    if (!ids.length) return res([]);
+    m.getBulkProperties(ids, { propFilter: ['Tag'] }, (r) => res(r.filter((x) => (x.properties || []).some((p) => String(p.displayValue).toUpperCase() === tag)).map((x) => x.dbId)), () => res([]));
+  });
+  async function findEquipment(q) {
+    const mm = EQ_RE.exec(q || ''); if (!mm) return;
+    const run = ++eqRun, tag = `${mm[1]}-${mm[2]}${mm[3]}`.toUpperCase(), area = mm[1].toUpperCase();
+    if (!S.open.has(area) && index.areas[area]) { status(`opening ${area} to find ${tag}…`); await setAreas([area]); S.q = q; $('#q').value = q; refresh(false); }
+    if (run !== eqRun) return;
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const hits = []; let pending = false;
+      for (const [k, m] of Object.entries(models)) {
+        const ids = await searchModel(m, tag); if (ids === null) { pending = true; continue; }
+        const ex = await exactTag(m, ids, tag); if (ex.length) hits.push({ k, m, ids: ex });
+      }
+      if (run !== eqRun) return;
+      if (hits.length) {
+        for (const [k, m] of Object.entries(models)) { const h = hits.find((x) => x.k === k); if (h) viewer.isolate(h.ids, m); else { viewer.isolate([], m); viewer.hide(m.getRootId(), m); } }
+        viewer.fitToView(hits.map((h) => ({ model: h.m, selection: h.ids })));
+        const h = hits[0]; viewer.select(h.ids, h.m);
+        const n = hits.reduce((a, x) => a + x.ids.length, 0);
+        status(`${tag}: ${n} model element${n > 1 ? 's' : ''} · clear the search to go back`);
+        return;
+      }
+      if (!pending && attempt > 2) break;
+      await sleep(1500);
+    }
+    if (run === eqRun) status(`${tag}: no model element carries this tag in the open areas`);
+  }
   $('#inm').checked = S.inm; $('#inm').onchange = (e) => { S.inm = e.target.checked; refresh(false); };
   $('#lbl').checked = S.lbl; $('#lbl').onchange = (e) => { S.lbl = e.target.checked; pushUrl(); updateLabels(); };
   $('#ctx').checked = S.ctx; $('#ctx').onchange = (e) => { S.ctx = e.target.checked; pushUrl(); syncContext(); };
