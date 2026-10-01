@@ -80,6 +80,15 @@
   function bestSS(o) { let b = null; for (const id of o.ss) { const s = SS[id]; if (!s) continue;
     if (!b || PH_ORDER.indexOf(s.phase) > PH_ORDER.indexOf(b.phase) || (s.phase === b.phase && (s.qcr_pct ?? 1) < (b.qcr_pct ?? 1))) b = s; } return b; }
   const ready = (pct, ph) => ph && ph !== 'none' ? C[ph] : pct == null ? C.grey : pct >= 1 ? C.green : pct >= 0.75 ? C.yellow : pct >= 0.25 ? C.orange : C.red;
+  // ---------------------------------------------------------------- as-built isometrics (asbuilt.json: line -> Bilfinger isometrics in ACC, AS-BUILT stamp checked)
+  const ASB = { ready: false, byLine: {}, date: '', src: '' };
+  A.readDataFile('asbuilt.json').then((d) => { if (!d) return; Object.assign(ASB, d, { ready: true });
+    if (window.__cxUp) { refresh(false); if (S.mode === 'asbuilt') colorAll(); if (S.sel && SS[S.sel]) showInfo(SS[S.sel]); } }).catch(() => {});
+  const asbLatest = (l) => (ASB.byLine[l] || []).filter((x) => x.latest);
+  function asbLine(l) { const v = asbLatest(l); if (!v.length) return 'none'; const n = v.filter((x) => x.st).length; return n === v.length ? 'stamped' : n ? 'partial' : 'iso'; }
+  function ssAsb(s) { const ls = linesOf(s); let st = 0, any = 0; for (const l of ls) { const k = asbLine(l.line); if (k === 'stamped') st++; if (k !== 'none') any++; } return [ls.length, any, st]; }
+  const ASB_C = { stamped: [0.30, 0.72, 0.35], partial: [0.95, 0.55, 0.15], iso: [0.93, 0.83, 0.20], none: [0.86, 0.22, 0.20] };
+  function ssAsbColor(s) { if (!ASB.ready || !s) return null; const [n, a, st] = ssAsb(s); if (!n) return null; return st === n ? ASB_C.stamped : a === n ? ASB_C.iso : a ? ASB_C.partial : ASB_C.none; }
   const MODES = {
     mc: { legend: [['QCR <25%', C.red], ['25–74%', C.orange], ['75–99%', C.yellow], ['QCR 100%', C.green], ['MC', C.mc], ['Pre-Cx', C.pcx], ['Cold Cx', C.ccx], ['Hot Cx', C.hcx], ['no data', C.grey]],
       color: (o) => { const s = bestSS(o); if (s) return ready(s.qcr_pct, s.phase); const l = LN[o.line]; return l ? ready(l.qcr_pct, null) : null; },
@@ -100,6 +109,10 @@
       value: (s) => { const q = QC.ready ? ssQcr(s.ss) : null; return q ? `${q[1]}/${q[0]}` : '–'; } },
     ready: { legend: [['MC or beyond', C.mc], ['ready for MC', C.green], ['minor: B/C punches or QCR <100%', C.orange], ['blocked: A-punch, spools or QCR <75%', C.red], ['no data', SILVER]],
       color: (o) => RDY[readiness(o).k] || null, value: (s) => ssReadiness(s) },
+    asbuilt: { legend: [['as-built ISO, stamp found', ASB_C.stamped], ['ISO in ACC, no stamp found', ASB_C.iso], ['subsystem: some lines covered', ASB_C.partial], ['no ISO in ACC', ASB_C.none], ['equipment / no line data', SILVER]],
+      color: (o) => { if (!ASB.ready) return null; if (o.line && LN[o.line]) return ASB_C[asbLine(o.line)]; return null; },
+      ssColor: (s) => ssAsbColor(s),
+      value: (s) => { if (!ASB.ready) return '…'; const [n, a, st] = ssAsb(s); return n ? `${st}/${n}` : '–'; } },
     sprint: { legend: () => [...new Set(listScope().flatMap((s) => s.sprints || []))].sort().map((n) => [n, sprintColor(n)]),
       color: (o) => { const n = bestSS(o)?.sprints?.[0]; return n ? sprintColor(n) : null; }, value: (s) => (s.sprints?.[0] || '–').replace(/^.*Sprint\s*(\w+).*$/i, 'S$1') },
   };
@@ -192,12 +205,17 @@
   };
   function renderPunchFacets() {
     const el = $('#pfacets'); if (!el) return;
-    const on = ['punch', 'cleared', 'qcr', 'ready'].includes(S.mode); el.style.display = on ? 'grid' : 'none'; if (!on) return;
+    const on = ['punch', 'cleared', 'qcr', 'ready', 'asbuilt'].includes(S.mode); el.style.display = on ? 'grid' : 'none'; if (!on) return;
     if (S.mode === 'cleared') {
       const scope = new Set(listScope().map((s) => s.ss)); const n = Object.entries(ssClr).filter(([k]) => scope.has(k)).reduce((a, [, v]) => a + v, 0);
       el.innerHTML = `<label>Cleared within<select id="cdw">${[7, 14, 35].map((d) => `<option ${d === S.cd ? 'selected' : ''} value="${d}">last ${d} days</option>`).join('')}</select></label>
         <label>&nbsp;<span class="meta" style="padding-top:5px"><b style="color:#27f273">${n}</b> punches cleared in this selection · Co-Consol ${esc(PU.date)}</span></label>`;
       $('#cdw').onchange = (e) => { S.cd = +e.target.value; recomputeCleared(); refresh(false); colorAll(); }; return;
+    }
+    if (S.mode === 'asbuilt') {
+      if (!ASB.ready) { el.innerHTML = `<label style="grid-column:1/3"><span class="meta">As-built data not loaded (asbuilt.json missing in the ACC data folder).</span></label>`; return; }
+      const rows = listScope(); let n = 0, a = 0, st = 0, full = 0, none = 0; for (const s of rows) { const x = ssAsb(s); n += x[0]; a += x[1]; st += x[2]; if (x[0] && x[2] === x[0]) full++; if (x[0] && !x[1]) none++; }
+      el.innerHTML = `<label style="grid-column:1/3"><span class="meta">Lines in this selection: <b>${st}/${n}</b> with stamped as-built ISO · ${a} with an ISO in ACC · subsystems fully as-built <b>${full}</b> · without any ISO ${none}. Source: ${esc(ASB.src || 'Bilfinger isometrics')} · ${esc(ASB.date)}</span></label>`; return;
     }
     if (S.mode === 'qcr') {
       const rows = listScope(); let a = 0, b = 0; for (const s of rows) { const q = ssQcr(s.ss); if (q) { a += q[0]; b += q[1]; } }
@@ -308,7 +326,7 @@
     const rows = filtered().sort((x, y) => (x.area || '').localeCompare(y.area || '') || (x.tag || '').localeCompare(y.tag || ''));
     const M = MODES[S.mode];
     $('#counts').textContent = `${rows.length} subsystems · ${rows.filter((s) => inModel(s)).length} linked to model · ${rows.filter((s) => s.phase !== 'none').length} MC or beyond · ${PU.ready ? (() => { const c = { A: 0, B: 0, C: 0 }; for (const s of rows) { const x = pCount(PU.bySs[s.ss] || []); c.A += x.A; c.B += x.B; c.C += x.C; } return `open punches A ${c.A} · B ${c.B} · C ${c.C}`; })() : rows.reduce((a, s) => a + (s.punch_a_open || 0), 0) + ' Punch-A open'}`;
-    const item = (s) => { const c = M.color({ ss: new Set([s.ss]), line: linesOf(s)[0]?.line }) || C.grey;
+    const item = (s) => { const c = (M.ssColor ? M.ssColor(s) : M.color({ ss: new Set([s.ss]), line: linesOf(s)[0]?.line })) || C.grey;
       return `<div class="ss ${inModel(s) === false ? 'dim' : ''} ${S.sel === s.ss ? 'sel' : ''}" data-ss="${s.ss}"><div class="dot" style="background:${rgb(c)}"></div>
         <div><div class="t">${esc(s.tag || s.ss)}</div><div class="d">${s.ss} · ${esc(s.desc || '')}${s.sprints?.length ? ' · ' + esc(s.sprints[0]) : ''}</div></div>
         <div class="v"><b>${M.value(s)}</b><br>${s.punch_a_open ? s.punch_a_open + ' A' : ''}${s.punch_b_open ? ' · ' + s.punch_b_open + ' B' : ''}</div></div>`; };
@@ -672,6 +690,16 @@
     if (s) for (const l of linesOf(s).slice(0, 30)) add(DOCS.byLine[l.line], l.line);
     return out;
   }
+  function asbSection(s, extra) {
+    const ls = linesOf(s), [n, a, st] = ssAsb(s), first = extra?.o?.line;
+    const order = [...new Set([first, ...ls.map((l) => l.line)].filter(Boolean))];
+    const row = (x) => `<div class="pr"><span class="pb" style="background:${rgb(x.st ? ASB_C.stamped : ASB_C.iso)};color:#000">${esc(x.rev || '')}</span><div><a href="${x.u}" target="_blank" rel="noopener">${esc(x.n)}</a> <span class="meta">${x.st ? 'AS-BUILT stamp' : 'no stamp found'} · ${esc((x.d || '').slice(0, 10))}</span></div></div>`;
+    const withIso = order.filter((l) => asbLatest(l).length), missing = order.filter((l) => !asbLatest(l).length);
+    return `<h3>As-built isometrics <small class="meta">${st}/${n} lines stamped · ${a}/${n} with ISO</small></h3>` +
+      withIso.slice(0, 25).map((l) => `<div class="meta" style="margin-top:4px"><b>${esc(l)}</b>${l === first ? ' · clicked line' : ''}</div>` + asbLatest(l).map(row).join('')).join('') +
+      (withIso.length > 25 ? `<div class="meta">… +${withIso.length - 25} more lines</div>` : '') +
+      (missing.length ? `<div class="meta" style="margin-top:4px;color:${rgb(ASB_C.none)}">No ISO in ACC: ${missing.slice(0, 20).map(esc).join(', ')}${missing.length > 20 ? ' …' : ''}</div>` : '');
+  }
   function docRows(list, max = 40) {
     const groups = {}; for (const d of list) (groups[d.k] ||= []).push(d);
     const order = ['pid', 'vendor', 'mech', 'iso', 'ei', 'csa', 'other'];
@@ -751,7 +779,7 @@
         const box = new THREE.Box3(), fb = new THREE.Box3();
         for (const id of ids) it.enumNodeFragments(id, (f) => { fl.getWorldBounds(f, fb); box.union(fb); }, true);
         if (box.isEmpty()) continue;
-        const c = MODES[S.mode].color({ ss: new Set([ss]), line: null }) || C.grey;
+        const c = (MODES[S.mode].ssColor ? MODES[S.mode].ssColor(SS[ss]) : MODES[S.mode].color({ ss: new Set([ss]), line: null })) || C.grey;
         labelPts.push({ p: new THREE.Vector3((box.min.x + box.max.x) / 2, (box.min.y + box.max.y) / 2, box.max.z), t: s.eq, c, ss });
         seen.add(ss); if (labelPts.length >= 120) break;
       }
@@ -853,6 +881,7 @@
       ${QC.ready && QC.bySs[s.ss] ? `<h3>QCR of ${esc(s.ss)} by object type</h3><div class="meta">${Object.entries(QC.bySs[s.ss]).map(([t, v]) => `${esc(t)} ${v[1]}/${v[0]}`).join(' · ')}</div>` : ''}
       ${extra.elemP ? `<h3>Punches on this element <small class="meta">${esc(extra.elemKey || '')}</small></h3>${pRows(extra.elemP) || '<div class="meta">none open</div>'}` : ''}
       ${PU.ready ? `<h3>All open punches of ${esc(s.ss)}</h3>${pRows(PU.bySs[s.ss] || [], extra.elemP ? 15 : 60) || '<div class="meta">none open</div>'}` : ''}
+      ${ASB.ready ? asbSection(s, extra) : ''}
       ${DOCS.ready ? (() => { const dl = docsFor(s, extra.o); return `<h3>Documents in ACC <small class="meta">${dl.length}${ssEq[s.ss] ? ' · ' + esc(ssEq[s.ss]) : ''}</small></h3>${docRows(dl) || '<div class="meta">none found by tag, line or P&amp;ID</div>'}`; })() : ''}`;
     $('#infox').onclick = (e) => { e.preventDefault(); if (S.sel) selectSubsystem(S.sel); else $('#info').style.display = 'none'; };
   }
