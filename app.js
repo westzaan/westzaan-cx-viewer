@@ -82,7 +82,7 @@
   const ready = (pct, ph) => ph && ph !== 'none' ? C[ph] : pct == null ? C.grey : pct >= 1 ? C.green : pct >= 0.75 ? C.yellow : pct >= 0.25 ? C.orange : C.red;
   // ---------------------------------------------------------------- as-built isometrics (asbuilt.json: line -> Bilfinger isometrics in ACC, AS-BUILT stamp checked)
   const ASB = { ready: false, byLine: {}, date: '', src: '' };
-  A.readDataFile('asbuilt.json').then((d) => { if (!d) return; Object.assign(ASB, d, { ready: true });
+  A.readDataFile('asbuilt.json').then((d) => { if (!d) return; Object.assign(ASB, d, { ready: true }); ppRefresh();
     if (window.__cxUp) { refresh(false); if (S.mode === 'asbuilt') colorAll(); if (S.sel && SS[S.sel]) showInfo(SS[S.sel]); } }).catch(() => {});
   const asbLatest = (l) => (ASB.byLine[l] || []).filter((x) => x.latest);
   function asbLine(l) { const v = asbLatest(l); if (!v.length) return 'none'; const n = v.filter((x) => x.st).length; return n === v.length ? 'stamped' : n ? 'partial' : 'iso'; }
@@ -140,7 +140,7 @@
   const punchReady = A.readDataFile('punches.json').then((j) => {
     if (!j) return; PU.date = j.data_date; PU.all = j.punches;
     for (const p of j.punches) { (PU.bySs[p.ss] ||= []).push(p); if (p.l) (PU.byLine[p.l] ||= []).push(p); if (p.e) (PU.byEq[p.e] ||= []).push(p); }
-    PU.ready = true; recomputePunch(); recomputeCleared(); if (window.__cxUp) { renderPunchFacets(); refresh(false); if (S.mode === 'punch') colorAll(); }
+    PU.ready = true; recomputePunch(); recomputeCleared(); ppRefresh(); if (window.__cxUp) { renderPunchFacets(); refresh(false); if (S.mode === 'punch') colorAll(); }
   }).catch((e) => console.warn('no punches', e));
   const pOk = (p) => p.o && (!S.pf.cls || p.s === S.pf.cls) && (!S.pf.by || p.by === S.pf.by) && (!S.pf.di || p.di === S.pf.di);
   const pFilterOn = () => !!(S.pf.cls || S.pf.by || S.pf.di);
@@ -163,7 +163,7 @@
   const elemCleared = (o) => o.line ? (lineClr[o.line] || 0) : [...o.ss].reduce((a, x) => a + (eqClr[ssEq[x]] || 0), 0);
   // QCR sheets (qcr.json): per element key and per subsystem/type
   const QC = { ready: false, byKey: {}, bySs: {} };
-  const qcrReady = A.readDataFile('qcr.json').then((j) => { if (!j) return; QC.byKey = j.byKey; QC.bySs = j.bySs; QC.ready = true;
+  const qcrReady = A.readDataFile('qcr.json').then((j) => { if (!j) return; QC.byKey = j.byKey; QC.bySs = j.bySs; QC.ready = true; ppRefresh();
     if (window.__cxUp) { refresh(false); if (S.mode === 'qcr' || S.mode === 'ready') colorAll(); } }).catch(() => {});
   const elemQcr = (o) => { if (!o) return null; if (o.line) return QC.byKey[o.line] || null; for (const x of o.ss) { const e = QC.byKey[ssEq[x]]; if (e) return e; } return null; };
   const qBand = (e) => { if (!e || !e[0]) return null; const r = e[1] / e[0]; return r >= 1 ? C.green : r >= 0.75 ? C.yellow : r >= 0.25 ? C.orange : C.red; };
@@ -678,7 +678,7 @@
   A.readDataFile('views.json').then((v) => { views = v || []; renderViews(); }).catch(() => {});
   // ---------------------------------------------------------------- documents in ACC (docs.json: tag / line / P&ID -> files with ACC links)
   const DOCS = { ready: false, byTag: {}, byLine: {}, byPid: {} };
-  A.readDataFile('docs.json').then((d) => { if (d) { Object.assign(DOCS, d, { ready: true }); if (S.sel && SS[S.sel]) showInfo(SS[S.sel]); } }).catch(() => {});
+  A.readDataFile('docs.json').then((d) => { if (d) { Object.assign(DOCS, d, { ready: true }); if (S.sel && SS[S.sel]) showInfo(SS[S.sel]); ppRefresh(); } }).catch(() => {});
   const KIND_TXT = { vendor: 'Vendor', pid: 'P&ID', iso: 'Isometric', mech: 'Mechanical', ei: 'E&I', csa: 'CSA', other: 'Other' };
   // documents of a subsystem (+ the clicked element's line): equipment tag, P&ID, lines
   function docsFor(s, o) {
@@ -699,6 +699,90 @@
       withIso.slice(0, 25).map((l) => `<div class="meta" style="margin-top:4px"><b>${esc(l)}</b>${l === first ? ' · clicked line' : ''}</div>` + asbLatest(l).map(row).join('')).join('') +
       (withIso.length > 25 ? `<div class="meta">… +${withIso.length - 25} more lines</div>` : '') +
       (missing.length ? `<div class="meta" style="margin-top:4px;color:${rgb(ASB_C.none)}">No ISO in ACC: ${missing.slice(0, 20).map(esc).join(', ')}${missing.length > 20 ? ' …' : ''}</div>` : '');
+  }
+  // ---------------------------------------------------------------- ASSET PASSPORT: one page per equipment tag (click in 3D, search, or ?p=TAG from a QR label)
+  const ASSETS = { ready: false, byTag: {}, date: '', pid: '' };
+  A.readDataFile('assets.json').then((d) => { if (!d) return; Object.assign(ASSETS, d, { ready: true }); if (PP.tag) openPassport(PP.tag, PP.ctx); }).catch(() => {});
+  const PP = { tag: null, ctx: {}, skip: null };
+  function ppRefresh() { try { if (PP.tag && $('#passport')?.style.display === 'flex') openPassport(PP.tag, PP.ctx); } catch (e) { } }
+  const tagSS = {}; for (const [ss, t] of Object.entries(ssEq)) (tagSS[t] ||= []).push(ss);
+  const normTag = (q) => { const m = EQ_RE.exec(q || ''); return m ? `${m[1]}-${m[2]}${m[3]}`.toUpperCase() : null; };
+  const ppUrl = (tag) => location.origin + location.pathname + '?p=' + encodeURIComponent(tag);
+  const TODO = (who) => `<span class="pp-todo">to be added${who ? ' · ' + esc(who) : ''}</span>`;
+  const kv = (k, v) => `<span class="k">${esc(k)}</span><span class="v">${v == null || v === '' ? TODO() : v}</span>`;
+  const fmtD = (d) => d ? esc(String(d).slice(0, 10)) : '';
+  function ppBlock(title, src, body, cls = '') { return `<section class="pp-card ${cls}"><div class="pp-ch"><b>${title}</b><span>${src}</span></div>${body}</section>`; }
+  function openPassport(tag, ctx = {}) {
+    tag = (tag || '').toUpperCase(); if (!tag) return; PP.tag = tag; PP.ctx = ctx;
+    const el = $('#passport'); el.style.display = 'flex'; document.body.classList.add('pp-open');
+    const asset = ASSETS.byTag[tag]?.[0]; const ssl = tagSS[tag] || []; const s = SS[ssl[0]] || null;
+    const area = tag.slice(0, 3); const docs = DOCS.byTag?.[tag] || []; const pidDocs = s?.pid ? Object.entries(DOCS.byPid || {}).filter(([k]) => String(s.pid).includes(k) || k.includes(String(s.pid))).flatMap(([, v]) => v) : [];
+    const q = QC.ready ? QC.byKey[tag] : null; const eqP = PU.ready ? (PU.byEq[tag] || []).filter((p) => p.o) : []; const ssP = s && PU.ready ? (PU.bySs[s.ss] || []).filter((p) => p.o) : [];
+    const ab = eqP.filter((p) => p.s === 'A' || p.s === 'B').length; const asb = s && ASB.ready ? ssAsb(s) : null;
+    const checks = [
+      ['Model element linked', ctx.o ? true : s && inModel(s) ? true : null, ctx.o ? 'clicked in 3D' : s && inModel(s) ? 'subsystem in model' : 'open in 3D to check'],
+      ['Vendor documents', docs.length ? true : false, docs.length ? `${docs.length} in ACC` : 'none found by tag'],
+      ['No open A/B punches', PU.ready ? ab === 0 : null, PU.ready ? `${eqP.length} open on this tag` : 'loading'],
+      ['Quality checks complete', q ? q[1] >= q[0] : null, q ? `${q[1]} of ${q[0]}` : 'no QCR sheet found'],
+      ['Mechanical completion', s?.actual?.mc ? true : false, s?.actual?.mc ? fmtD(s.actual.mc) : 'not recorded'],
+      ['As-built ISOs stamped', asb && asb[0] ? asb[2] === asb[0] : null, asb && asb[0] ? `${asb[2]} of ${asb[0]} lines` : 'no line data'],
+    ];
+    const ok = checks.filter((c) => c[1] === true).length;
+    const ico = (v) => v === true ? '<i class="ok">✓</i>' : v === false ? '<i class="no">!</i>' : '<i class="na">?</i>';
+    const phase = s ? (s.phase !== 'none' ? PHASE_TXT[s.phase] : 'Installed · MC pending') : 'status unknown';
+    const docName = (n) => String(n || '').replace(/\.pdf$/i, '').replace(new RegExp('^' + tag.slice(0, 3) + '(-\\d{2})?-' + tag.slice(4) + '[\\s_-]*', 'i'), '').trim() || n;
+    const docRow = (d) => `<li><span class="pdf">PDF</span><a href="${d.u}" target="_blank" rel="noopener" title="${esc(d.n)}">${esc(docName(d.n))}</a></li>`;
+    const buildUrl = ASSETS.pid ? `https://acc.autodesk.eu/build/assets/projects/${ASSETS.pid}` : '#';
+    el.innerHTML = `<div class="pp">
+      <div class="pp-bar"><span class="dot"></span><b>Asset passport</b><span class="crumb">Westzaan / ${esc(area)} / ${esc(tag)}</span>
+        <span class="sp"></span><button class="btn" id="pp3d">◳ Show in 3D</button><button class="btn" id="pplink">Copy link</button><button class="btn" id="ppprint">Print</button><button class="btn ibtn" id="ppx" title="Close">✕</button></div>
+      <div class="pp-scroll">
+      <div class="pp-head">
+        <div class="pp-qr" id="ppqr" title="Scan to open this passport"></div>
+        <div class="pp-id"><div class="kick">ASSET PASSPORT</div><div class="tag">${esc(tag)}</div>
+          <div class="desc">${esc(asset?.desc || s?.desc || '')}${asset?.comment ? ' · ' + esc(asset.comment) : ''}</div>
+          <div class="chips"><span class="chip ${s ? 'st' : ''}">${esc(phase)}</span>${asset?.cat ? `<span class="chip">${esc(asset.cat)}</span>` : ''}<span class="chip">Area ${esc(area)}</span>${s ? `<span class="chip">Subsystem ${esc(s.ss)}</span>` : ''}${s?.pid ? `<span class="chip">P&amp;ID ${esc(s.pid)}</span>` : ''}</div></div>
+      </div>
+      <div class="pp-ready"><b>Ready for handover: ${ok} of ${checks.length}</b>${checks.map((c) => `<span title="${esc(c[2])}">${ico(c[1])}${esc(c[0])} <em>${esc(c[2])}</em></span>`).join('')}</div>
+      <div class="pp-grid">
+        ${ppBlock('Asset &amp; purchase', 'Build Assets · procurement register', asset ? `<div class="kv">${kv('Vendor / package', esc([asset.vendor, asset.pkg].filter(Boolean).join(' · ')))}${kv('Package name', esc(asset.pkgName || ''))}${kv('Purchase order', esc(asset.po || ''))}${kv('Made in', esc(asset.origin || ''))}${kv('Status', esc(asset.mfg || ''))}${kv('At site', fmtD(asset.atSite))}${kv('GRN · MRN', esc([asset.grn, asset.mrn].filter(Boolean).join(' · ')))}${kv('Delivered to', esc(asset.deliveredTo || ''))}</div><a class="pp-link" href="${buildUrl}" target="_blank" rel="noopener">Open Build Assets ↗</a>` : `<div class="pp-empty">Not found in the Build Assets register under this tag. ${TODO('Procurement')}</div>`)}
+        ${ppBlock('Where it is', 'as-built model · linked by tag (IDS §8.13)', `<div class="pp-3d"><div class="ph3d"><svg viewBox="0 0 120 70"><path d="M20 50 L60 30 L100 50 L60 68 Z" fill="#7aa52a"/><circle cx="48" cy="38" r="10" fill="#c6f432"/><rect x="62" y="34" width="26" height="12" rx="6" fill="#b5e32c"/></svg><span>3D preview · placeholder</span></div><button class="btn on" id="pp3d2">Show this element in 3D</button></div><div class="kv">${kv('P&ID', esc(s?.pid || ''))}${kv('Location', esc(area))}${kv('Lines', s ? esc(linesOf(s).map((l) => l.line).join(', ')) || '–' : '')}${ctx.model ? kv('Model', esc(ctx.model)) : ''}</div>`)}
+        ${ppBlock('Commissioning', 'Co-Consol · Primavera P6', s ? `<div class="kv">${kv('Subsystem', esc(s.ss + ' · ' + (s.tag || '')))}${kv('Phase', esc(phase))}${kv('MC planned (P6)', fmtD(s.p6?.mc_date))}${kv('Cold Cx planned', fmtD(s.p6?.ccx_date))}${kv('MC actual', s.actual?.mc ? fmtD(s.actual.mc) : 'not recorded')}</div>
+            <div class="sec">QUALITY CHECKS ${q ? `· ${q[1]} OF ${q[0]}` : ''}</div>${q ? `<div class="prog"><i style="width:${Math.round(100 * q[1] / Math.max(1, q[0]))}%"></i></div><ul>${(q[2] || []).map((x) => `<li><span class="pill o">open</span>${esc(x[1] || x[0])}</li>`).join('') || '<li class="meta">all checked</li>'}</ul>` : `<div class="meta">${QC.ready ? 'no QCR sheet on this tag' : 'loading…'}</div>`}
+            <div class="sec">PUNCHES · ${eqP.length} OPEN ON THIS TAG${ssP.length ? ` · ${ssP.length} ON THE SUBSYSTEM` : ''}</div><ul>${eqP.slice(0, 6).map((p) => `<li><span class="pill s${p.s}">${esc(p.s)}</span>${esc(p.n)} · ${esc(p.d)}</li>`).join('') || '<li class="meta">none open</li>'}</ul>`
+            : `<div class="pp-empty">No commissioning subsystem found for this tag. ${TODO('Cx team')}</div>`)}
+        <div class="pp-col">
+          ${ppBlock(`Documents · ${docs.length}`, 'ACC Docs · vendor documents', docs.length ? `<ul class="docs">${docs.slice(0, 8).map(docRow).join('')}</ul>${docs.length > 8 ? `<div class="meta">+ ${docs.length - 8} more · <a href="#" id="ppmore">show all</a></div>` : ''}` : `<div class="pp-empty">No vendor documents found by tag. ${TODO('Doc control')}</div>`)}
+          ${ppBlock('As-built isometrics', 'Bilfinger · FP067', asb && asb[0] ? `<div class="meta" style="margin-bottom:4px">${asb[2]} of ${asb[0]} subsystem lines stamped AS-BUILT</div><ul class="docs">${linesOf(s).flatMap((l) => asbLatest(l.line).map((x) => `<li><span class="pill ${x.st ? 'g' : 'y'}">${esc(x.rev)}</span><a href="${x.u}" target="_blank" rel="noopener">${esc(l.line)}${x.sheet ? ' · sheet ' + esc(x.sheet) : ''}</a> <span class="meta">${x.st ? 'stamped' : 'no stamp'}</span></li>`)).slice(0, 8).join('') || '<li class="meta">no ISO in ACC</li>'}</ul>` : `<div class="pp-empty">${ASB.ready ? 'No line data for this subsystem.' : 'As-built data loads for 20B and 20D.'}</div>`)}
+          ${ppBlock('Operations', 'SAP PM · after takeover', `<div class="kv">${kv('Equipment no.', TODO('at takeover'))}${kv('Maintenance plan', TODO('operations'))}${kv('Warranty', TODO('starts at handover'))}${kv('Spare parts', TODO('vendor / operations'))}</div>`, 'fut')}
+        </div>
+      </div>
+      ${pidDocs.length ? `<div class="pp-foot2">P&amp;ID: ${pidDocs.slice(0, 3).map((d) => `<a href="${d.u}" target="_blank" rel="noopener">${esc(d.n)}</a>`).join(' · ')}</div>` : ''}
+      <div class="pp-foot">Sources: Build Assets ${esc(ASSETS.date || '…')} · Co-Consol ${esc(PU.date || '…')} · subsystems ${esc(meta.subsystem_data_date || '')} · as-built ISOs ${esc(ASB.date || '…')} · Asset Thread ${esc(window.CX_VERSION || '')}</div>
+      </div></div>`;
+    try { if (window.QRCode) new QRCode($('#ppqr'), { text: ppUrl(tag), width: 116, height: 116, colorDark: '#043C5A', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M }); else $('#ppqr').textContent = 'QR'; } catch { }
+    const go3d = async () => { PP.skip = tag; closePassport(); S.q = tag; $('#q').value = tag; refresh(true); await findEquipment(tag); };
+    $('#pp3d').onclick = go3d; $('#pp3d2').onclick = go3d;
+    const pm = $('#ppmore'); if (pm) pm.onclick = (e) => { e.preventDefault(); pm.parentElement.previousElementSibling.innerHTML = docs.map(docRow).join(''); pm.parentElement.remove(); };
+    $('#ppx').onclick = closePassport; $('#ppprint').onclick = () => window.print();
+    $('#pplink').onclick = async () => { try { await navigator.clipboard.writeText(ppUrl(tag)); $('#pplink').textContent = 'Copied ✓'; } catch { prompt('Copy this link:', ppUrl(tag)); } };
+    const u = new URL(location.href); u.searchParams.set('p', tag); history.replaceState(null, '', u);
+  }
+  function closePassport() { $('#passport').style.display = 'none'; document.body.classList.remove('pp-open'); PP.tag = null; const u = new URL(location.href); u.searchParams.delete('p'); history.replaceState(null, '', u); }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && PP.tag) closePassport(); });
+  // element clicked in 3D -> read its Tag; equipment with a passport opens it
+  function passportFromSelection(model, dbId, o) {
+    model.getProperties(dbId, (p) => {
+      const t = (p.properties || []).find((x) => x.displayName === 'Tag' && x.displayValue)?.displayValue; const tag = normTag(t);
+      if (!tag || !(ASSETS.byTag[tag] || tagSS[tag] || DOCS.byTag?.[tag])) return;
+      if (PP.skip === tag) { PP.skip = null; addPassportButton(tag, { o, model: model._cxName }); return; }
+      addPassportButton(tag, { o, model: model._cxName }); openPassport(tag, { o, model: model._cxName });
+    }, () => {});
+  }
+  function addPassportButton(tag, ctx) {
+    const i = $('#info'); if (!i || i.style.display === 'none' || i.querySelector('#ppbtn')) return;
+    const b = document.createElement('button'); b.className = 'btn on'; b.id = 'ppbtn'; b.style.cssText = 'margin:0 0 8px;width:100%'; b.textContent = `Asset passport · ${tag}`;
+    b.onclick = () => openPassport(tag, ctx); i.insertBefore(b, i.children[1] || null);
   }
   function docRows(list, max = 40) {
     const groups = {}; for (const d of list) (groups[d.k] ||= []).push(d);
@@ -884,10 +968,12 @@
       ${ASB.ready ? asbSection(s, extra) : ''}
       ${DOCS.ready ? (() => { const dl = docsFor(s, extra.o); return `<h3>Documents in ACC <small class="meta">${dl.length}${ssEq[s.ss] ? ' · ' + esc(ssEq[s.ss]) : ''}</small></h3>${docRows(dl) || '<div class="meta">none found by tag, line or P&amp;ID</div>'}`; })() : ''}`;
     $('#infox').onclick = (e) => { e.preventDefault(); if (S.sel) selectSubsystem(S.sel); else $('#info').style.display = 'none'; };
+    if (ssEq[s.ss]) addPassportButton(ssEq[s.ss], { o: extra.o, model: extra.model });
   }
   viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT, (ev) => {
     const sel = ev.selections?.[0]; if (!sel || !sel.dbIdArray?.length) return;
     const k = sel.model._cxKey; const o = idx[k]?.get(sel.dbIdArray[0]);
+    try { passportFromSelection(sel.model, sel.dbIdArray[0], idx[k]?.get(sel.dbIdArray[0])); } catch (e) { }
     if (!o) {
       const dbId = sel.dbIdArray[0];
       $('#info').style.display = 'block';
@@ -922,5 +1008,6 @@
   } else { showOverview(true); status('pick an area'); }
   if (S.cam) { applyCam(S.cam); S.cam = ''; }
   window.__cxUp = true; if (PU.ready) { renderPunchFacets(); refresh(false); if (S.mode === 'punch') colorAll(); }
-  if (EQ_RE.test(S.q || '')) findEquipment(S.q);   // deep link: ?q=20D-XP2601 opens the area and isolates that element
+  if (EQ_RE.test(S.q || '')) findEquipment(S.q);
+  { const pt = normTag(new URLSearchParams(location.search).get('p') || ''); if (pt) openPassport(pt, {}); }   // deep link: ?q=20D-XP2601 opens the area and isolates that element
 })();
