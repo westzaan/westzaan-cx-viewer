@@ -1,4 +1,4 @@
-/* Westzaan Asset Thread (formerly Cx Viewer) v5 — ACC-native: Autodesk login, data + models straight from ACC, nothing on a server.
+/* Westzaan OneTag (formerly OneTag / Cx Viewer) v5 — ACC-native: Autodesk login, data + models straight from ACC, nothing on a server.
    Data set (published weekly into ACC › Internal Check › Cx Viewer data):
      index.json            areas → models, KPIs (small, loads first)
      subsystems.json       status per subsystem (Subsystems Master, Data Hub)
@@ -46,11 +46,11 @@
   const P = new URLSearchParams(location.search);
   const S = {
     open: new Set((P.get('open') || '').split(',').filter(Boolean)), area: P.get('area') || '', mode: P.get('mode') || 'mc',
-    f: { prio: P.get('prio') || '', sprint: P.get('sprint') || '', typ: P.get('typ') || '', fluid: P.get('fluid') || '', phase: P.get('phase') || '', link: P.get('link') || '' },
+    f: { prio: P.get('prio') || '', sprint: P.get('sprint') || '', typ: P.get('typ') || '', fluid: P.get('fluid') || '', phase: P.get('phase') || '', link: P.get('link') || '', asb: P.get('asb') || '' },
     group: P.get('group') || '', q: P.get('q') || '', sel: P.get('sel') || null, gsel: null,
     sub: new Set((P.get('sub') || '').split(',').map((x) => x.trim()).filter(Boolean)),
     inm: P.get('inm') === '1', lbl: P.get('lbl') === '1', ctx: P.get('ctx') === '1', ei: P.get('ei') === '1', cam: P.get('cam') || '', alb: P.get('alb') !== '0',
-    pf: { cls: P.get('pcls') || '', by: P.get('pby') || '', di: P.get('pdi') || '' }, pins: P.get('pins') !== '0', hov: P.get('hov') !== '0', cd: +(P.get('cd') || 7),
+    pf: { cls: P.get('pcls') || '', by: P.get('pby') || '', di: P.get('pdi') || '' }, al: P.get('al') || '', pins: P.get('pins') !== '0', hov: P.get('hov') !== '0', cd: +(P.get('cd') || 7),
   };
   if (S.area) S.open.add(S.area);
   function pushUrl() {
@@ -62,7 +62,7 @@
     if (S.group) q.set('group', S.group); if (S.q) q.set('q', S.q); if (S.sel) q.set('sel', S.sel);
     if (S.sub.size) q.set('sub', [...S.sub].join(','));
     if (S.inm) q.set('inm', '1'); if (S.lbl) q.set('lbl', '1'); if (S.ctx) q.set('ctx', '1'); if (S.ei) q.set('ei', '1'); if (!S.alb) q.set('alb', '0'); if (S.pf.cls) q.set('pcls', S.pf.cls); if (S.pf.by) q.set('pby', S.pf.by); if (S.pf.di) q.set('pdi', S.pf.di);
-    if (!S.pins) q.set('pins', '0'); if (S.cd !== 7) q.set('cd', S.cd); if (!S.hov) q.set('hov', '0'); if (S.cam) q.set('cam', S.cam);
+    if (S.al) q.set('al', S.al); if (!S.pins) q.set('pins', '0'); if (S.cd !== 7) q.set('cd', S.cd); if (!S.hov) q.set('hov', '0'); if (S.cam) q.set('cam', S.cam);
     history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
   }
   $('#copy').onclick = async () => { S.cam = camToStr(); pushUrl(); S.cam = ''; try { await navigator.clipboard.writeText(location.href); $('#copy').textContent = 'Copied ✓'; } catch { prompt('Copy this link:', location.href); } setTimeout(() => ($('#copy').textContent = 'Copy link'), 1500); };
@@ -88,6 +88,9 @@
   function asbLine(l) { const v = asbLatest(l); if (!v.length) return 'none'; const n = v.filter((x) => x.st).length; return n === v.length ? 'stamped' : n ? 'partial' : 'iso'; }
   function ssAsb(s) { const ls = linesOf(s); let st = 0, any = 0; for (const l of ls) { const k = asbLine(l.line); if (k === 'stamped') st++; if (k !== 'none') any++; } return [ls.length, any, st]; }
   const ASB_C = { stamped: [0.30, 0.72, 0.35], partial: [0.95, 0.55, 0.15], iso: [0.93, 0.83, 0.20], none: [0.86, 0.22, 0.20] };
+  const ASB_LBL = { stamped: '1 · all lines stamped', partial: '2 · partly stamped', iso: '3 · ISO in ACC, no stamp', none: '4 · no ISO in ACC', nodata: '5 · no line data' };
+  function asbClass(s) { if (!ASB.ready || !s) return ''; const [n, a, st] = ssAsb(s); if (!n) return 'nodata'; return st === n ? 'stamped' : a === n ? 'iso' : a ? 'partial' : 'none'; }
+  const lineOk = (l) => !S.al || (S.al === 'unst' ? asbLine(l) !== 'stamped' : S.al === 'noiso' ? asbLine(l) === 'none' : true);
   function ssAsbColor(s) { if (!ASB.ready || !s) return null; const [n, a, st] = ssAsb(s); if (!n) return null; return st === n ? ASB_C.stamped : a === n ? ASB_C.iso : a ? ASB_C.partial : ASB_C.none; }
   const MODES = {
     mc: { legend: [['QCR <25%', C.red], ['25–74%', C.orange], ['75–99%', C.yellow], ['QCR 100%', C.green], ['MC', C.mc], ['Pre-Cx', C.pcx], ['Cold Cx', C.ccx], ['Hot Cx', C.hcx], ['no data', C.grey]],
@@ -214,8 +217,11 @@
     }
     if (S.mode === 'asbuilt') {
       if (!ASB.ready) { el.innerHTML = `<label style="grid-column:1/3"><span class="meta">As-built data not loaded (asbuilt.json missing in the ACC data folder).</span></label>`; return; }
-      const rows = listScope(); let n = 0, a = 0, st = 0, full = 0, none = 0; for (const s of rows) { const x = ssAsb(s); n += x[0]; a += x[1]; st += x[2]; if (x[0] && x[2] === x[0]) full++; if (x[0] && !x[1]) none++; }
-      el.innerHTML = `<label style="grid-column:1/3"><span class="meta">Lines in this selection: <b>${st}/${n}</b> with stamped as-built ISO · ${a} with an ISO in ACC · subsystems fully as-built <b>${full}</b> · without any ISO ${none}. Source: ${esc(ASB.src || 'Bilfinger isometrics')} · ${esc(ASB.date)}</span></label>`; return;
+      const rows = filtered(); let n = 0, a = 0, st = 0, full = 0, none = 0; for (const s of rows) { const x = ssAsb(s); n += x[0]; a += x[1]; st += x[2]; if (x[0] && x[2] === x[0]) full++; if (x[0] && !x[1]) none++; }
+      const seen = new Set(); let lu = 0, ln = 0; for (const s of rows) for (const l of linesOf(s)) { if (seen.has(l.line)) continue; seen.add(l.line); const k = asbLine(l.line); if (k !== 'stamped') lu++; if (k === 'none') ln++; }
+      el.innerHTML = `<label>Show lines<select id="alsel"><option value="">all lines</option><option value="unst" ${S.al === 'unst' ? 'selected' : ''}>without stamped ISO (${lu})</option><option value="noiso" ${S.al === 'noiso' ? 'selected' : ''}>without any ISO in ACC (${ln})</option></select></label>
+        <label>&nbsp;<span class="meta" style="padding-top:5px">Lines in this selection: <b>${st}/${n}</b> stamped · ${a} with an ISO in ACC · subsystems fully as-built <b>${full}</b> · without any ISO ${none}. Filter subsystems with <b>As-built ISO</b> above. Source: ${esc(ASB.src || 'Bilfinger isometrics')} · ${esc(ASB.date)}</span></label>`;
+      $('#alsel').onchange = (e) => { S.al = e.target.value; refresh(true); }; return;
     }
     if (S.mode === 'qcr') {
       const rows = listScope(); let a = 0, b = 0; for (const s of rows) { const q = ssQcr(s.ss); if (q) { a += q[0]; b += q[1]; } }
@@ -298,7 +304,7 @@
 
   // ------------------------------------------------------------------ filters + list
   const listScope = () => subsystems.filter((s) => S.sub.size ? S.sub.has(s.ss) : (S.area ? s.area === S.area : S.open.has(s.area)));
-  const FKEY = { prio: (s) => s.prio, sprint: (s) => s.sprints || [], typ: (s) => s.typ, fluid: (s) => s.fluid, phase: (s) => PHASE_TXT[s.phase], area: (s) => s.area, link: (s) => s.link || '?' };
+  const FKEY = { prio: (s) => s.prio, sprint: (s) => s.sprints || [], typ: (s) => s.typ, fluid: (s) => s.fluid, phase: (s) => PHASE_TXT[s.phase], area: (s) => s.area, link: (s) => s.link || '?', asb: (s) => { const k = asbClass(s); return k ? ASB_LBL[k] : ''; } };
   const has = (s, k, v) => { const x = FKEY[k](s); return Array.isArray(x) ? x.includes(v) : x === v; };
   function filtered(except) {
     const q = S.q.trim().toLowerCase();
@@ -391,7 +397,7 @@
   $('#hov').checked = S.hov; $('#hov').onchange = (e) => { S.hov = e.target.checked; pushUrl(); if (!S.hov) card.style.display = 'none'; };
   $('#alb').checked = S.alb; $('#alb').onchange = (e) => { S.alb = e.target.checked; pushUrl(); updateAreaLabels(); };
   $('#ei').checked = S.ei; $('#ei').onchange = (e) => { S.ei = e.target.checked; pushUrl(); syncEI(); };
-  $('#clear').onclick = () => { for (const k in S.f) S.f[k] = ''; S.q = ''; $('#q').value = ''; S.sel = null; S.gsel = null; S.inm = false; $('#inm').checked = false; $('#info').style.display = 'none'; refresh(true); };
+  $('#clear').onclick = () => { for (const k in S.f) S.f[k] = ''; S.al = ''; S.q = ''; $('#q').value = ''; S.sel = null; S.gsel = null; S.inm = false; $('#inm').checked = false; $('#info').style.display = 'none'; refresh(true); };
   $$('.modes .btn').forEach((b) => { b.classList.toggle('on', b.dataset.mode === S.mode); b.onclick = () => { $$('.modes .btn').forEach((x) => x.classList.toggle('on', x === b)); S.mode = b.dataset.mode; refresh(false); colorAll(); updatePins(); }; });
   if (S.sub.size) {
     $('#pbi').style.display = 'flex'; $('#pbi span').textContent = `Shared selection: ${S.sub.size} subsystem${S.sub.size > 1 ? 's' : ''}`;
@@ -613,7 +619,7 @@
     }
     applyFilterToModel();
   }
-  const isFiltering = () => S.sel || S.gsel || S.sub.size || S.q || S.inm || Object.values(S.f).some(Boolean) || (S.area && S.open.size > 1);
+  const isFiltering = () => S.sel || S.gsel || S.sub.size || S.q || S.inm || Object.values(S.f).some(Boolean) || (S.area && S.open.size > 1) || (S.mode === 'asbuilt' && S.al);
   function keepSet() {
     if (S.sel) return new Set([S.sel]);
     let rows = filtered(); if (S.gsel) rows = rows.filter((s) => { const k = FKEY[S.group](s); return Array.isArray(k) ? (k.length ? k.includes(S.gsel) : S.gsel === '–') : (k || '–') === S.gsel; });
@@ -624,12 +630,13 @@
     if (!isFiltering()) { for (const m of Object.values(models)) viewer.isolate([], m); updateLabels(); return; }
     const keep = keepSet(); const fit = [];
     for (const [k, m] of Object.entries(models)) {
-      const ids = []; for (const [id, o] of idx[k] || []) for (const s of o.ss) if (keep.has(s)) { ids.push(id); break; }
+      const lf = S.mode === 'asbuilt' && S.al && ASB.ready;
+      const ids = []; for (const [id, o] of idx[k] || []) { if (lf && (!o.line || !lineOk(o.line))) continue; for (const s of o.ss) if (keep.has(s)) { ids.push(id); break; } }
       if (ids.length) { viewer.isolate(ids, m); fit.push({ model: m, selection: ids }); } else { viewer.isolate([], m); viewer.hide(m.getRootId(), m); }
     }
     if (fit.length && (S.sel || S.gsel || S.sub.size)) viewer.fitToView(fit);
     updateLabels(); updatePins();
-    if (S.sel || S.gsel || S.sub.size || Object.values(S.f).some(Boolean) || S.q) ensureExtraModels(keep);
+    if (S.sel || S.gsel || S.sub.size || Object.values(S.f).some(Boolean) || S.q || S.al) ensureExtraModels(keep);
   }
   function selectSubsystem(ss) {
     S.sel = S.sel === ss ? null : ss; renderList(); pushUrl(); applyFilterToModel();
@@ -758,7 +765,7 @@
         </div>
       </div>
       ${pidDocs.length ? `<div class="pp-foot2">P&amp;ID: ${pidDocs.slice(0, 3).map((d) => `<a href="${d.u}" target="_blank" rel="noopener">${esc(d.n)}</a>`).join(' · ')}</div>` : ''}
-      <div class="pp-foot">Sources: Build Assets ${esc(ASSETS.date || '…')} · Co-Consol ${esc(PU.date || '…')} · subsystems ${esc(meta.subsystem_data_date || '')} · as-built ISOs ${esc(ASB.date || '…')} · Asset Thread ${esc(window.CX_VERSION || '')}</div>
+      <div class="pp-foot">Sources: Build Assets ${esc(ASSETS.date || '…')} · Co-Consol ${esc(PU.date || '…')} · subsystems ${esc(meta.subsystem_data_date || '')} · as-built ISOs ${esc(ASB.date || '…')} · OneTag ${esc(window.CX_VERSION || '')}</div>
       </div></div>`;
     try { if (window.QRCode) new QRCode($('#ppqr'), { text: ppUrl(tag), width: 116, height: 116, colorDark: '#043C5A', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M }); else $('#ppqr').textContent = 'QR'; } catch { }
     const go3d = async () => { PP.skip = tag; closePassport(); S.q = tag; $('#q').value = tag; refresh(true); await findEquipment(tag); };

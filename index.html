@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Westzaan Asset Thread</title>
+<title>Westzaan OneTag</title>
 <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
 <style>
   /* Design: the model is the content; controls sit on quiet glass layers and appear only when needed.
@@ -228,11 +228,11 @@
 <body>
 <div id="gate"><div class="box">
   <div class="logo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg></div>
-  <h2>Westzaan Asset Thread</h2><p style="margin:-4px 0 10px;opacity:.7;font-size:13px">Commissioning data, carried to handover and operations</p><p id="gatemsg">Checking your session…</p><div id="gatebtn"></div></div></div>
+  <h2>Westzaan OneTag</h2><p style="margin:-4px 0 10px;opacity:.7;font-size:13px">One tag, any tool, every phase · asset data from model to handover and operations</p><p id="gatemsg">Checking your session…</p><div id="gatebtn"></div></div></div>
 <div id="app">
   <aside id="side">
     <header>
-      <h1>Asset Thread <span class="sp"></span>
+      <h1>OneTag <span class="sp"></span>
         <button class="btn ibtn" id="home" title="All areas"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="2"/><rect x="11" y="2" width="7" height="7" rx="2"/><rect x="2" y="11" width="7" height="7" rx="2"/><rect x="11" y="11" width="7" height="7" rx="2"/></svg></button>
         <button class="btn" id="copy" title="Copy a link to exactly this view, to share">Copy link</button></h1>
       <div class="meta" id="meta">loading…</div>
@@ -268,9 +268,10 @@
           <label>System<select id="f_fluid"></select></label>
           <label>Phase<select id="f_phase"></select></label>
           <label>In model<select id="f_link"></select></label>
+          <label>As-built ISO<select id="f_asb"></select></label>
           <label style="grid-column:1 / -1">Group the list by<select id="group">
             <option value="">No grouping</option><option value="fluid">System</option><option value="sprint">Sprint</option>
-            <option value="prio">Priority</option><option value="phase">Phase</option><option value="typ">Type</option><option value="area">Area</option><option value="link">In model</option></select></label>
+            <option value="prio">Priority</option><option value="phase">Phase</option><option value="typ">Type</option><option value="area">Area</option><option value="link">In model</option><option value="asb">As-built ISO</option></select></label>
         </div>
       </div>
       <div class="facets" id="pfacets" style="display:none"></div>
@@ -321,11 +322,11 @@
 <div id="passport"></div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>window.CX_VERSION = "2026-10-02a";</script>
-<script src="config.js?v=2026-10-02a"></script>
-<script src="auth.js?v=2026-10-02a"></script>
-<script src="harvest.js?v=2026-10-02a"></script>
-<script src="app.js?v=2026-10-02a"></script>
+<script>window.CX_VERSION = "2026-10-05a";</script>
+<script src="config.js?v=2026-10-05a"></script>
+<script src="auth.js?v=2026-10-05a"></script>
+<script src="harvest.js?v=2026-10-05a"></script>
+<script src="app.js?v=2026-10-05a"></script>
 <script>
 /* interface only: popovers, filter disclosure, badge; the viewer logic stays in app.js */
 (function () {
