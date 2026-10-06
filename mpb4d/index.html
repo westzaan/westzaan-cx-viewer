@@ -180,7 +180,8 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 .zb{display:flex;height:10px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.12)} .zb i{display:block;height:100%;transition:width .5s}
 .fo{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px 0;font-size:12px} .fo:first-of-type{margin-top:6px;border-top:1px solid var(--line);padding-top:8px}
 #capt{position:absolute;left:152px;right:286px;bottom:12px;z-index:5;padding:10px 16px;font-size:14px;line-height:1.35}
-#capt b{font-size:16px} #capt .tx{margin-top:2px} #capt .cx{margin-top:2px;font-size:12.5px;color:#ffd8a0} #capt .lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11.5px;color:var(--mute);margin-top:6px} #capt .lg span{display:inline-flex;align-items:center;gap:6px} #capt .lg i{width:10px;height:10px;border-radius:3px}
+#capt b{font-size:16px} #capt .tx{margin-top:2px} #capt .cx{margin-top:2px;font-size:12.5px;color:#ffd8a0} #capt .lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11.5px;color:var(--mute);margin-top:6px} #capt .lg span{display:inline-flex;align-items:center;gap:6px} #capt .lg i{width:10px;height:10px;border-radius:3px} #capt .lg .sc{gap:3px} #capt .lg .sc i:last-of-type{margin-right:4px}
+.stg.idle .arc{opacity:.5}
 #msbar{flex-wrap:nowrap} #msn{font-family:var(--f-num);font-size:12.5px;color:var(--mute);white-space:nowrap}
 #msprev,#msnext{font-size:18px;line-height:18px;padding:6px 14px;font-weight:600}
 #mst{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px} #mst span{color:var(--mute);font-size:12.5px;margin-left:6px}
@@ -292,8 +293,8 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v13b"></script>
-<script src="auth.js?v=2026-10-06v13b"></script>
+<script src="config.js?v=2026-10-06v15"></script>
+<script src="auth.js?v=2026-10-06v15"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -418,6 +419,7 @@ function goMS(i){if(!MS.length)return; S.msI=i; S.mode='ms'; toggle(false); refr
 
 /* ---------- overview: a month strip, five stages, eleven zone bars and one sentence ---------- */
 const STG=[['Structure',['CI','ST'],'<path d="M4 20V8l8-4 8 4v12M4 14h16M9 20V9M15 20V9"/>'],['Envelope',['FA'],'<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M12 3v18M6 12h12"/>'],['Services',['HV','FF','PH','PI','EL'],'<path d="M3 8h7a3 3 0 0 1 3 3v2a3 3 0 0 0 3 3h5M3 5v6M21 13v6"/>'],['Interior',['AR'],'<rect x="4" y="4" width="13" height="5" rx="1"/><path d="M17 6.5h3v5h-8v3M12 14.5v6"/>'],['Furniture and lab equipment',['FU'],'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3M7.5 15h9"/>']];
+const STC=['#2f6fde','#12a5a5','#e03131','#e6a700','#2f9e44'], stgCol=d=>{const i=STG.findIndex(g=>g[1].includes(d)); return i<0?'#8e8e93':STC[i]};   // one colour per stage; purple stays reserved for Phase 2
 let ML=[],playI=0,FOC=new Set(),focOn=false,cutF=null,cutUp=[];
 const today=()=>Math.max(t0,Math.min(t1,Math.floor(Date.now()/DAY)));
 const liveOf=sid=>tags.filter(t=>!t.built&&!deferred(t,sid));
@@ -431,7 +433,7 @@ const xOf=d=>{const i=ML.findIndex(o=>d<=o.e); if(i<0)return 100; const o=ML[i];
 // the few dates worth a flag on the strip; they follow the planner's dates and the chosen scenario
 function flags(){
   const sid=S.scen, lv=liveOf(sid), mx=f=>{const a=lv.filter(f); return a.length?Math.max(...a.map(t=>t.f)):null}, labs=['GF-LAB','1F-QC','1F-PD','1F-CTR'], out=[['Today',today()]];
-  const r=mx(t=>t.zone==='ROOF'), en=mx(t=>t.zone==='ENV'); if(r)out.push(['Roof closed',r]); if(en)out.push(['Envelope closed',en]);
+  const r=mx(t=>t.zone==='ROOF'&&(t.disc==='FA'||t.disc==='ST')), en=mx(t=>t.zone==='ENV'); if(r)out.push(['Roof closed',r]); if(en)out.push(['Envelope closed',en]);
   if(!tags.some(t=>labs.includes(t.zone)&&deferred(t,sid))){const l=mx(t=>labs.includes(t.zone)); if(l)out.push(['Labs complete',l])}
   const e=mx(()=>true); if(e)out.push([sid==='BASE'?'Building complete':'End of Phase 1',e]); return out;
 }
@@ -442,19 +444,19 @@ function storyUI(){
     +fl.map((f,i)=>'<button type="button" class="flag'+(i%2?' r2':'')+(f[1]===d?' on':'')+'" data-d="'+f[1]+'" style="left:'+xOf(f[1])+'%">'+esc(f[0])+' · '+n2s(f[1]).slice(0,5)+'</button>').join('');
   const C=2*Math.PI*29;
   $('stages').innerHTML=STG.map((g,i)=>{const ts=tags.filter(t=>g[1].includes(t.disc)), lv=ts.filter(t=>!deferred(t,sid)), tot=lv.reduce((a,t)=>a+t.n,0), p=tot?lv.reduce((a,t)=>a+t.n*frac(t),0)/tot:0, nd=ts.length-lv.length, wip=lv.some(t=>!t.built&&T>=t.s&&T<=t.f);
-    return '<button type="button" class="stg'+(p<=0?' idle':'')+(S.stg===i?' sel':'')+'" data-g="'+i+'" title="Show only this stage"><span class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="bgc"/><circle cx="32" cy="32" r="29" class="arc" stroke="'+(wip?'#ff9f0a':'#0a84ff')+'" stroke-dasharray="'+(C*p)+' '+C+'" transform="rotate(-90 32 32)"/><g transform="translate(18 18) scale(1.17)" class="ic">'+g[2]+'</g></svg></span><b>'+g[0]+'</b><em>'+(tot?Math.round(p*100)+'%':'')+(nd?(tot?' · part ':'')+'Phase 2':'')+'</em></button>'}).join('');
+    return '<button type="button" class="stg'+(p<=0?' idle':'')+(S.stg===i?' sel':'')+'" data-g="'+i+'" title="Show only this stage"><span class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="bgc"/><circle cx="32" cy="32" r="29" class="arc" stroke="'+STC[i]+'" stroke-dasharray="'+(C*p)+' '+C+'" transform="rotate(-90 32 32)"/><g transform="translate(18 18) scale(1.17)" class="ic">'+g[2]+'</g></svg></span><b>'+g[0]+'</b><em>'+(tot?Math.round(p*100)+'%':'')+(nd?(tot?' · part ':'')+'Phase 2':'')+'</em></button>'}).join('');
   $('zbars').innerHTML='<div class="lab">Zones'+(S.stg!=null?' · '+esc(STG[S.stg][0]):'')+'</div>'+D.zones.filter(z=>z[2]==='B'&&tags.some(t=>t.zone===z[0])).map(z=>{const ts=tags.filter(t=>t.zone===z[0]&&(!S.disc.size||S.disc.has(t.disc))), tot=ts.reduce((a,t)=>a+t.n,0)||1; let dn=0,wp=0,df=0;
     ts.forEach(t=>{if(deferred(t,sid)){df+=t.n;return} const f=frac(t); dn+=t.n*f; if(f>0&&f<1)wp+=t.n*(1-f)}); const sc1=tot-df;
     return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
     +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Cut open at the busiest floor</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
   const wipT=liveOf(sid).filter(t=>T>=t.s&&T<=t.f&&(!S.disc.size||S.disc.has(t.disc))), parts=STG.map(g=>{const zs=[...new Set(wipT.filter(t=>g[1].includes(t.disc)).map(t=>t.zoneName.replace(/^.. - /,'')))]; return zs.length?g[0]+' in '+zs.slice(0,3).join(', ')+(zs.length>3?' and '+(zs.length-3)+' more zones':''):null}).filter(Boolean);
   const sc=scenOf(sid), f=fl.find(x=>x[1]===d), nd=tags.filter(t=>deferred(t,sid)).length, txt=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):parts.length?'Under way: '+parts.join('; ')+'.':'No work under way on this date.';
-  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>':'')+'<div class="lg">'+(focOn?'<span><i style="background:#8e8e93"></i>Solid, in its own materials: the work of this date</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
+  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>':'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
   $('splayb').textContent=playI?'❚❚':'▶';
 }
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
 function stepMonth(dir){const d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e)); let ni=ci+dir; if(dir>0&&d<ML[ci].e)ni=ci; if(ni>=ML.length)return false; goDay(ni<0?today():Math.max(today(),ML[ni].e)); return true}
-function playMonths(on){clearInterval(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setInterval(()=>{const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7))},1300)} storyUI()}
+function playMonths(on){clearInterval(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setInterval(()=>{const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7))},2600)} storyUI()}
 
 /* ---------- inventory grid with Gantt bars ---------- */
 function tree(){
@@ -632,7 +634,7 @@ function makeView(key){
       if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; if(focOn&&!msFinal)return ['ghost','d',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
       const r=t.built?2:T<t.s?0:T<=t.f?1:2; if(r===0)return ['off','',0];
       if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',0];
-      if(focOn&&(r===1||HI.has(t.i)))return ['solid','o',0];   // the work of this date keeps its own materials: no status colours
+      if(focOn&&(r===1||HI.has(t.i)))return ['solid',stgCol(t.disc),0];   // the work of this date is coloured by its stage
       if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return ['ghost','',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
       return ['solid',R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint,0];
     }
@@ -680,7 +682,7 @@ function makeView(key){
     if(!V.viewer||S.mode!=='story'||!Object.keys(V.models).length)return; if(V.zone){V.fkey=null;return}
     const key=(focOn?[...FOC].sort((a,b)=>a-b).join(','):'')+'|'+S.cut+S.follow+msFinal+cutF; if(V.fkey===key)return; V.fkey=key;
     if(!focOn){V.viewer.setCutPlanes([]); if(S.follow)V.fit(); return}
-    const bx=V.boundsOf(t=>FOC.has(t.i),'fo:'+key); if(!bx)return;
+    const inb=[...FOC].some(i=>tags[i].zone!=='EXT'), bx=V.boundsOf(t=>FOC.has(t.i)&&(!inb||t.zone!=='EXT'),'fo:'+key); if(!bx)return;   // work outside the building does not pull the camera away
     // section plane that follows the work: the building is cut open just above the highest item of this date
     let P=[],fb=null; if(cutF){const all=V.boundsOf(()=>true,'all'); fb=V.boundsOf(t=>FOC.has(t.i)&&t.floor===cutF,'fc:'+key); if(all&&fb){const H=all.max.z-all.min.z, zc=fb.max.z+H*0.012; if(zc<all.max.z-H*0.03)P=[new THREE.Vector4(0,0,1,-zc)]; else fb=null}}
     V.viewer.setCutPlanes(P);
