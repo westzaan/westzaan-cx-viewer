@@ -76,6 +76,7 @@ th{font-family:var(--f-lab);font-weight:500;letter-spacing:.05em;text-transform:
 .b{position:absolute;top:5px;height:12px;border-radius:2px;min-width:3px}
 .row.gp .b{top:7px;height:8px;background:var(--ghost)}.row.gp .b i{display:block;height:100%;background:var(--built);border-radius:2px}
 .b.s0{opacity:.38}.b.s2{filter:saturate(.45)}
+.site{position:sticky;left:calc(var(--lw) + 8px);display:inline-block;margin-top:3px;font-family:var(--f-lab);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);border:1px solid var(--line);border-radius:3px;padding:0 6px;line-height:15px;background:var(--panel)}
 #cur{position:absolute;top:0;bottom:0;width:2px;background:var(--cursor);z-index:1;pointer-events:none}
 #msg{color:var(--mute)}
 @media (max-width:820px){
@@ -136,6 +137,7 @@ const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#
 const DN={CI:'Civil',ST:'Structure',FA:'Facade and roof',AR:'Interior',HV:'HVAC',FF:'Sprinkler',PH:'Plumbing',PI:'Lab gas',EL:'Electrical',FU:'Furniture and equipment'};
 const PAL=['#2e86ab','#d9a021','#d1495b','#3aa17e','#7b5ea7','#e07a3f','#5b6c8f','#b0408f','#946b4a','#6aa84f','#c2185b','#00838f','#8d6e63','#5c6bc0','#f4b400','#455a64'];
 const SN=['Not started','In progress','Built'];
+const span=ts=>{const a=ts.filter(t=>!t.built); return a.length?[Math.min(...a.map(t=>t.s)),Math.max(...a.map(t=>t.f))]:null};
 const DAY=864e5, $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const d2n=s=>Math.round(Date.parse(s+'T00:00:00Z')/DAY), n2s=n=>{const d=new Date(n*DAY);return String(d.getUTCDate()).padStart(2,'0')+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+d.getUTCFullYear()};
@@ -159,18 +161,18 @@ async function start(){
   const tok=await A.init();
   if(!tok){$('signin').hidden=false;$('signin').onclick=()=>A.login();say('Sign in with your Autodesk account to load the models.');return}
   say('Reading data from ACC…');
-  const d=await A.readDataFile(CFG.dataFile);
+  const alt=n=>n.replace(/_/g,' '); const d=await A.readDataFile(CFG.dataFile)||await A.readDataFile(alt(CFG.dataFile));
   if(!d){say('The file '+CFG.dataFile+' was not found in the ACC data folder, or you have no access to that folder.');return}
   D=d; const zn=Object.fromEntries(D.zones.map(z=>[z[0],z]));
-  tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2],
+  tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),built:!!t[8],name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2],
     zoneName:zn[t[1]][1],block:zn[t[1]][2]==='A'?'Shell':'Fit-out',floor:floorOf(t[1]),zo:D.zones.indexOf(zn[t[1]])}));
-  try{const b=await A.readDataBlob(CFG.scheduleFile); if(b)readBook(await b.arrayBuffer(),CFG.scheduleFile+' in ACC')}catch(e){console.warn('no schedule file',e)}
+  try{const b=await A.readDataBlob(CFG.scheduleFile)||await A.readDataBlob(alt(CFG.scheduleFile)); if(b)readBook(await b.arrayBuffer(),CFG.scheduleFile+' in ACC')}catch(e){console.warn('no schedule file',e)}
   buildBars(); range(); bind(); setT(t0); refresh();
   await initViewer();
 }
-function range(){t0=Math.min(...tags.map(t=>t.s))-7;t1=Math.max(...tags.map(t=>t.f))+14;$('slider').min=t0;$('slider').max=t1}
-function st(t){return !S.time?2:T<t.s?0:T<=t.f?1:2}
-function real(t){return T<t.s?0:T<=t.f?1:2}
+function range(){const ts=tags.filter(t=>!t.built); if(!ts.length)ts.push(...tags); t0=Math.min(...ts.map(t=>t.s))-7;t1=Math.max(...ts.map(t=>t.f))+14;$('slider').min=t0;$('slider').max=t1}
+function st(t){return !S.time||t.built?2:T<t.s?0:T<=t.f?1:2}
+function real(t){return t.built?2:T<t.s?0:T<=t.f?1:2}
 function inZone(t){const z=S.zone; return !z||(z.length===2||z==='Roof'?t.floor===z:t.zone===z)}
 function pass(t){if(!inZone(t))return false; if(S.disc.size&&!S.disc.has(t.disc))return false; if(S.q){const q=S.q.toLowerCase(); if(!(t.tag+' '+t.name+' '+t.pkg+' '+t.zoneName).toLowerCase().includes(q))return false} return true}
 
@@ -182,7 +184,7 @@ function buildBars(){
     h+='<span class="seg"><button type="button" data-z="'+f+'" title="Whole floor"><b>'+f+'</b></button>'+zs.map(z=>'<button type="button" data-z="'+z[0]+'">'+esc(z[1].replace(/^.. - /,''))+'</button>').join('')+'</span>'}
   const sh=D.zones.filter(z=>z[2]==='A'&&tags.some(t=>t.zone===z[0]));
   h+='<span class="seg">'+sh.map(z=>'<button type="button" data-z="'+z[0]+'">'+esc(z[1])+'</button>').join('')+'</span>'; zb.innerHTML=h;
-  zb.onclick=e=>{const b=e.target.closest('button[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); applyZone(); const ts=tags.filter(pass); if(ts.length)$('gantt').scrollLeft=Math.max(0,(Math.min(...ts.map(t=>t.s))-t0)*PX-40)};
+  zb.onclick=e=>{const b=e.target.closest('button[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); applyZone(); const sp=span(tags.filter(pass)); $('gantt').scrollLeft=sp?Math.max(0,(sp[0]-t0)*PX-40):0};
   const opts=Object.keys(KN).map(k=>'<option value="'+k+'">'+KN[k]+'</option>').join(''); $('g1').innerHTML=opts; $('g2').innerHTML='<option value="">(none)</option>'+opts; $('g1').value=S.g1; $('g2').value=S.g2;
   $('fdisc').innerHTML=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<button type="button" data-d="'+k+'" title="'+DN[k]+'">'+k+'</button>').join('');
   loadViews();
@@ -218,15 +220,15 @@ function buildGrid(){
   const a=new Date(t0*DAY); let m=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1));
   while(m.getTime()/DAY<t1){const x=(m.getTime()/DAY-t0)*PX; if(x>=0)h+='<div class="mon" style="left:'+x+'px">'+m.toLocaleString('en-GB',{month:'short',year:'2-digit',timeZone:'UTC'})+'</div>'; m=new Date(Date.UTC(m.getUTCFullYear(),m.getUTCMonth()+1,1))}
   h+='</div></div>';
-  rows.forEach((r,i)=>{const ts=r.tags,s=Math.min(...ts.map(t=>t.s)),f=Math.max(...ts.map(t=>t.f)),n=ts.reduce((a,t)=>a+t.n,0),pad=6+r.depth*16;
-    if(r.leaf){const t=r.t; h+='<div class="row" tabindex="0" data-i="'+i+'" title="'+esc(t.tag+' · '+t.pkg+' · '+n2s(t.s)+' → '+n2s(t.f))+'"><div class="gl"><span class="tw" style="margin-left:'+pad+'px"></span><span class="nm">'+esc(t.name)+' <em>'+esc(S.g1==='zone'||S.g2==='zone'?t.pkg:t.zoneName)+'</em></span><span class="c">'+num(t.n)+'</span><span class="c q">'+fmt(t.qty,t.unit)+'</span></div><div class="gt" style="width:'+W+'px"><div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div></div></div>'}
-    else h+='<div class="row gp" tabindex="0" data-i="'+i+'"><div class="gl"><span class="tw" data-tw="1" style="margin-left:'+pad+'px">'+(r.open?'▾':'▸')+'</span><span class="nm">'+esc(r.label)+' <em>'+ts.length+' tags</em></span><span class="c">'+num(n)+'</span><span class="c q">'+qsum(ts)+'</span></div><div class="gt" style="width:'+W+'px"><div class="b" data-s="'+s+'" data-f="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div></div></div>'});
+  rows.forEach((r,i)=>{const ts=r.tags,sp=span(ts),s=sp?sp[0]:0,f=sp?sp[1]:0,n=ts.reduce((a,t)=>a+t.n,0),pad=6+r.depth*16,nb=ts.filter(t=>t.built).length, site='<span class="site">on site</span>';
+    if(r.leaf){const t=r.t; h+='<div class="row" tabindex="0" data-i="'+i+'" title="'+esc(t.tag+' · '+t.pkg+' · '+(t.built?'on site':n2s(t.s)+' → '+n2s(t.f)))+'"><div class="gl"><span class="tw" style="margin-left:'+pad+'px"></span><span class="nm">'+esc(t.name)+' <em>'+esc(S.g1==='zone'||S.g2==='zone'?t.pkg:t.zoneName)+'</em></span><span class="c">'+num(t.n)+'</span><span class="c q">'+fmt(t.qty,t.unit)+'</span></div><div class="gt" style="width:'+W+'px">'+(t.built?site:'<div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div>')+'</div></div>'}
+    else h+='<div class="row gp" tabindex="0" data-i="'+i+'"><div class="gl"><span class="tw" data-tw="1" style="margin-left:'+pad+'px">'+(r.open?'▾':'▸')+'</span><span class="nm">'+esc(r.label)+' <em>'+ts.length+' tags'+(nb?', '+nb+' on site':'')+'</em></span><span class="c">'+num(n)+'</span><span class="c q">'+qsum(ts)+'</span></div><div class="gt" style="width:'+W+'px">'+(sp?'<div class="b" data-s="'+s+'" data-f="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div>':site)+'</div></div>'});
   h+='<div id="cur"></div>'; g.innerHTML=h; $('count').textContent=list.length+' of '+tags.length+' tags'; gridState();
 }
 function gridState(){
   const c=$('cur'); if(!c)return; c.style.left=(LW+(T-t0)*PX)+'px';
   document.querySelectorAll('#g .row').forEach(el=>{const r=rows[+el.dataset.i],b=el.querySelector('.b'); if(!r)return;
-    if(r.leaf)b.className='b s'+real(r.t); else{const s=+b.dataset.s,f=+b.dataset.f; b.firstChild.style.width=Math.max(0,Math.min(1,(T-s)/(f-s+1)))*100+'%'}
+    if(!b){} else if(r.leaf)b.className='b s'+real(r.t); else{const s=+b.dataset.s,f=+b.dataset.f; b.firstChild.style.width=Math.max(0,Math.min(1,(T-s)/(f-s+1)))*100+'%'}
     el.classList.toggle('sel',r.tags.length>0&&r.tags.every(t=>S.sel.has(t.i)))});
 }
 function rowClick(e){
@@ -245,7 +247,7 @@ function panel(){
   if(sel.length){
     const u={}; sel.forEach(t=>{u[t.unit]=(u[t.unit]||0)+t.qty}); const n=sel.reduce((a,t)=>a+t.n,0);
     h+='<h2>Selection: '+(sel.length===1?esc(sel[0].tag):sel.length+' tags')+'</h2>';
-    if(sel.length===1){const t=sel[0];h+='<div>'+esc(t.name)+'<br><span class="lab">'+esc(t.pkg+' · '+t.zoneName)+'</span></div><div style="font-family:var(--f-num)">'+n2s(t.s)+' → '+n2s(t.f)+'</div>'}
+    if(sel.length===1){const t=sel[0];h+='<div>'+esc(t.name)+'<br><span class="lab">'+esc(t.pkg+' · '+t.zoneName)+'</span></div><div style="font-family:var(--f-num)">'+(t.built?'Already on site':n2s(t.s)+' → '+n2s(t.f))+'</div>'}
     h+='<table><tr><th>Total</th><th class="n">'+num(n)+' elements</th></tr>'+Object.keys(u).map(x=>'<tr><td>Quantity</td><td class="n">'+fmt(u[x],x)+'</td></tr>').join('')+'</table>';
     if(sel.length>1)h+='<table><tr><th>Tag</th><th class="n">Quantity</th></tr>'+sel.slice(0,60).map(t=>'<tr><td><span class="st s'+real(t)+'"></span>'+esc(t.zone+' · '+t.name)+'</td><td class="n">'+fmt(t.qty,t.unit)+'</td></tr>').join('')+(sel.length>60?'<tr><td colspan="2">… '+(sel.length-60)+' more (use Export Excel)</td></tr>':'')+'</table>';
   }
@@ -278,24 +280,28 @@ async function initViewer(){
   viewer.start(); viewer.setGhosting(true); viewer.setGroundShadow(false); viewer.setLightPreset(1); viewer.setQualityLevel(false,true); viewer.setOptimizeNavigation(true);
   try{viewer.setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark-theme':'light-theme')}catch(e){}
   viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
+  // geometry keeps streaming in after a model is linked: re-apply visibility and colours when it has all arrived
+  viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT,ev=>{const m=ev.model; if(!m||!m._code||!models[m._code])return; try{viewer.hide(m.getRootId(),m)}catch(e){} applied={}; boundsCache={}; apply3D(); clearTimeout(refit); refit=setTimeout(()=>{if(S.zone||!moved)applyZone()},400)});
+  $('fv').addEventListener('pointerdown',()=>{moved=true},true);
   say('Listing models…'); const files={}; let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
   while(url){const j=await A.api(url); const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v])); for(const it of j.data||[]){const v=inc[it.id]; if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber}} url=j.links?.next?.href||null}
-  const want=Object.keys(D.map).filter(c=>!CFG.onlyModels||CFG.onlyModels.includes(c)); let n=0,miss=[],globalOffset=null; const rep=[];
+  // a main contractor model goes first: it sets the shared origin and units for all the others
+  const pri=['ST-01','CI-01','ST-03','AR-01','FF-01'], want=Object.keys(D.map).filter(c=>!CFG.onlyModels||CFG.onlyModels.includes(c)).sort((x,y)=>((pri.indexOf(x)+1)||99)-((pri.indexOf(y)+1)||99)); let n=0,miss=[],globalOffset=null,units=null; const rep=[];
   for(const code of want){
     const fn=D.files[code],f=files[fn]; n++; if(!f){miss.push(fn);continue}
     say('Loading '+n+' / '+want.length+'  '+fn+' (v'+f.n+')');
     const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
     try{
       const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0]; if(!g)return rej(new Error('no 3D view'));
-        const o={keepCurrentModels:true,applyRefPoint:true,preserveView:n>1}; if(globalOffset)o.globalOffset=globalOffset;
+        const o={keepCurrentModels:true,applyRefPoint:true,preserveView:n>1}; if(globalOffset)o.globalOffset=globalOffset; if(units)o.applyScaling=units;
         try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(msg||('code '+c)))));
-      if(!globalOffset)globalOffset=m.getData().globalOffset; m._code=code; models[code]=m;
-      rep.push(await mapModel(code,m)); applied={}; boundsCache={}; apply3D();
+      if(!globalOffset){globalOffset=m.getData().globalOffset; try{units=m.getUnitString()}catch(e){}} m._code=code;
+      const r=await mapModel(code,m); models[code]=m; rep.push(r); applied={}; boundsCache={}; apply3D();
     }catch(e){console.warn('load failed',fn,e);miss.push(fn+' ('+(e.message||e)+')')}
   }
   const tot=rep.reduce((a,r)=>a+r[1],0),hit=rep.reduce((a,r)=>a+r[2],0); say('');
   $('msg').textContent='Models: '+rep.length+' loaded. Elements linked to tags: '+num(hit)+' of '+num(tot)+'.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':'')+' '+rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
-  window.MPB4D={rep,miss,models,S}; applyZone();
+  window.MPB4D={rep,miss,models,S,boundsOf,pass,applyZone,fit}; applyZone();
 }
 // link the IFC GlobalIds in the data file to this model's element ids (external id = GlobalId, children carry a /n suffix)
 async function mapModel(code,m){
@@ -323,7 +329,7 @@ function apply3D(){
     const key=show?col:'-'; if(applied[t.i]===key)return; applied[t.i]=key; changed=true;
     const c=show?(col[0]==='m'?v4(col.slice(1),.6,builtC):v4(col)):null;
     for(const code in models){const ids=tagIds[code]&&tagIds[code][t.i]; if(!ids||!ids.length)continue; const m=models[code];
-      if(!show)viewer.hide(ids,m); else{viewer.show(ids,m); for(const id of ids)viewer.setThemingColor(id,c,m,true)}}});
+      if(!show)viewer.hide(ids,m); else{viewer.show(ids,m); const rec=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{viewer.setThemingColor(id,c,m,rec)}catch(e){try{viewer.setThemingColor(id,c,m,false)}catch(e2){}}}}}});
   // blue highlight only in Highlight mode
   const hk=S.vis==='normal'?[...S.sel].sort().join(','):''; if(applied._h!==hk){applied._h=hk; muting=true; viewer.clearSelection();
     if(hk){const s=[]; for(const code in models){const ids=[]; S.sel.forEach(i=>{const a=tagIds[code]&&tagIds[code][i]; if(a&&applied[i]!=='-')for(const id of a)ids.push(id)}); if(ids.length)s.push({model:models[code],ids})} if(s.length)viewer.impl.selector.setAggregateSelection(s)}
@@ -345,10 +351,12 @@ function applyZone(){
   if(S.clip&&zoned){const e=bx.clone().expandByScalar(Math.max(bx.max.x-bx.min.x,bx.max.y-bx.min.y)*0.004+0.05), P=[];
     P.push(new THREE.Vector4(0,0,1,-e.max.z),new THREE.Vector4(0,0,-1,e.min.z),new THREE.Vector4(1,0,0,-e.max.x),new THREE.Vector4(-1,0,0,e.min.x),new THREE.Vector4(0,1,0,-e.max.y),new THREE.Vector4(0,-1,0,e.min.y));
     viewer.setCutPlanes(P)} else viewer.setCutPlanes([]);
-  try{viewer.navigation.fitBounds(false,bx)}catch(e){}
+  look(bx)
 }
-function fit(){if(!viewer)return; const bx=boundsOf(pass,'f:'+S.zone+[...S.disc].join('')+S.q); if(bx)try{viewer.navigation.fitBounds(false,bx)}catch(e){}}
-function fitSel(){if(!viewer||S.zone)return; const bx=boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)try{viewer.navigation.fitBounds(false,bx)}catch(e){}}
+let cubed=false,moved=false,refit=0;
+function look(bx){const go=()=>{try{viewer.navigation.fitBounds(true,bx)}catch(e){}}; if(!cubed){cubed=true; try{const x=viewer.getExtension('Autodesk.ViewCubeUi'); if(x){x.setViewCube('front top right'); setTimeout(go,900); return}}catch(e){}} go()}
+function fit(){if(!viewer)return; const bx=boundsOf(pass,'f:'+S.zone+[...S.disc].join('')+S.q); if(bx)look(bx)}
+function fitSel(){if(!viewer||S.zone)return; const bx=boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)look(bx)}
 function onPick(ev){
   if(muting||S.pick!=='tag')return; const s=ev.selections&&ev.selections[0]; if(!s||!s.dbIdArray.length)return; const m=s.model,map=id2tag[m._code]; if(!map)return;
   const tree=m.getInstanceTree(); let id=s.dbIdArray[0],k=0; while(id!=null&&map[id]==null&&tree&&k++<12)id=tree.getNodeParentId(id);
@@ -365,19 +373,19 @@ function restore(v){const byTag=Object.fromEntries(tags.map(t=>[t.tag,t.i])); S.
 function loadViews(){const vs=store.get('views')||{}; $('views').innerHTML='<option value="">—</option>'+Object.keys(vs).map(k=>'<option>'+esc(k)+'</option>').join('')}
 
 /* ---------- planner Excel in, Excel out ---------- */
-function applyDates(map){let n=0; tags.forEach(t=>{const d=map[t.tag]; if(d&&d[0]&&d[1]){t.s=d[0];t.f=Math.max(d[0],d[1]);n++}}); return n}
+function applyDates(map){let n=0; tags.forEach(t=>{const d=map[t.tag]; if(!d)return; if(d[2]!=null)t.built=d[2]; if(d[0]&&d[1]){t.s=d[0];t.f=Math.max(d[0],d[1])} if(d[2]||(d[0]&&d[1]))n++}); return n}
 function xl(v){if(v==null||v==='')return null; if(v instanceof Date)return Math.round((Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()))/DAY); if(typeof v==='number')return Math.round(v-25569); const m=String(v).match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); if(m)return Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/DAY); const p=Date.parse(v); return isNaN(p)?null:Math.round(p/DAY)}
 function readBook(buf,fname){try{const wb=XLSX.read(buf,{type:'array',cellDates:true}); const map={}; let seen=0;
-    wb.SheetNames.forEach(sn=>{const rs=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true}); const hi=rs.findIndex(x=>x&&x.some(c=>String(c).trim().toUpperCase()==='TAG')); if(hi<0)return; const H=rs[hi].map(c=>String(c||'').trim().toUpperCase()),ct=H.indexOf('TAG'),cs=H.indexOf('START'),cf=H.indexOf('FINISH'); if(cs<0||cf<0)return;
-      rs.slice(hi+1).forEach(x=>{if(!x||!x[ct])return; seen++; const s=xl(x[cs]),e=xl(x[cf]); if(s&&e)map[String(x[ct]).trim()]=[s,e]})});
-    const n=applyDates(map); if(n){$('dnote').textContent='Planner dates from '+fname+': '+n+' of '+tags.length+' tags.'+(n<tags.length?' The others keep example dates.':'')}
+    wb.SheetNames.forEach(sn=>{const rs=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true}); const hi=rs.findIndex(x=>x&&x.some(c=>String(c).trim().toUpperCase()==='TAG')); if(hi<0)return; const H=rs[hi].map(c=>String(c||'').trim().toUpperCase()),ct=H.indexOf('TAG'),cs=H.indexOf('START'),cf=H.indexOf('FINISH'),cb=H.findIndex(c=>c.startsWith('BUILT')); if(cs<0||cf<0)return;
+      rs.slice(hi+1).forEach(x=>{if(!x||!x[ct])return; seen++; const s=xl(x[cs]),e=xl(x[cf]),bv=cb<0?'':String(x[cb]==null?'':x[cb]).trim().toUpperCase(),b=/^(Y|YES|TRUE|X|1)$/.test(bv)?true:/^(N|NO|FALSE|0)$/.test(bv)?false:null; if((s&&e)||b!=null)map[String(x[ct]).trim()]=[s,e,b]})});
+    const n=applyDates(map); if(n){$('dnote').textContent='Planner file '+fname+': '+n+' of '+tags.length+' tags set ('+tags.filter(t=>t.built).length+' on site).'+(n<tags.length?' The others keep example dates.':'')}
     else $('dnote').textContent='Example dates. '+(seen?'No Start and Finish dates found in '+fname+'.':'No sheet with TAG, Start and Finish columns in '+fname+'.');
     if(n&&t0!=null){range(); applied={}; refresh(); setT(Math.max(t0,Math.min(T,t1)))}
   }catch(e){$('dnote').textContent='Could not read '+fname+': '+e.message}}
 function exportXlsx(){
-  const list=tags.filter(pass), rowsX=[['TAG','Zone','Floor','Model item group','Discipline','Package','Elements','Quantity','Unit','Start','Finish','Status on '+n2s(Math.floor(T)),'Selected']];
-  list.forEach(t=>rowsX.push([t.tag,t.zoneName,t.floor,t.name,DN[t.disc],t.pkg,t.n,t.qty,t.unit,new Date(t.s*DAY),new Date(t.f*DAY),SN[real(t)],S.sel.has(t.i)?'yes':'']));
-  const ws=XLSX.utils.aoa_to_sheet(rowsX,{cellDates:true,dateNF:'dd-mm-yyyy'}); ws['!cols']=[22,22,10,30,20,22,10,10,6,12,12,16,9].map(w=>({wch:w}));
+  const list=tags.filter(pass), rowsX=[['TAG','Zone','Floor','Model item group','Discipline','Package','Elements','Quantity','Unit','Built?','Start','Finish','Status on '+n2s(Math.floor(T)),'Selected']];
+  list.forEach(t=>rowsX.push([t.tag,t.zoneName,t.floor,t.name,DN[t.disc],t.pkg,t.n,t.qty,t.unit,t.built?'Y':'N',t.built?null:new Date(t.s*DAY),t.built?null:new Date(t.f*DAY),SN[real(t)],S.sel.has(t.i)?'yes':'']));
+  const ws=XLSX.utils.aoa_to_sheet(rowsX,{cellDates:true,dateNF:'dd-mm-yyyy'}); ws['!cols']=[22,22,10,30,20,22,10,10,6,7,12,12,16,9].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Tag list'); XLSX.writeFile(wb,'66A-MPB_sequence_'+n2s(Math.floor(T))+'.xlsx');
 }
 
