@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MPB Build Sequence</title>
+<link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}
+/* Layout: one working screen. 3D viewport top-left, readout panel top-right, programme (Gantt) across the bottom. Stacks on phones. */
+:root{
+  --bg:#eef1f3; --panel:#ffffff; --ink:#18222b; --mute:#5c6b78; --line:#d3dae0; --view:#dfe5ea;
+  --accent:#0b6e8e; --ghost:#cfd7dd; --built:#9aa5ae; --cursor:#d1495b; --rowalt:#f6f8f9;
+  --f-body:"Barlow",system-ui,sans-serif; --f-lab:"Barlow Condensed","Arial Narrow",sans-serif; --f-num:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12181d; --panel:#1a2229; --ink:#e6ecf0; --mute:#93a2af; --line:#2c3842; --view:#0d1216;
+  --accent:#4fb6d6; --ghost:#27323b; --built:#56636e; --cursor:#ff6b7d; --rowalt:#1e2830; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#12181d; --panel:#1a2229; --ink:#e6ecf0; --mute:#93a2af; --line:#2c3842; --view:#0d1216;
+  --accent:#4fb6d6; --ghost:#27323b; --built:#56636e; --cursor:#ff6b7d; --rowalt:#1e2830; color-scheme:dark }
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;display:flex;flex-direction:column}
+button,input,select{font:inherit;color:inherit}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar h1{font-family:var(--f-lab);font-weight:600;font-size:20px;letter-spacing:.02em;margin:0;white-space:nowrap}
+.bar h1 small{display:block;font-family:var(--f-body);font-weight:400;font-size:11.5px;color:var(--mute);white-space:normal;letter-spacing:0}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 320px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)} .btn:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+#play{min-width:70px;font-weight:600}
+#slider{flex:1 1 120px;min-width:80px;accent-color:var(--accent)}
+#date{font-family:var(--f-num);font-weight:500;font-size:15px;min-width:104px;text-align:right}
+select{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:4px 6px}
+.note{background:color-mix(in srgb,var(--cursor) 12%,var(--panel));border-bottom:1px solid var(--line);padding:5px 16px;font-size:12.5px}
+.main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 330px;grid-template-rows:minmax(0,1.15fr) minmax(0,1fr)}
+#view{position:relative;background:var(--view);min-height:0;overflow:hidden}
+#fv{position:absolute;inset:0}
+#load{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 16px;max-width:80%;text-align:center}
+#signin{position:absolute;left:50%;top:56%;transform:translateX(-50%);z-index:5}
+.legend{z-index:4}
+.legend{position:absolute;left:12px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;max-width:calc(100% - 24px);pointer-events:none}
+.legend span{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--panel) 80%,transparent);padding:1px 6px;border-radius:3px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.hint{position:absolute;right:12px;top:8px;font-size:11.5px;color:var(--mute)}
+#side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.kpi{border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+.kpi b{display:block;font-family:var(--f-num);font-size:18px;font-weight:500}
+.kpi span,.lab{font-family:var(--f-lab);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+h2{font-family:var(--f-lab);font-size:15px;font-weight:600;letter-spacing:.03em;margin:0 0 4px;text-wrap:balance}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+th{font-family:var(--f-lab);font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);font-size:11.5px}
+.st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--ghost);border:1px solid var(--mute)}
+.st.s1{background:var(--cursor);border-color:var(--cursor)} .st.s2{background:var(--built);border-color:var(--built)}
+.pbar{height:6px;background:var(--ghost);border-radius:3px;overflow:hidden;min-width:60px}.pbar i{display:block;height:100%}
+#gantt{grid-column:1 / -1;border-top:1px solid var(--line);background:var(--panel);overflow:auto;position:relative;min-height:0}
+.g{position:relative;min-width:max-content}
+.ghead{position:sticky;top:0;z-index:3;display:flex;background:var(--panel);border-bottom:1px solid var(--line);height:26px}
+.gl{position:sticky;left:0;z-index:2;flex:0 0 var(--lw);width:var(--lw);background:inherit;border-right:1px solid var(--line);padding:0 8px;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap}
+.gt{position:relative;flex:0 0 auto}
+.mon{position:absolute;top:0;height:26px;border-left:1px solid var(--line);padding:5px 5px 0;font-family:var(--f-lab);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.row{display:flex;height:22px;background:var(--panel);cursor:pointer}
+.row:nth-child(even){background:var(--rowalt)}
+.row.z{height:26px;font-weight:600;border-top:1px solid var(--line)}
+.row.sel .gl{box-shadow:inset 3px 0 0 var(--accent);color:var(--accent)}
+.row .gl{font-size:12.5px}.row.t .gl{padding-left:24px;font-weight:400}
+.row .gl em{font-style:normal;color:var(--mute);font-size:11.5px;overflow:hidden;text-overflow:ellipsis}
+.tw{font-size:10px;width:10px;color:var(--mute)}
+.b{position:absolute;top:5px;height:12px;border-radius:2px;min-width:3px}
+.row.z .b{top:8px;height:10px;background:var(--ghost)}.row.z .b i{display:block;height:100%;background:var(--built);border-radius:2px}
+.b.s0{opacity:.38}.b.s2{filter:saturate(.45)}
+#cur{position:absolute;top:0;bottom:0;width:2px;background:var(--cursor);z-index:1;pointer-events:none}
+#msg{font-size:12.5px;color:var(--mute)}
+@media (max-width:820px){
+  html,body{height:auto} body{display:block}
+  .main{display:block}
+  #view{height:46vh;min-height:260px}
+  #side{border-left:0;border-top:1px solid var(--line)}
+  #gantt{max-height:70vh}
+  .hint,.bar h1 small{display:none}
+  #date{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<div class="bar">
+  <h1>MPB Build Sequence<small id="ver"></small></h1>
+  <div class="ctl">
+    <button class="btn" id="play" type="button">Play</button>
+    <select id="speed" aria-label="Animation speed"><option value="7">1 week / s</option><option value="14" selected>2 weeks / s</option><option value="30">1 month / s</option></select>
+    <input id="slider" type="range" min="0" max="100" value="0" aria-label="Programme date">
+    <span id="date"></span>
+  </div>
+  <button class="btn" id="ghost" type="button" aria-pressed="true">Not started: shown</button>
+  <label class="btn" for="file">Load planner Excel<input id="file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
+</div>
+<div class="note" id="note"><b>Example dates.</b> Placeholder dates from the proposed sequence, until the planner's dates are loaded. <span id="msg"></span></div>
+<div class="main">
+  <div id="view"><div id="fv"></div><div id="load">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend" id="legend"></div></div>
+  <div id="side">
+    <div class="kpis">
+      <div class="kpi"><b id="k2">0</b><span>Tags built</span></div>
+      <div class="kpi"><b id="k1">0</b><span>In progress</span></div>
+      <div class="kpi"><b id="k0">0</b><span>To start</span></div>
+    </div>
+    <div id="selbox"></div>
+  </div>
+  <div id="gantt"><div class="g" id="g"></div></div>
+</div>
+<script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js?v=2026-10-06a"></script>
+<script src="auth.js?v=2026-10-06a"></script>
+<script>
+(function(){
+const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
+const DN={CI:'Civil',ST:'Structure',FA:'Facade and roof',AR:'Interior',HV:'HVAC',FF:'Sprinkler',PH:'Plumbing',PI:'Lab gas',EL:'Electrical',FU:'Furniture and equipment'};
+const DAY=864e5, $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const d2n=s=>Math.round(Date.parse(s+'T00:00:00Z')/DAY), n2s=n=>{const d=new Date(n*DAY);return String(d.getUTCDate()).padStart(2,'0')+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+d.getUTCFullYear()};
+const fmt=(v,u)=>(u==='no.'?Math.round(v):v>=100?Math.round(v):Math.round(v*10)/10).toLocaleString('en-GB')+' '+u;
+
+let D,tags,T=0,t0,t1,playing=false,sel=null,ghost=true,open={},PX=3,LW=250;
+let viewer=null,models={},tagIds=[],id2tag={},tstat=[],muting=false,status={fill(){tstat=[]}};
+const CFG=window.CX_CONFIG,A=window.CX_AUTH;
+const say=t=>{$('load').textContent=t};
+start().catch(e=>{say('Error: '+e.message);console.error(e)});
+
+async function start(){
+  const tok=await A.init();
+  if(!tok){$('signin').hidden=false;$('signin').onclick=()=>A.login();say('Sign in with your Autodesk account to load the models.');return}
+  say('Reading data from ACC…');
+  const d=await A.readDataFile(CFG.dataFile);
+  if(!d){say('The file '+CFG.dataFile+' was not found in the ACC data folder, or you have no access to that folder.');return}
+  D=d; tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2]}));
+  $('ver').textContent='66A · data '+D.built.split('-').reverse().join('-');
+  $('legend').innerHTML=Object.keys(DC).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+'<span>bright = in progress · muted = built</span>';
+  try{const b=await A.readDataBlob(CFG.scheduleFile); if(b){readBook(await b.arrayBuffer(),CFG.scheduleFile+' (ACC)')}}catch(e){console.warn('no schedule file',e)}
+  range(); buildGantt(); bind(); setT(t0);
+  await initViewer();
+}
+function range(){t0=Math.min(...tags.map(t=>t.s))-7;t1=Math.max(...tags.map(t=>t.f))+14;$('slider').min=t0;$('slider').max=t1}
+function st(t){return T<t.s?0:T<=t.f?1:2}
+function inSel(t){return !sel||(sel.tag!=null?sel.tag===t.i:sel.zone===t.zone)}
+
+/* ---------- Autodesk viewer ---------- */
+async function initViewer(){
+  const getToken=async cb=>{const t=await A.token(); if(!t)return A.login(); cb(t.access,Math.floor((t.exp-Date.now())/1000))};
+  await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
+  viewer=new Autodesk.Viewing.GuiViewer3D($('fv'),{extensions:[]});
+  viewer.start(); viewer.setGhosting(true); viewer.setGroundShadow(false); viewer.setLightPreset(1); viewer.setQualityLevel(false,true); viewer.setOptimizeNavigation(true);
+  try{viewer.setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark-theme':'light-theme')}catch(e){}
+  viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
+  // newest version of every model file in the coordination folder
+  say('Listing models…'); const files={}; let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
+  while(url){const j=await A.api(url); const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v])); for(const it of j.data||[]){const v=inc[it.id]; if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber,date:v.attributes.lastModifiedTime}} url=j.links?.next?.href||null}
+  const want=Object.keys(D.map); let n=0,miss=[],globalOffset=null; const rep=[];
+  for(const code of want){
+    const fn=D.files[code],f=files[fn]; n++; if(!f){miss.push(fn);continue}
+    say('Loading '+n+' / '+want.length+'  '+fn+' (v'+f.n+')');
+    const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    try{
+      const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0]; if(!g)return rej(new Error('no 3D view'));
+        const o={keepCurrentModels:true,applyRefPoint:true,preserveView:n>1}; if(globalOffset)o.globalOffset=globalOffset;
+        try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(msg||('code '+c)))));
+      if(!globalOffset)globalOffset=m.getData().globalOffset; m._code=code; models[code]=m;
+      rep.push(await mapModel(code,m)); tstat=[]; paint();
+    }catch(e){console.warn('load failed',fn,e);miss.push(fn+' ('+e.message+')')}
+  }
+  const tot=rep.reduce((a,r)=>a+r[1],0),hit=rep.reduce((a,r)=>a+r[2],0);
+  say(''); $('load').hidden=true;
+  $('msg').textContent='Models: '+rep.length+' loaded. Elements linked to tags: '+hit.toLocaleString('en-GB')+' of '+tot.toLocaleString('en-GB')+'.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':'')+' '+rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
+  console.table(rep);
+}
+// link the IFC GlobalIds in the data file to this model's element ids
+async function mapModel(code,m){
+  let e2id=await new Promise(r=>m.getExternalIdMapping(r,()=>r({})));
+  const groups=D.map[code]; let tot=0,hit=0; const all=groups.map(g=>g[1].split(' ')); all.forEach(a=>tot+=a.length);
+  const test=()=>{let h=0;for(const a of all)for(const g of a)if(e2id[g]!=null)h++;return h};
+  if(test()<tot*0.2){ // external ids are not the IFC GlobalId in this translation: read the GlobalId property instead
+    try{const alt=await m.getPropertyDb().executeUserFunction(function(pdb){var ai=[];pdb.enumAttributes(function(i,def){if(/^(globalid|ifcguid|ifc guid|guid)$/i.test(def.name))ai.push(i)});var out={};pdb.enumObjects(function(dbId){pdb.enumObjectProperties(dbId,function(a,v){if(ai.indexOf(a)>=0){out[pdb.getAttrValue(a,v)]=dbId}})});return out});
+      if(alt&&Object.keys(alt).length)e2id=alt}catch(e){console.warn('GlobalId property scan failed',code,e)}
+  }
+  tagIds[code]={}; id2tag[code]={};
+  groups.forEach((g,k)=>{const ids=[];for(const guid of all[k]){const id=e2id[guid];if(id!=null){ids.push(id);id2tag[code][id]=g[0];hit++}} tagIds[code][g[0]]=ids});
+  viewer.hide(m.getRootId(),m);           // everything starts hidden; tags switch elements on
+  return [code,tot,hit];
+}
+const v4=(hex,mix,to)=>{const c=new THREE.Color(hex); if(to)c.lerp(new THREE.Color(to),mix); return new THREE.Vector4(c.r,c.g,c.b,1)};
+function paint(){
+  if(!viewer)return; const builtC=css('--built');
+  tags.forEach(t=>{const s=st(t); if(tstat[t.i]===s)return; tstat[t.i]=s;
+    for(const code in models){const ids=tagIds[code]&&tagIds[code][t.i]; if(!ids||!ids.length)continue; const m=models[code];
+      if(s===0){viewer.hide(ids,m)}else{viewer.show(ids,m); const col=s===1?v4(DC[t.disc]):v4(DC[t.disc],.6,builtC); for(const id of ids)viewer.setThemingColor(id,col,m,true)}}});
+  viewer.impl.invalidate(true,true,true);
+}
+function highlight(){
+  if(!viewer)return; muting=true; viewer.clearSelection();
+  if(sel){const s=[]; for(const code in models){const ids=[]; tags.filter(inSel).forEach(t=>{const a=tagIds[code]&&tagIds[code][t.i]; if(a&&st(t)>0)for(const id of a)ids.push(id)}); if(ids.length)s.push({model:models[code],ids})}
+    if(s.length){viewer.impl.selector.setAggregateSelection(s.map(x=>({model:x.model,ids:x.ids}))); try{viewer.fitToView(s.map(x=>({model:x.model,selection:x.ids})))}catch(e){}}}
+  setTimeout(()=>muting=false,50);
+}
+function onPick(ev){
+  if(muting)return; const s=ev.selections&&ev.selections[0]; if(!s||!s.dbIdArray.length)return; const m=s.model,code=m._code,map=id2tag[code]; if(!map)return;
+  const tree=m.getInstanceTree(); let id=s.dbIdArray[0],k=0; while(id!=null&&map[id]==null&&tree&&k++<12)id=tree.getNodeParentId(id);
+  if(id==null||map[id]==null)return; const t=tags[map[id]]; open[t.zone]=true; select({tag:t.i},true); const r=document.querySelector('.row[data-t="'+t.i+'"]'); if(r)r.scrollIntoView({block:'nearest'});
+}
+function select(s,fromViewer){sel=s; buildGantt(); panel(); if(!fromViewer)highlight()}
+
+/* ---------- time ---------- */
+let last=0;
+(function loop(){requestAnimationFrame(loop);if(tags)tick()})();
+function tick(){const now=performance.now(); if(playing){const dt=(now-last)/1000; let nt=T+dt*+$('speed').value; if(nt>=t1){nt=t1;toggle(false)} setT(nt)} last=now}
+function toggle(v){playing=v==null?!playing:v; if(playing&&T>=t1-1)setT(t0); $('play').textContent=playing?'Pause':'Play'; $('play').classList.toggle('on',playing)}
+function setT(v){T=v; $('slider').value=v; $('date').textContent=n2s(Math.floor(v)); paint(); gantState(); panel()}
+
+/* ---------- Gantt ---------- */
+function buildGantt(){
+  const g=$('g'); LW=innerWidth<820?150:250; g.style.setProperty('--lw',LW+'px'); const W=(t1-t0)*PX; let h='<div class="ghead"><div class="gl lab">Zone · model item group</div><div class="gt" style="width:'+W+'px">';
+  const a=new Date(t0*DAY); let m=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1));
+  while(m.getTime()/DAY<t1){const x=(m.getTime()/DAY-t0)*PX; if(x>=0)h+='<div class="mon" style="left:'+x+'px">'+m.toLocaleString('en-GB',{month:'short',year:'2-digit',timeZone:'UTC'})+'</div>'; m=new Date(Date.UTC(m.getUTCFullYear(),m.getUTCMonth()+1,1))}
+  h+='</div></div>';
+  for(const z of D.zones){const ts=tags.filter(t=>t.zone===z[0]); if(!ts.length)continue; const s=Math.min(...ts.map(t=>t.s)),f=Math.max(...ts.map(t=>t.f));
+    h+='<div class="row z" tabindex="0" data-z="'+z[0]+'"><div class="gl"><span class="tw">'+(open[z[0]]?'▾':'▸')+'</span>'+z[1]+' <em>'+ts.length+' tags</em></div><div class="gt" style="width:'+W+'px"><div class="b" data-zs="'+s+'" data-zf="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div></div></div>';
+    if(open[z[0]])for(const t of ts)h+='<div class="row t" tabindex="0" data-t="'+t.i+'" title="'+t.tag+' · '+t.pkg+'"><div class="gl">'+t.name+' <em>'+t.pkg+'</em></div><div class="gt" style="width:'+W+'px"><div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div></div></div>'}
+  h+='<div id="cur"></div>'; g.innerHTML=h; gantState();
+}
+function gantState(){
+  const c=$('cur'); if(!c)return; c.style.left=(LW+(T-t0)*PX)+'px';
+  document.querySelectorAll('.row.t').forEach(r=>{const t=tags[+r.dataset.t],b=r.querySelector('.b');b.className='b s'+st(t);r.classList.toggle('sel',!!sel&&sel.tag===t.i)});
+  document.querySelectorAll('.row.z').forEach(r=>{const b=r.querySelector('.b'),s=+b.dataset.zs,f=+b.dataset.zf;b.firstChild.style.width=Math.max(0,Math.min(1,(T-s)/(f-s+1)))*100+'%';r.classList.toggle('sel',!!sel&&sel.zone===r.dataset.z)});
+}
+
+
+/* ---------- side panel ---------- */
+function panel(){
+  const k=[0,0,0]; tags.forEach(t=>k[st(t)]++); $('k0').textContent=k[0];$('k1').textContent=k[1];$('k2').textContent=k[2];
+  let h='';
+  if(sel){const ts=tags.filter(inSel), z=D.zones.find(z=>z[0]===ts[0].zone);
+    h+='<h2>'+(sel.tag!=null?ts[0].tag:z[1])+'</h2>';
+    if(sel.tag!=null){const t=ts[0];h+='<div>'+t.name+'<br><span class="lab">'+t.pkg+' · '+z[1]+'</span></div><div style="font-family:var(--f-num);margin-top:4px">'+n2s(t.s)+' → '+n2s(t.f)+'</div>'}
+    h+='<table><tr><th>Group</th><th class="n">Quantity</th><th class="n">Elements</th></tr>'+ts.map(t=>'<tr><td><span class="st s'+st(t)+'"></span>'+t.name+'</td><td class="n">'+fmt(t.qty,t.unit)+'</td><td class="n">'+t.n.toLocaleString('en-GB')+'</td></tr>').join('')+'</table><button class="btn" type="button" id="clr">Clear selection</button>';
+  }else{
+    h+='<h2>In place on '+n2s(Math.floor(T))+'</h2><table><tr><th>Discipline</th><th class="n">Elements</th><th></th></tr>';
+    for(const d in DC){const ts=tags.filter(t=>t.disc===d); if(!ts.length)continue; const tot=ts.reduce((a,t)=>a+t.n,0); let done=0; ts.forEach(t=>{const s=st(t);done+=s===2?t.n:s===1?t.n*(T-t.s)/(t.f-t.s+1):0});
+      h+='<tr><td>'+DN[d]+'</td><td class="n">'+Math.round(done).toLocaleString('en-GB')+' / '+tot.toLocaleString('en-GB')+'</td><td><div class="pbar"><i style="width:'+(done/tot*100)+'%;background:'+DC[d]+'"></i></div></td></tr>'}
+    h+='</table><div class="lab" style="text-transform:none;letter-spacing:0">Select a zone or a group to see its quantities.</div>';
+  }
+  $('selbox').innerHTML=h; const c=$('clr'); if(c)c.onclick=()=>select(null);
+}
+
+/* ---------- planner Excel ---------- */
+function applyDates(map,quiet){let n=0; tags.forEach(t=>{const d=map[t.tag]; if(d&&d[0]&&d[1]){t.s=d[0];t.f=Math.max(d[0],d[1]);n++}}); if(n&&!quiet){$('note').firstElementChild.textContent='Planner dates loaded.'} if(n&&quiet){$('note').firstElementChild.textContent='Planner dates (saved in this browser).'} return n}
+function xl(v){if(v==null||v==='')return null; if(v instanceof Date)return Math.round((Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()))/DAY); if(typeof v==='number')return Math.round(v-25569); const m=String(v).match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); if(m)return Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/DAY); const p=Date.parse(v); return isNaN(p)?null:Math.round(p/DAY)}
+function loadFile(f){const r=new FileReader(); r.onload=()=>readBook(r.result,f.name); r.readAsArrayBuffer(f)}
+function readBook(buf,fname){const f={name:fname};{try{const wb=XLSX.read(buf,{type:'array',cellDates:true}); const map={}; let seen=0;
+    wb.SheetNames.forEach(sn=>{const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true}); const hi=rows.findIndex(x=>x&&x.some(c=>String(c).trim().toUpperCase()==='TAG')); if(hi<0)return; const H=rows[hi].map(c=>String(c||'').trim().toUpperCase()),ct=H.indexOf('TAG'),cs=H.indexOf('START'),cf=H.indexOf('FINISH'); if(cs<0||cf<0)return;
+      rows.slice(hi+1).forEach(x=>{if(!x||!x[ct])return; seen++; const s=xl(x[cs]),e=xl(x[cf]); if(s&&e)map[String(x[ct]).trim()]=[s,e]})});
+    const n=applyDates(map); $('msg').textContent=n?n+' of '+tags.length+' tags got dates from '+f.name+'. Tags without dates keep the example dates.':(seen?'No Start and Finish dates found in '+f.name+'.':'No sheet with TAG, Start and Finish columns found in '+f.name+'.');
+    if(n){try{localStorage.setItem('mpb4d-dates',JSON.stringify(map))}catch(e){} if(t0!=null){range(); tstat=[]; buildGantt(); setT(Math.max(t0,Math.min(T,t1)))}}
+  }catch(e){$('msg').textContent='Could not read '+f.name+': '+e.message}}}
+
+function bind(){
+  $('play').onclick=()=>toggle(); $('slider').oninput=e=>{toggle(false);setT(+e.target.value)};
+  $('ghost').onclick=e=>{ghost=!ghost;e.target.setAttribute('aria-pressed',ghost);e.target.textContent=ghost?'Not started: shown':'Not started: hidden';if(viewer){viewer.setGhosting(ghost);viewer.impl.invalidate(true,true,true)}};
+  $('ghost').textContent='Not started: shown';
+  $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
+  const act=e=>{const r=e.target.closest('.row'); if(!r)return; if(r.dataset.z){const z=r.dataset.z; if(e.target.closest('.gl')){open[z]=!open[z]; select(open[z]?{zone:z}:null)}else select(sel&&sel.zone===z&&sel.tag==null?null:{zone:z})}else{const i=+r.dataset.t; select(sel&&sel.tag===i?{zone:tags[i].zone}:{tag:i})}};
+  $('g').addEventListener('click',act); $('g').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(e)}});
+  $('g').querySelector('.ghead');
+  $('gantt').addEventListener('dblclick',e=>{const gt=e.target.closest('.gt'); if(!gt)return; const x=e.clientX-gt.getBoundingClientRect().left; toggle(false); setT(t0+x/PX)});
+  addEventListener('resize',()=>{const lw=innerWidth<820?150:250; if(lw!==LW)buildGantt(); if(viewer)viewer.resize()});
+}
+})();
+</script></body></html>
