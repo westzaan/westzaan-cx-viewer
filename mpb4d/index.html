@@ -148,6 +148,7 @@ body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
 #scard .chipline{display:flex;align-items:center;gap:7px;font-weight:600} #scard .chipline i{flex:0 0 10px;height:10px;border-radius:3px}
 #scard tr.tot td{font-weight:700;border-top:1px solid rgba(255,255,255,.3)} #scard .sub{color:var(--mute);font-size:11.5px;padding-left:14px}
 #scard #splay{width:100%;margin-top:8px}
+.pnote{margin:6px 0;font-size:12px;color:var(--mute)} .pnote.warn{background:rgba(255,159,10,.13);color:#ffd8a0;border-radius:8px;padding:6px 8px}
 .site.ph2{color:#d9a6f7;background:rgba(191,90,242,.16)}
 #gtools{display:contents}
 #msbar{flex-wrap:nowrap} #msn{font-family:var(--f-num);font-size:12.5px;color:var(--mute);white-space:nowrap}
@@ -254,8 +255,8 @@ body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v8"></script>
-<script src="auth.js?v=2026-10-06v8"></script>
+<script src="config.js?v=2026-10-06v9"></script>
+<script src="auth.js?v=2026-10-06v9"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -304,9 +305,9 @@ async function start(){
   const alt=n=>n.replace(/_/g,' '); const d=await A.readDataFile(CFG.dataFile)||await A.readDataFile(alt(CFG.dataFile));
   if(!d){$('loadA').textContent='The file '+CFG.dataFile+' was not found in the ACC data folder, or you have no access to that folder.';return}
   D=d; const zn=Object.fromEntries(D.zones.map(z=>[z[0],z]));
-  tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),built:!!t[8],name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2],
+  tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),built:!!t[8],p6s:t[9]||'',p6f:t[10]||'',note:t[11]||'',name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2],
     zoneName:zn[t[1]][1],block:zn[t[1]][2]==='A'?'Shell':'Fit-out',floor:floorOf(t[1]),zo:D.zones.indexOf(zn[t[1]])}));
-  pkgs=[...new Set(tags.map(t=>t.pkg))].sort();
+  pkgs=[...new Set(tags.map(t=>t.pkg))].sort(); if(D.sched)$('dnote').textContent=D.sched;
   try{const b=await A.readDataBlob(CFG.scheduleFile)||await A.readDataBlob(alt(CFG.scheduleFile)); if(b)readBook(await b.arrayBuffer(),CFG.scheduleFile+' in ACC')}catch(e){console.warn('no schedule file',e)}
   const lay=store.get('layout')||{}; if(lay.gh)setGridH(lay.gh,true);
   buildMenus(); range(); bind(); setT(t0); refresh();
@@ -340,7 +341,7 @@ function syncBars(){
   views.forEach(V=>V.label());
 }
 function refresh(){
-  buildMS(); if(S.mode==='ms'){const o=MS[S.msI]; HI=new Set(o.tags.map(t=>t.i)); msZone=o.zone; msFinal=o.kind==='end'; autoZ=o.zone; T=o.kind==='start'?t0:o.date+0.999; $('slider').value=T; $('date').textContent=n2s(Math.floor(T))}
+  buildMS(); if(S.mode==='ms'){const o=MS[S.msI]; HI=new Set(o.tags.map(t=>t.i)); msZone=o.zone; msFinal=o.kind==='end'; autoZ=o.zone; T=o.kind==='start'?o.date:o.date+0.999; $('slider').value=T; $('date').textContent=n2s(Math.floor(T))}
   syncBars(); buildGrid(); panel(); scard(); legend(); msUI(); applyAll(); activeList(); syncZones()}
 function applyAll(){views.forEach(V=>V.apply())}
 function resetApplied(){views.forEach(V=>{V.applied={}})}
@@ -354,12 +355,12 @@ function buildMS(){
   live.forEach(t=>{const k=S.mslev==='pkg'?t.zone+'|'+t.pkg:t.zone; if(!m.has(k))m.set(k,{zone:t.zone,zoneName:t.zoneName,pkg:S.mslev==='pkg'?t.pkg:null,tags:[],date:0}); const o=m.get(k); o.tags.push(t); o.date=Math.max(o.date,t.f)});
   const list=[...m.values()].sort((a,b)=>a.date-b.date||zi(a.zone)-zi(b.zone));
   list.forEach(o=>{o.title=o.zoneName+(o.pkg?' · '+o.pkg:''); o.sub=o.pkg?'package complete in this zone':'zone complete'+(sid==='BASE'?'':' for Phase 1')});
-  const end=list.length?list[list.length-1].date:t1, out=[{kind:'start',zone:null,tags:[],date:t0,title:'Today: on site',sub:'what is already built'}].concat(list);
+  const end=list.length?list[list.length-1].date:t1, td=Math.max(t0,Math.min(t1,Math.floor(Date.now()/DAY))), out=list.filter(o=>o.date<td).concat([{kind:'start',zone:null,tags:[],date:td,title:'Today',sub:'what is on site now'}],list.filter(o=>o.date>=td));
   if(sid!=='BASE')D.zones.forEach(z=>{if(tags.some(t=>t.zone===z[0]&&deferred(t,sid))&&!live.some(t=>t.zone===z[0]))out.push({kind:'wait',zone:z[0],zoneName:z[1],tags:[],date:end,title:z[1],sub:'nothing more in Phase 1, waits for Phase 2'})});
   out.push({kind:'end',zone:null,tags:[],date:end,title:sid==='BASE'?'Building complete':'End of Phase 1',sub:sid==='BASE'?'everything built':'what is built, and what waits for Phase 2'});
   out.forEach(o=>{o.nd=tags.filter(t=>(!o.zone||t.zone===o.zone)&&deferred(t,sid)).length; o.n=o.tags.reduce((a,t)=>a+t.n,0)});
   MS=out; S.msI=Math.max(0,Math.min(S.msI,MS.length-1));
-  $('mslist').innerHTML=MS.map((o,i)=>'<button type="button" class="mrow" data-i="'+i+'"><span class="n">'+(i+1)+'</span><span class="d">'+(o.kind==='start'?'now':n2s(o.date))+'</span><span class="t"><b>'+esc(o.title)+'</b> <em>'+esc(o.sub)+'</em></span><span class="c">'+(o.n?num(o.n)+' elements':'')+'</span><span class="p">'+(o.nd&&sid!=='BASE'?'<span class="ph2chip">'+o.nd+' tags to Phase 2</span>':'')+'</span></button>').join('');
+  $('mslist').innerHTML=MS.map((o,i)=>'<button type="button" class="mrow" data-i="'+i+'"><span class="n">'+(i+1)+'</span><span class="d">'+n2s(o.date)+'</span><span class="t"><b>'+esc(o.title)+'</b> <em>'+esc(o.sub)+'</em></span><span class="c">'+(o.n?num(o.n)+' elements':'')+'</span><span class="p">'+(o.nd&&sid!=='BASE'?'<span class="ph2chip">'+o.nd+' tags to Phase 2</span>':'')+'</span></button>').join('');
 }
 function msUI(){
   const ms=S.mode==='ms', tab=S.btab==='ms'; $('msbar').hidden=!ms; $('tlbar').hidden=ms; $('mspane').hidden=!tab; $('gantt').hidden=tab; $('gtools').hidden=tab; $('mstools').hidden=!tab;
@@ -437,7 +438,7 @@ function panel(){
   if(sel.length){
     const u={}; sel.forEach(t=>{u[t.unit]=(u[t.unit]||0)+t.qty}); const n=sel.reduce((a,t)=>a+t.n,0);
     h+='<h2>Selection: '+(sel.length===1?esc(sel[0].tag):sel.length+' tags')+'</h2>';
-    if(sel.length===1){const t=sel[0];h+='<div>'+esc(t.name)+'<br><span class="lab">'+esc(t.pkg+' · '+t.zoneName)+'</span></div><div style="font-family:var(--f-num)">'+(t.built?'Already on site':deferred(t,S.scen)?'Deferred to Phase 2 (date open)':n2s(t.s)+' → '+n2s(t.f))+'</div>'}
+    if(sel.length===1){const t=sel[0];h+='<div>'+esc(t.name)+'<br><span class="lab">'+esc(t.pkg+' · '+t.zoneName)+'</span></div><div style="font-family:var(--f-num)">'+(t.built?'On site · '+n2s(t.s)+' → '+n2s(t.f):deferred(t,S.scen)?'Deferred to Phase 2 (date open)':n2s(t.s)+' → '+n2s(t.f))+'</div>'+(t.p6s?'<div class="lab">P6: '+esc(t.p6s+(t.p6f?' → '+t.p6f:''))+'</div>':'')+(t.note?'<p class="pnote'+(/WARNING|CHECK|LOGIC/.test(t.note)?' warn':'')+'"><b>Planner.</b> '+esc(t.note)+'</p>':'')}
     h+='<table><tr><th>Total</th><th class="n">'+num(n)+' elements</th></tr>'+Object.keys(u).map(x=>'<tr><td>Quantity</td><td class="n">'+fmt(u[x],x)+'</td></tr>').join('')+'</table>';
     if(sel.length>1)h+='<table><tr><th>Tag</th><th class="n">Quantity</th></tr>'+sel.slice(0,60).map(t=>'<tr><td><span class="st s'+real(t)+'"></span>'+esc(t.zone+' · '+t.name)+'</td><td class="n">'+fmt(t.qty,t.unit)+'</td></tr>').join('')+(sel.length>60?'<tr><td colspan="2">… '+(sel.length-60)+' more (use Export Excel)</td></tr>':'')+'</table>';
   }
@@ -701,9 +702,9 @@ function readBook(buf,fname){try{const wb=XLSX.read(buf,{type:'array',cellDates:
     if(n&&t0!=null){range(); resetApplied(); refresh(); setT(Math.max(t0,Math.min(T,t1)))}
   }catch(e){$('dnote').textContent='Could not read '+fname+': '+e.message}}
 function exportXlsx(){
-  const list=tags.filter(t=>pass(t)), sc=scenOf(S.scen), rowsX=[['TAG','Zone','Floor','Model item group','Discipline','Package','Elements','Quantity','Unit','Built?','Start','Finish','Phase in '+(sc?sc.name.split(':')[0]:'Base'),'Status on '+n2s(Math.floor(T)),'Selected']];
-  list.forEach(t=>rowsX.push([t.tag,t.zoneName,t.floor,t.name,DN[t.disc],t.pkg,t.n,t.qty,t.unit,t.built?'Y':'N',t.built?null:new Date(t.s*DAY),t.built?null:new Date(t.f*DAY),t.built?'On site':deferred(t,S.scen)?'Phase 2 (date open)':'Phase 1',SN[real(t)],S.sel.has(t.i)?'yes':'']));
-  const ws=XLSX.utils.aoa_to_sheet(rowsX,{cellDates:true,dateNF:'dd-mm-yyyy'}); ws['!cols']=[22,22,10,30,20,22,10,10,6,7,12,12,20,16,9].map(w=>({wch:w}));
+  const list=tags.filter(t=>pass(t)), sc=scenOf(S.scen), rowsX=[['TAG','Zone','Floor','Model item group','Discipline','Package','Elements','Quantity','Unit','Built?','Start','Finish','Phase in '+(sc?sc.name.split(':')[0]:'Base'),'Status on '+n2s(Math.floor(T)),'Selected','Start activity (P6)','Finish activity (P6)','Planner comments']];
+  list.forEach(t=>rowsX.push([t.tag,t.zoneName,t.floor,t.name,DN[t.disc],t.pkg,t.n,t.qty,t.unit,t.built?'Y':'N',new Date(t.s*DAY),new Date(t.f*DAY),t.built?'On site':deferred(t,S.scen)?'Phase 2 (date open)':'Phase 1',SN[real(t)],S.sel.has(t.i)?'yes':'',t.p6s,t.p6f,t.note]));
+  const ws=XLSX.utils.aoa_to_sheet(rowsX,{cellDates:true,dateNF:'dd-mm-yyyy'}); ws['!cols']=[22,22,10,30,20,22,10,10,6,7,12,12,20,16,9,16,16,60].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Tag list'); XLSX.writeFile(wb,'66A-MPB_sequence_'+S.scen+'_'+n2s(Math.floor(T))+'.xlsx');
 }
 
