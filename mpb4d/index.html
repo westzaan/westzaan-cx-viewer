@@ -158,7 +158,7 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 #vws{position:relative} #story{position:absolute;inset:0;pointer-events:none;z-index:5} #story>*{pointer-events:auto}
 body.story .vlab{top:160px}
 #strip{position:absolute;left:12px;right:12px;top:10px;z-index:5;display:flex;align-items:flex-start;gap:6px;padding:7px 10px 44px}
-#strip .btn{padding:8px 12px;font-size:15px;line-height:20px}
+#strip .btn{padding:8px 12px;font-size:15px;line-height:20px} #strip #sspd{font-size:12px;font-family:var(--f-num);color:var(--mute);min-width:44px;padding:8px 6px}
 #months{position:relative;flex:1;display:flex;margin-left:6px}
 .mo{flex:1 1 0;text-align:center;padding:2px 0 6px;font-weight:600;font-size:13px;color:#fff;background:#2f6fc0;border-left:1px solid rgba(255,255,255,.22);cursor:pointer;user-select:none}
 .mo{position:relative} .wk{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;padding:6px;gap:4px;white-space:nowrap;background:rgba(28,28,30,.97);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45)} .mo:hover .wk{display:flex}
@@ -259,7 +259,7 @@ body.story .vlab{top:160px}
       <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div></div>
       <div class="view" id="vwB" hidden><div class="fv" id="fvB"></div><div class="vlab glass" id="labB" hidden></div><div class="load glass" id="loadB" hidden></div></div>
         <div id="story" hidden>
-          <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Play week by week" title="Play week by week">&#9654;</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
+          <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Play week by week" title="Play week by week">&#9654;</button><button class="btn" id="sspd" type="button" aria-label="Play speed: seconds per week" title="Seconds per week while playing. Click to change, or use the + and - keys">8 s</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
           <div id="stages" class="glass"></div>
           <div id="zbars" class="glass"></div>
           <div id="capt" class="glass"></div>
@@ -295,8 +295,8 @@ body.story .vlab{top:160px}
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v16"></script>
-<script src="auth.js?v=2026-10-06v16"></script>
+<script src="config.js?v=2026-10-06v17"></script>
+<script src="auth.js?v=2026-10-06v17"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -313,7 +313,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catc
 let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430,views=[],VA=null,VB=null,autoZ=null,MAP={},pkgs=[],colorMap={},rows=[];
 // everything the user can switch. Shared by both 3D views; each view only differs in zone and scenario.
 const S={sel:new Set(),off:new Set(),ns:'off',bu:'ghost',df:'mark',recent:28,grow:true,vis:'normal',colorBy:'real',pick:'tag',time:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set(),
-  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,auto2:true,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
+  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,auto2:true,spw:8,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
 let MS=[],HI=new Set(),msZone=null,msFinal=false; const HIC='#34c759';
 
 const floorOf=z=>{const m=/^(?:STR-)?(GF|1F|2F|3F)/.exec(z);return m?m[1]:(z==='ROOF'?'Roof':z==='SUB'?'Substructure':'Building')};
@@ -458,11 +458,14 @@ function storyUI(){
   const wipT=liveOf(sid).filter(t=>T>=t.s&&T<=t.f&&(!S.disc.size||S.disc.has(t.disc))), parts=STG.map(g=>{const zs=[...new Set(wipT.filter(t=>g[1].includes(t.disc)).map(t=>t.zoneName.replace(/^.. - /,'')))]; return zs.length?g[0]+' in '+zs.slice(0,3).join(', ')+(zs.length>3?' and '+(zs.length-3)+' more zones':''):null}).filter(Boolean);
   const sc=scenOf(sid), f=fl.find(x=>x[1]===d), nd=tags.filter(t=>deferred(t,sid)).length, txt=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):parts.length?'Under way: '+parts.join('; ')+'.':'No work under way on this date.';
   $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?(two?'<div class="cx">Two busy floors: left cut open above '+esc(cutF)+', right above '+esc(cutF2)+'.</div>':'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>'):'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
-  $('splayb').textContent=playI?'❚❚':'▶';
+  $('splayb').textContent=playI?'❚❚':'▶'; $('sspd').textContent=S.spw+' s';
 }
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
 function stepMonth(dir){const d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e)); let ni=ci+dir; if(dir>0&&d<ML[ci].e)ni=ci; if(ni>=ML.length)return false; goDay(ni<0?today():Math.max(today(),ML[ni].e)); return true}
-function playMonths(on){clearInterval(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setInterval(()=>{const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7))},2600)} storyUI()}
+const SPD=[12,8,5,3];   // seconds one week stays on screen
+function playTick(){const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7)); playI=setTimeout(playTick,S.spw*1000)}
+function playMonths(on){clearTimeout(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setTimeout(playTick,Math.min(1500,S.spw*1000))} storyUI()}
+function setSpeed(dir){const i=SPD.indexOf(S.spw); S.spw=dir===0?SPD[(i+1)%SPD.length]:SPD[Math.max(0,Math.min(SPD.length-1,i+dir))]; store.set('spw',S.spw); if(playI){clearTimeout(playI); playI=setTimeout(playTick,S.spw*1000)} storyUI()}
 
 /* ---------- inventory grid with Gantt bars ---------- */
 function tree(){
@@ -830,10 +833,10 @@ function bind(){
   $('fig').onclick=()=>{S.fig=!S.fig; syncBars(); scard()}; $('bt').onclick=()=>{S.bt=!S.bt; if(S.bt)S.fig=true; syncBars(); scard()};
   $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); if(S.mode==='ms')goMS(MS.length-1); else{setT(t0); toggle(true)}}};
   $('msprev').onclick=()=>goMS(S.msI-1); $('msnext').onclick=()=>goMS(S.msI+1); $('mslist').onclick=e=>{const b=e.target.closest('.mrow'); if(b)goMS(+b.dataset.i)};
-  addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){const k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(k){e.preventDefault(); playMonths(false); if(e.shiftKey)goDay(Math.max(today(),Math.min(ML[ML.length-1].e,Math.floor(T)+7*k))); else stepMonth(k)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
+  addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){if(e.key==='+'||e.key==='='){setSpeed(1);return} if(e.key==='-'){setSpeed(-1);return} if(e.key===' '){e.preventDefault();playMonths(!playI);return} const k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(k){e.preventDefault(); playMonths(false); if(e.shiftKey)goDay(Math.max(today(),Math.min(ML[ML.length-1].e,Math.floor(T)+7*k))); else stepMonth(k)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
   seg('mode',v=>{S.mode=v; playMonths(false); views.forEach(V=>{V.fkey=null}); if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} if(v!=='story'&&S.stg!=null){S.stg=null;S.disc=new Set()} resetApplied(); refresh(); setTimeout(()=>{resizeAll(); if(v!=='story')buildGrid()},60); syncZones(true); applyRender('bg')});
   $('months').onclick=e=>{const w=e.target.closest('.wkb'), f=e.target.closest('.flag'), m=e.target.closest('.mo'); playMonths(false); if(w)goDay(+w.dataset.d); else if(f)goDay(+f.dataset.d); else if(m)goDay(Math.max(today(),ML[+m.dataset.i].e))};
-  $('splayb').onclick=()=>playMonths(!playI); $('sprev').onclick=()=>{playMonths(false);stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false);stepMonth(1)};
+  $('splayb').onclick=()=>playMonths(!playI); $('sspd').onclick=()=>setSpeed(0); {const v=store.get('spw'); if(SPD.includes(v))S.spw=v} $('sprev').onclick=()=>{playMonths(false);stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false);stepMonth(1)};
   $('stages').onclick=e=>{const b=e.target.closest('.stg'); if(!b)return; const i=+b.dataset.g; S.stg=S.stg===i?null:i; S.disc=new Set(S.stg==null?[]:STG[S.stg][1]); refresh()};
   $('zbars').onclick=e=>{const o=e.target.closest('[data-o]'); if(o){S[o.dataset.o]=!S[o.dataset.o]; views.forEach(V=>{V.fkey=null}); refresh(); return} const b=e.target.closest('.zr'); if(!b)return; S.zone=S.zone===b.dataset.z?null:b.dataset.z; refresh()};
   seg('mslev',v=>{S.mslev=v; S.msI=9999; refresh()}); seg('btab',v=>{S.btab=v; syncBars(); msUI(); if(v!=='ms')buildGrid()});
