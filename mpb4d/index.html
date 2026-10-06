@@ -295,8 +295,8 @@ body.story .vlab{top:160px}
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v17"></script>
-<script src="auth.js?v=2026-10-06v17"></script>
+<script src="config.js?v=2026-10-06v18"></script>
+<script src="auth.js?v=2026-10-06v18"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -325,7 +325,7 @@ const scenOf=id=>(D.scen||[]).find(s=>s.id===id)||null;
 const defSets={};
 function deferred(t,sid){
   if(!sid||sid==='BASE'||t.built)return false; let set=defSets[sid];
-  if(!set){set=defSets[sid]=new Set(); const sc=scenOf(sid); if(sc)tags.forEach(x=>{if(x.built)return; for(const r of sc.defer){const zok=r.z==='*'||(r.z==='DZ'?(D.dz||[]).includes(x.zone):r.z===x.zone); if(zok&&((r.d||[]).includes(x.disc)||(r.g||[]).includes(x.group))){set.add(x.i);break}}})}
+  if(!set){set=defSets[sid]=new Set(); const sc=scenOf(sid); if(sc)tags.forEach(x=>{if(x.built)return; for(const r of sc.defer){const zok=r.z==='*'||(r.z==='DZ'?(D.dz||[]).includes(x.zone):r.z==='FIT'?x.block==='Fit-out':r.z===x.zone); if(zok&&((r.d||[]).includes(x.disc)||(r.g||[]).includes(x.group))){set.add(x.i);break}}})}
   return set.has(t.i);
 }
 // 0 not started, 1 in progress, 2 built, 3 deferred (its Phase 1 slot has passed and it was left out)
