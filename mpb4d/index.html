@@ -151,6 +151,7 @@ body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
 .pnote{margin:6px 0;font-size:12px;color:var(--mute)} .pnote.warn{background:rgba(255,159,10,.13);color:#ffd8a0;border-radius:8px;padding:6px 8px}
 .site.ph2{color:#d9a6f7;background:rgba(191,90,242,.16)}
 #gtools{display:contents}
+#note{display:none}
 body.story #split,body.story #grid,body.story #side,body.story #legend,body.story #active{display:none!important}
 body.story #stage{grid-template-columns:minmax(0,1fr)}
 body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.story .homeViewWrapper{display:none!important}
@@ -254,7 +255,7 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
     <div id="vws">
       <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div>
         <div id="story" hidden>
-          <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Step through the months automatically">&#9654;</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
+          <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Play week by week" title="Play week by week">&#9654;</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
           <div id="stages" class="glass"></div>
           <div id="zbars" class="glass"></div>
           <div id="capt" class="glass"></div>
@@ -291,8 +292,8 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v12"></script>
-<script src="auth.js?v=2026-10-06v12"></script>
+<script src="config.js?v=2026-10-06v13b"></script>
+<script src="auth.js?v=2026-10-06v13b"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -448,12 +449,12 @@ function storyUI(){
     +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Cut open at the busiest floor</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
   const wipT=liveOf(sid).filter(t=>T>=t.s&&T<=t.f&&(!S.disc.size||S.disc.has(t.disc))), parts=STG.map(g=>{const zs=[...new Set(wipT.filter(t=>g[1].includes(t.disc)).map(t=>t.zoneName.replace(/^.. - /,'')))]; return zs.length?g[0]+' in '+zs.slice(0,3).join(', ')+(zs.length>3?' and '+(zs.length-3)+' more zones':''):null}).filter(Boolean);
   const sc=scenOf(sid), f=fl.find(x=>x[1]===d), nd=tags.filter(t=>deferred(t,sid)).length, txt=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):parts.length?'Under way: '+parts.join('; ')+'.':'No work under way on this date.';
-  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>':'')+'<div class="lg"><span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier'+(focOn?' (faint)':'')+'</span>'+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
+  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>':'')+'<div class="lg">'+(focOn?'<span><i style="background:#8e8e93"></i>Solid, in its own materials: the work of this date</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
   $('splayb').textContent=playI?'❚❚':'▶';
 }
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
 function stepMonth(dir){const d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e)); let ni=ci+dir; if(dir>0&&d<ML[ci].e)ni=ci; if(ni>=ML.length)return false; goDay(ni<0?today():Math.max(today(),ML[ni].e)); return true}
-function playMonths(on){clearInterval(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setInterval(()=>{if(!stepMonth(1)||msFinal)playMonths(false)},1700)} storyUI()}
+function playMonths(on){clearInterval(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setInterval(()=>{const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7))},1300)} storyUI()}
 
 /* ---------- inventory grid with Gantt bars ---------- */
 function tree(){
@@ -624,14 +625,15 @@ function makeView(key){
   };
   // what a tag looks like right now in this view: [state, colour key, grown step]
   const lookOf=(t,hasSel,sid)=>{
-    if(S.mode==='story'&&S.stg!=null&&!S.disc.has(t.disc)&&inZone(t,V.zone)&&!S.off.has(t.i))return (t.built||T>t.f)&&!deferred(t,sid)?['ghost','k',0]:['off','',0];   // one stage chosen: the rest of the building stays as grey glass
+    if(S.mode==='story'&&S.stg!=null&&!S.disc.has(t.disc)&&inZone(t,V.zone)&&!S.off.has(t.i))return (t.built||T>t.f)&&!deferred(t,sid)?['ghost','',0]:['off','',0];   // one stage chosen: the rest of the building stays as grey glass
     if(!pass(t,V.zone)||S.off.has(t.i))return ['off','',0];
     const isSel=S.sel.has(t.i); if(hasSel){if(S.vis==='isolate'&&!isSel)return ['off','',0]; if(S.vis==='hide'&&isSel)return ['off','',0]; if(S.vis==='ghost'&&!isSel)return ['ghost','',0]}
     if(S.mode!=='tl'){   // a still moment: everything solid, no x-ray. Green = finished at this step, white = built before, purple = waits for Phase 2
       if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; if(focOn&&!msFinal)return ['ghost','d',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
       const r=t.built?2:T<t.s?0:T<=t.f?1:2; if(r===0)return ['off','',0];
       if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',0];
-      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return ['ghost','k',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
+      if(focOn&&(r===1||HI.has(t.i)))return ['solid','o',0];   // the work of this date keeps its own materials: no status colours
+      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return ['ghost','',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
       return ['solid',R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint,0];
     }
     const s=st(t,sid); if(s===0)return [S.ns,'',0];
@@ -733,8 +735,8 @@ function applyRender(only){views.forEach(V=>applyRenderV(V,only))}
 function applyRenderV(V,only){
   const viewer=V.viewer; if(!viewer)return; const I=viewer.impl, T_=f=>{try{f()}catch(e){console.warn('render setting',e.message)}}, is=k=>!only||only===k||(Array.isArray(only)&&only.includes(k));
   if(is('preset')){T_(()=>viewer.setLightPreset(+R.preset)); V.baseDir=null; only=null}
-  const xr=S.mode==='tl'&&R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), a=rgb(xr?'#232a33':R.bgTop),b=rgb(xr?'#0c0f13':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
-  const bg=()=>{T_(()=>viewer.setEnvMapBackground(false)); T_(()=>viewer.setBackgroundColor(a[0],a[1],a[2],b[0],b[1],b[2])); I.invalidate(true,false,false)}; bg(); clearTimeout(V.bgT1); clearTimeout(V.bgT2); V.bgT1=setTimeout(bg,400); V.bgT2=setTimeout(bg,2000);   // a light preset loads its own background a moment later
+  const xr=S.mode==='tl'&&R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), st=S.mode==='story', a=rgb(xr?'#232a33':st?'#cfd6de':R.bgTop),b=rgb(xr?'#0c0f13':st?'#eef1f4':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
+  const bg=()=>{T_(()=>viewer.setEnvMapBackground(false)); T_(()=>viewer.setBackgroundColor(a[0],a[1],a[2],b[0],b[1],b[2])); T_(()=>{const fm=I.fadeMaterial; if(fm&&st){fm.color.setRGB(.42,.48,.56); fm.opacity=.06; fm.needsUpdate=true}}); I.invalidate(true,true,true)}; bg(); clearTimeout(V.bgT1); clearTimeout(V.bgT2); V.bgT1=setTimeout(bg,400); V.bgT2=setTimeout(bg,2000);   // a light preset loads its own background a moment later
   T_(()=>viewer.setTheme((a[0]+a[1]+a[2])/3<110?'dark-theme':'light-theme'));
   T_(()=>I.setTonemapMethod(+R.tone)); T_(()=>I.setTonemapExposureBias(+R.expo)); T_(()=>I.matman().setEnvExposure(+R.envExpo)); T_(()=>I.renderer().setEnvExposure(+R.envExpo)); T_(()=>{I.matman().setEnvRotation(R.envRot*Math.PI/180); I.renderer().setEnvRotation(R.envRot*Math.PI/180)});
   T_(()=>{if(I.dir_light1){if(V.baseDir==null)V.baseDir=I.dir_light1.intensity; I.dir_light1.intensity=V.baseDir*R.dirInt}});
