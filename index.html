@@ -1,353 +1,275 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Westzaan OneTag</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MPB Build Sequence</title>
 <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
-<style>
-  /* Design: the model is the content; controls sit on quiet glass layers and appear only when needed.
-     Colour carries status only; one accent (blue) marks what is selected or actionable. */
-  :root {
-    --bg:#1c1c1e; --panel:#242426; --panel2:#2c2c2e; --glass:rgba(30,30,32,.86); --line:rgba(255,255,255,.09);
-    --fg:#f2f2f7; --muted:#98989f; --faint:#6c6c70; --accent:#0a84ff; --ok:#30d158; --fill:rgba(118,118,128,.24);
-    --r:12px; --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
-  }
-  * { box-sizing:border-box }
-  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.45 var(--font); -webkit-font-smoothing:antialiased }
-  button, select, input { font:inherit; color:var(--fg) }
-  a { color:var(--accent); text-decoration:none } a:hover { text-decoration:underline }
-  ::-webkit-scrollbar { width:10px; height:10px } ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.14); border-radius:10px; border:3px solid transparent; background-clip:padding-box }
-
-  /* ---------- layout */
-  #app { display:grid; grid-template-columns:348px 1fr; height:100%; transition:grid-template-columns .25s ease }
-  #app.collapsed { grid-template-columns:0 1fr } #app.collapsed #side { overflow:hidden; border:0; min-width:0 }
-  #side { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; min-width:0 }
-  #viewer { position:relative; min-width:0; background:#111 } #fv { position:absolute; inset:0 }
-
-  /* ---------- controls */
-  .btn { background:var(--fill); border:0; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:13px; font-weight:500; line-height:18px; transition:background .15s }
-  .btn:hover { background:rgba(118,118,128,.36) } .btn.on { background:var(--accent); color:#fff }
-  .btn.plain { background:transparent; color:var(--accent); padding:6px 8px } .btn.plain:hover { background:rgba(10,132,255,.12) }
-  .ibtn { width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px }
-  .ibtn svg { width:17px; height:17px }
-  select, input[type=search] { background:var(--fill); border:0; border-radius:8px; padding:7px 10px; font-size:13px; min-width:0; outline:none }
-  select:focus, input[type=search]:focus { box-shadow:0 0 0 3px rgba(10,132,255,.45) }
-  select option { background:#2c2c2e }
-  .meta { color:var(--muted); font-size:11.5px }
-
-  /* ---------- sidebar header */
-  header { padding:16px 16px 10px }
-  header h1 { font-size:20px; letter-spacing:-.01em; margin:0; font-weight:700; display:flex; align-items:center; gap:6px }
-  header h1 .sp { flex:1 }
-  header .meta { margin-top:4px }
-  #who a { color:var(--muted); text-decoration:underline }
-  .row { display:flex; gap:8px; padding:6px 16px; flex-wrap:wrap; align-items:center }
-
-  /* ---------- search + filters (progressive disclosure) */
-  .search { position:relative; padding:4px 16px 8px } .search svg { position:absolute; left:26px; top:13px; width:14px; height:14px; color:var(--muted) }
-  .search input { width:100%; padding-left:30px }
-  .disc { display:flex; align-items:center; gap:8px; padding:6px 16px }
-  .disc button.open { background:transparent; border:0; padding:4px 0; cursor:pointer; font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px }
-  .disc .chev { width:12px; height:12px; transition:transform .2s; color:var(--muted) } .disc.opened .chev { transform:rotate(90deg) }
-  .badge { background:var(--accent); color:#fff; border-radius:10px; font-size:11px; font-weight:600; padding:0 7px; line-height:18px; display:none }
-  .disc #clear { margin-left:auto }
-  #filters { display:none; padding:0 16px 8px } #filters.show { display:block }
-  .facets { display:grid; grid-template-columns:1fr 1fr; gap:8px 8px }
-  .facets label { display:flex; flex-direction:column; font-size:11px; color:var(--muted); gap:3px } .facets select { width:100% }
-  .facets select.set { box-shadow:inset 0 0 0 1.5px var(--accent) }
-  #pfacets { padding:4px 16px 8px }
-  #pbi { display:none; gap:8px; align-items:center; margin:4px 16px; padding:8px 12px; background:rgba(10,132,255,.14); border-radius:10px; font-size:12px }
-
-  /* ---------- list */
-  #counts { padding:8px 16px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--line) }
-  #list { flex:1; overflow:auto; min-height:0; padding:0 8px 12px }
-  .grp { position:sticky; top:0; z-index:1; background:var(--panel2); margin:6px 0 2px; padding:8px 10px; border-radius:10px; cursor:pointer; display:grid; grid-template-columns:14px 1fr auto; gap:8px; align-items:center; font-size:12.5px }
-  .grp.on { box-shadow:inset 0 0 0 1.5px var(--accent) } .grp b { font-weight:600 } .grp .n { color:var(--muted); font-size:11.5px }
-  .bar { height:4px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; margin-top:4px } .bar i { display:block; height:100%; background:var(--ok) }
-  .ss { padding:8px 10px; border-radius:10px; cursor:pointer; display:grid; grid-template-columns:10px 1fr auto; gap:10px; align-items:center }
-  .ss:hover { background:rgba(255,255,255,.05) } .ss.sel { background:rgba(10,132,255,.22) }
-  .ss .dot { width:10px; height:10px; border-radius:50% }
-  .ss > div { min-width:0 } .ss .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis } .ss .d { color:var(--muted); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  .ss .v { text-align:right; font-variant-numeric:tabular-nums; font-size:11.5px; color:var(--muted) } .ss .v b { color:var(--fg); font-size:12.5px }
-  .ss.dim { opacity:.4 }
-
-  /* ---------- area overview */
-  #ovhint { padding:2px 16px 8px }
-  #tiles { display:grid; grid-template-columns:1fr; gap:6px; padding:4px 16px 16px; overflow:auto; align-content:start }
-  .tile { background:var(--panel2); border-radius:var(--r); padding:10px 12px; cursor:pointer; transition:box-shadow .15s; display:grid; grid-template-columns:64px 1fr; column-gap:12px; align-items:center }
-  .tile > * { grid-column:2 } .tile h3 { grid-column:1; grid-row:1 / span 3 }
-  .tile .k span { white-space:nowrap } .tile h3 small { display:block; font-size:10.5px; font-weight:500 }
-  .tile:hover { box-shadow:0 0 0 1.5px var(--accent) } .tile.none { opacity:.4; cursor:default; box-shadow:none }
-  .tile h3 { margin:0; font-size:20px; font-weight:700; letter-spacing:-.01em } .tile .k { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:6px }
-  .ph4 { display:flex; height:6px; border-radius:3px; overflow:hidden; margin-top:6px; background:rgba(255,255,255,.1) } .ph4 i { display:block; height:100% }
-
-  /* ---------- floating glass layers over the model */
-  .glass { background:var(--glass); -webkit-backdrop-filter:blur(24px) saturate(160%); backdrop-filter:blur(24px) saturate(160%); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 8px 30px rgba(0,0,0,.35) }
-  #topbars { position:absolute; top:12px; left:52px; right:8px; z-index:7; display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start; gap:8px; pointer-events:none }
-  #topbars > * { pointer-events:auto } #topbars .tb-sep { height:16px }
-  #toolbar { display:flex; gap:6px; align-items:center; padding:4px }
-  .modes { display:flex; background:var(--fill); border-radius:9px; padding:2px; gap:2px; position:relative }
-  .modes .btn, .modes .more { background:transparent; border-radius:7px; padding:4px 8px; font-size:11.5px; white-space:nowrap }
-  .modes .btn.on { background:#636366; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35) }
-  .modes .more { border:0; cursor:pointer; display:flex; align-items:center; gap:4px } .modes .more.on { background:#636366 }
-  .modes .more svg { width:10px; height:10px }
-  .menu { display:none; background:rgba(44,44,46,.97) !important; position:absolute; top:calc(100% + 8px); right:0; min-width:210px; padding:6px; z-index:8 } .menu.show { display:block }
-  .menu .btn { display:block; width:100%; text-align:left; background:transparent; border-radius:7px; padding:7px 10px }
-  .menu .btn:hover { background:var(--accent); color:#fff } .menu .btn.on { background:rgba(10,132,255,.25); color:#fff }
-  .menu .hint { color:var(--muted); font-size:11px; padding:2px 10px 6px }
-  .tb-sep { width:1px; height:22px; background:var(--line) }
-  #toolbar #views { background:transparent; max-width:170px; padding:6px 8px }
-  .popwrap { position:relative }
-  #display { width:260px; right:-4px }
-  .tog { font-size:13px; color:var(--fg); display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; cursor:pointer; border-radius:7px }
-  .tog:hover { background:rgba(255,255,255,.05) }
-  .tog input { appearance:none; -webkit-appearance:none; width:36px; height:22px; border-radius:11px; background:rgba(120,120,128,.4); position:relative; cursor:pointer; flex:none; margin:0; transition:background .2s }
-  .tog input::after { content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.4); transition:transform .2s }
-  .tog input:checked { background:var(--ok) } .tog input:checked::after { transform:translateX(14px) }
-  .menu h4 { margin:6px 10px 2px; font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em }
-
-  #toggle { position:absolute; left:12px; top:12px; z-index:7 }
-  #legend { position:absolute; left:12px; bottom:52px; z-index:4; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11.5px; color:var(--fg); padding:8px 12px; max-width:min(560px, calc(100% - 400px)) }
-  #legend:empty { display:none }
-  #legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; background:var(--c) }
-  #status { position:absolute; left:12px; bottom:12px; padding:6px 12px; border-radius:10px; font-size:11.5px; color:var(--muted); pointer-events:none; z-index:3 }
-
-  /* inspector: details of what you picked, on the right */
-  #info { position:absolute; right:12px; top:160px; width:340px; max-height:calc(100% - 420px); min-height:120px; overflow:auto; z-index:6; padding:14px 16px; font-size:12.5px; display:none }
-  #info h2 { font-size:15px; margin:0 0 8px; font-weight:700 } #info h3 { font-size:12px; margin:12px 0 4px; color:var(--muted); font-weight:600 }
-  #info dl { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:0 } #info dt { color:var(--muted) } #info dd { margin:0 }
-  #info a#infox { color:var(--muted); font-weight:400 }
-  #info table.ct, table.ct { width:100%; border-collapse:collapse; margin-top:6px; font-size:12px } table.ct td { padding:5px 3px; border-bottom:1px solid var(--line) }
-  .ph { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; background:var(--fill); margin-right:4px }
-  .pr { display:grid; grid-template-columns:auto 1fr; gap:6px; padding:5px 0; border-bottom:1px solid var(--line); font-size:11.5px }
-
-  #labels { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:2 }
-  #labels div { position:absolute; transform:translate(-50%,-100%); background:rgba(28,28,30,.85); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border-left:3px solid var(--c); padding:1px 6px; border-radius:5px; font-size:11px; white-space:nowrap }
-  #labels div.area { border:0; font-size:15px; font-weight:700; padding:3px 12px; border-radius:9px; background:rgba(10,132,255,.85); color:#fff }
-  #labels div.pin { border:0; border-radius:10px; padding:1px 7px; font-weight:700; font-size:11px; color:#fff; background:#ff453a; box-shadow:0 0 0 2px rgba(255,255,255,.8) }
-  #labels div.pinA { animation:pulse 1.6s infinite } #labels div.pinB { background:#ff9f0a; color:#000 }
-  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(255,69,58,.8) } 70% { box-shadow:0 0 0 10px rgba(255,69,58,0) } 100% { box-shadow:0 0 0 0 rgba(255,69,58,0) } }
-  .pb { display:inline-block; min-width:18px; padding:0 6px; border-radius:6px; font-size:10.5px; font-weight:700; color:#000; margin-right:4px; text-align:center }
-  .pbA { background:#ff453a; color:#fff } .pbB { background:#ff9f0a } .pbC { background:#ffd60a } .pb0 { background:var(--fill); color:var(--muted); font-weight:400 }
-
-  #map { display:none; position:absolute; right:12px; bottom:12px; width:320px; overflow:hidden; z-index:4; background:var(--glass); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 8px 30px rgba(0,0,0,.35) }
-  #map.big { width:min(72%, 1100px); right:50%; transform:translateX(50%); bottom:auto; top:112px }
-  #map.min .mb { display:none } #map .mh { display:flex; gap:8px; align-items:center; padding:6px 8px 6px 12px } #map .mh .meta { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  #map .mh .btn { padding:2px 10px }
-  #map .mb svg { display:block; width:100%; height:auto; background:#fff } #map .ar { cursor:pointer } #map .ar:hover rect { fill-opacity:.45 }
-
-  #hcard { display:none; position:absolute; z-index:6; width:290px; pointer-events:none; background:var(--glass); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border:1px solid var(--line); border-radius:var(--r); padding:10px 12px; font-size:12px; box-shadow:0 8px 30px rgba(0,0,0,.4) }
-  #hcard .ht { font-weight:700; font-size:13.5px } #hcard .hrow { display:flex; gap:6px; align-items:center; margin-top:4px } #hcard .hp { font-size:11.5px; margin-top:3px }
-
-  /* sign-in */
-  #gate { position:fixed; inset:0; background:radial-gradient(1200px 600px at 50% 30%, #2a3442, var(--bg)); display:flex; align-items:center; justify-content:center; z-index:10 }
-  #gate .box { width:min(420px, 92vw); padding:36px 32px; background:var(--glass); -webkit-backdrop-filter:blur(30px); backdrop-filter:blur(30px); border:1px solid var(--line); border-radius:20px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45) }
-  #gate .logo { width:56px; height:56px; border-radius:14px; margin:0 auto 14px; background:linear-gradient(145deg,#0a84ff,#5e5ce6); display:flex; align-items:center; justify-content:center }
-  #gate h2 { margin:0 0 6px; font-size:22px; letter-spacing:-.01em } #gate p { color:var(--muted); margin:0 0 18px }
-  #gate .btn { font-size:15px; padding:10px 22px; background:var(--accent); color:#fff; border-radius:10px }
-
-  /* Autodesk viewer toolbar: match the glass look */
-  .adsk-viewing-viewer .adsk-toolbar { background:var(--glass) !important; -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); border-radius:var(--r) !important; border:1px solid var(--line) }
-
-  /* areas menu: tick boxes, like the ACC model browser */
-  .apick { position:relative; padding:0 16px 8px }
-  #areabtn { width:100%; display:flex; align-items:center; gap:8px; padding:9px 12px; font-weight:600; font-size:14px }
-  #areabtn svg { width:17px; height:17px; flex:none } #areabtn .chev { width:10px; height:10px; margin-left:auto; color:var(--muted) }
-  #arealbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  #areamenu { left:16px; right:auto; width:440px; max-width:calc(100vw - 32px); top:calc(100% - 2px); min-width:0; padding:8px; z-index:20 }
-  .amhead { display:flex; justify-content:space-between; padding:0 2px 4px; border-bottom:1px solid var(--line) }
-  #alist { max-height:min(56vh, 460px); overflow:auto; padding:4px 0 }
-  .arow { display:grid; grid-template-columns:18px 44px 1fr auto; align-items:center; gap:8px; padding:6px 8px; border-radius:7px; cursor:pointer }
-  .arow:hover { background:rgba(255,255,255,.06) } .arow.none { opacity:.4; cursor:default }
-  .arow input { width:16px; height:16px; margin:0; accent-color:var(--accent); cursor:pointer }
-  .arow b { font-size:13.5px } .arow .meta { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  .arow .only { visibility:hidden; background:transparent; border:0; color:var(--accent); font-size:12px; cursor:pointer; padding:2px 4px }
-  .arow:hover .only { visibility:visible }
-  .amfoot { display:flex; align-items:center; gap:8px; padding:8px 2px 0; border-top:1px solid var(--line) } .amfoot .meta { flex:1 }
-  #aapply:disabled { opacity:.4; cursor:default }
-  #areamenu .amhead .btn, #areamenu .amfoot .btn { display:inline-block; width:auto }
-  #areamenu .amhead .btn:hover { background:rgba(10,132,255,.12); color:var(--accent) }
-  #aapply, #aapply:hover { background:var(--accent) !important; color:#fff; padding:6px 20px; font-weight:600 }
-  /* always-visible "Show" bar under the colour modes */
-  #showbar { display:flex; gap:3px; align-items:center; padding:4px 6px }
-  .sb-h { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:0 4px }
-  .chip { display:inline-flex; flex-direction:row-reverse; align-items:center; gap:4px; padding:3px 8px 3px 6px; border-radius:14px; background:var(--fill); font-size:11.5px; white-space:nowrap; cursor:pointer; user-select:none; transition:background .15s }
-  .chip:hover { background:rgba(118,118,128,.36) }
-  .chip input { appearance:none; -webkit-appearance:none; width:11px; height:11px; border-radius:50%; border:1.5px solid var(--muted); margin:0; flex:none; cursor:pointer }
-  .chip:has(input:checked) { background:var(--accent); color:#fff }
-  .chip input:checked { border-color:#fff; background:#fff; box-shadow:inset 0 0 0 3px var(--accent) }
-  .adsk-viewing-viewer .viewcube, .adsk-viewing-viewer .viewcubeWrapper { margin-top:44px }
-  @media (max-width:1100px) { #legend { max-width:calc(100% - 360px) } }
-  @media (max-width:900px) { #app { grid-template-columns:300px 1fr } #info { width:290px } }
-
-  /* ---------- asset passport (light card over the model) */
-  #passport { display:none; position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:24px }
-  .pp { width:min(1500px,100%); height:min(940px,100%); background:#fff; color:#14232c; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.5); font-size:13.5px }
-  .pp a { color:#3C647D } .pp .meta { color:#6b7680 }
-  .pp-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#043C5A; color:#fff }
-  .pp-bar .dot { width:9px; height:9px; border-radius:50%; background:#9BC83C; box-shadow:0 0 8px #9BC83C } .pp-bar .crumb { opacity:.7 } .pp-bar .sp { flex:1 }
-  .pp-bar .btn { background:rgba(255,255,255,.14); color:#fff; padding:5px 12px } .pp-bar .btn:hover { background:rgba(255,255,255,.26) }
-  .pp-scroll { overflow:auto; flex:1 }
-  .pp-head { display:flex; gap:22px; align-items:center; padding:20px 24px 14px; border-bottom:1px solid #e2e7eb }
-  .pp-qr { width:128px; height:128px; flex:none; border:1px solid #e2e7eb; border-radius:12px; padding:6px; display:flex; align-items:center; justify-content:center; color:#6b7680 }
-  .pp-qr img, .pp-qr canvas { width:116px !important; height:116px !important }
-  .pp-id .kick { font-size:11.5px; letter-spacing:3px; color:#3C647D; font-weight:700 } .pp-id .tag { font-size:44px; font-weight:700; color:#043C5A; letter-spacing:-1px; line-height:1.1 }
-  .pp-id .desc { font-size:16px; color:#6b7680; margin-top:2px } .pp-id .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px }
-  .pp-id .chip { background:#f4f6f8; border:1px solid #e2e7eb; border-radius:14px; padding:3px 10px; font-size:12.5px; color:#14232c; cursor:default } .pp-id .chip.st { background:#eef6e0; border-color:#cfe5a6; color:#3f6a0c; font-weight:600 }
-  .pp-ready { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; padding:12px 24px; background:#fbfcfd; border-bottom:1px solid #e2e7eb; font-size:13px }
-  .pp-ready b { color:#043C5A } .pp-ready em { font-style:normal; color:#6b7680; font-size:11.5px }
-  .pp-ready i { display:inline-flex; width:18px; height:18px; border-radius:50%; align-items:center; justify-content:center; font-style:normal; font-size:11px; font-weight:700; color:#fff; margin-right:5px; vertical-align:-3px }
-  .pp-ready i.ok { background:#5AA546 } .pp-ready i.no { background:#D28728 } .pp-ready i.na { background:#a7b0b8 }
-  .pp-grid { display:grid; grid-template-columns:1fr 1.2fr 1fr 1fr; gap:16px; padding:18px 24px }
-  .pp-col { display:flex; flex-direction:column; gap:16px }
-  .pp-card { border:1px solid #e2e7eb; border-radius:14px; padding:14px 16px; background:#fff } .pp-card.fut { border-style:dashed; background:#fafbfc }
-  .pp-ch { display:flex; justify-content:space-between; gap:8px; align-items:baseline; margin-bottom:10px } .pp-ch b { font-size:15px; color:#043C5A } .pp-ch span { font-size:11px; color:#6b7680; text-align:right }
-  .pp .kv { display:grid; grid-template-columns:120px 1fr; row-gap:6px; column-gap:8px } .pp .kv .k { color:#6b7680 } .pp .kv .v { font-weight:500; word-break:break-word }
-  .pp-todo { color:#a7b0b8; font-weight:400; font-style:italic }
-  .pp-empty { color:#6b7680; padding:6px 0 }
-  .pp-link { display:inline-block; margin-top:10px; font-weight:600 }
-  .pp-3d { margin-bottom:10px } .ph3d { height:170px; border-radius:10px; background:radial-gradient(ellipse at 50% 40%,#22323c,#0e171d); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#9fb0ba; font-size:11.5px; margin-bottom:8px }
-  .ph3d svg { width:120px; opacity:.9 } .pp-3d .btn.on { width:100%; background:#043C5A; color:#fff }
-  .pp .sec { font-size:11px; letter-spacing:1.4px; color:#3C647D; font-weight:700; margin:12px 0 5px }
-  .pp .prog { height:8px; border-radius:4px; background:#eef1f3; overflow:hidden; margin-bottom:6px } .pp .prog i { display:block; height:100%; background:#5AA546 }
-  .pp ul { list-style:none; margin:0; padding:0 } .pp li { display:flex; gap:7px; align-items:flex-start; padding:4px 0; border-top:1px solid #f0f2f4; line-height:1.3 } .pp li:first-child { border-top:0 }
-  .pp .pill { flex:none; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:9px; background:#eef1f3; color:#4a555e }
-  .pp .pill.o, .pp .pill.y { background:#fdebd3; color:#9a5a10 } .pp .pill.g { background:#e6f6c4; color:#3f6a0c } .pp .pill.sA { background:#ff453a; color:#fff } .pp .pill.sB { background:#ff9f0a; color:#000 } .pp .pill.sC { background:#ffd60a; color:#000 }
-  .pp .pdf { flex:none; font-size:8.5px; font-weight:700; color:#fff; background:#e04b3a; border-radius:3px; padding:2px 4px; margin-top:1px }
-  .pp ul.docs a { word-break:break-word }
-  .pp-foot2 { padding:0 24px 6px; font-size:12px; color:#6b7680 } .pp-foot { padding:6px 24px 16px; font-size:11.5px; color:#6b7680 }
-  @media (max-width:1100px) { .pp-grid { grid-template-columns:1fr 1fr } }
-  @media (max-width:700px) {
-    #passport { padding:0 } .pp { height:100%; border-radius:0 } .pp-grid { grid-template-columns:1fr; padding:12px } .pp-head { flex-direction:column; align-items:flex-start; padding:14px }
-    .pp-id .tag { font-size:34px } .pp-bar .crumb, #ppprint { display:none } .pp-ready { padding:10px 14px } .pp-qr { display:none }
-  }
-  @media print { body.pp-open #app, body.pp-open #gate { display:none !important } body.pp-open #passport { position:static; background:none; padding:0 } body.pp-open .pp { height:auto; box-shadow:none } body.pp-open .pp-bar .btn { display:none } }
-</style>
-</head>
-<body>
-<div id="gate"><div class="box">
-  <div class="logo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg></div>
-  <h2>Westzaan OneTag</h2><p style="margin:-4px 0 10px;opacity:.7;font-size:13px">One tag, any tool, every phase · asset data from model to handover and operations</p><p id="gatemsg">Checking your session…</p><div id="gatebtn"></div></div></div>
-<div id="app">
-  <aside id="side">
-    <header>
-      <h1>OneTag <span class="sp"></span>
-        <button class="btn ibtn" id="home" title="All areas"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="2"/><rect x="11" y="2" width="7" height="7" rx="2"/><rect x="2" y="11" width="7" height="7" rx="2"/><rect x="11" y="11" width="7" height="7" rx="2"/></svg></button>
-        <button class="btn" id="copy" title="Copy a link to exactly this view, to share">Copy link</button></h1>
-      <div class="meta" id="meta">loading…</div>
-      <div class="meta" id="who"></div>
-    </header>
-    <div class="apick">
-      <button class="btn" id="areabtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 5.5l7-3 7 3-7 3z"/><path d="M3 10l7 3 7-3M3 14.5l7 3 7-3"/></svg><span id="arealbl">Choose areas</span><svg class="chev" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4z"/></svg></button>
-      <div class="menu glass" id="areamenu">
-        <div class="search" style="padding:4px 4px 6px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="left:14px;top:13px"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5" stroke-linecap="round"/></svg><input id="areaq" type="search" placeholder="Find area"></div>
-        <div class="amhead"><button class="btn plain" id="aall">Select all</button><button class="btn plain" id="anone">Clear</button></div>
-        <div id="alist"></div>
-        <div class="amfoot"><span class="meta" id="acount"></span><button class="btn on" id="aapply">Show</button></div>
-      </div>
-    </div>
-
-    <div id="overview" style="display:flex;flex-direction:column;min-height:0;flex:1">
-      <div class="meta" id="ovhint">Pick an area below, or tick several in the <b>Areas</b> menu above.</div>
-      <div id="tiles"></div>
-    </div>
-
-    <div id="work" style="display:none;flex-direction:column;min-height:0;flex:1">
-      <div class="search"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l5 5" stroke-linecap="round"/></svg>
-        <input id="q" type="search" placeholder="Search equipment tag (20D-XP2601), subsystem or line"></div>
-      <div class="disc" id="disc">
-        <button class="open" id="discbtn"><svg class="chev" viewBox="0 0 12 12" fill="currentColor"><path d="M4 2l5 4-5 4z"/></svg>Filters <span class="badge" id="fbadge"></span></button>
-        <button class="btn plain" id="clear">Clear</button>
-      </div>
-      <div id="filters">
-        <div class="facets">
-          <label>Priority<select id="f_prio"></select></label>
-          <label>Sprint<select id="f_sprint"></select></label>
-          <label>Type<select id="f_typ"></select></label>
-          <label>System<select id="f_fluid"></select></label>
-          <label>Phase<select id="f_phase"></select></label>
-          <label>In model<select id="f_link"></select></label>
-          <label>As-built ISO<select id="f_asb"></select></label>
-          <label style="grid-column:1 / -1">Group the list by<select id="group">
-            <option value="">No grouping</option><option value="fluid">System</option><option value="sprint">Sprint</option>
-            <option value="prio">Priority</option><option value="phase">Phase</option><option value="typ">Type</option><option value="area">Area</option><option value="link">In model</option><option value="asb">As-built ISO</option></select></label>
-        </div>
-      </div>
-      <div class="facets" id="pfacets" style="display:none"></div>
-      <div id="pbi"><span></span><button class="btn plain" style="margin-left:auto">Clear</button></div>
-      <div id="counts"></div>
-      <div id="list"></div>
-    </div>
-  </aside>
-
-  <main id="viewer">
-    <button class="btn ibtn glass" id="toggle" title="Show or hide the side panel"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="3.5" width="15" height="13" rx="3"/><path d="M8 3.5v13"/></svg></button>
-    <div id="fv"></div><div id="labels"></div>
-
-    <div id="topbars">
-    <div id="toolbar" class="glass">
-      <div class="modes" title="Colour the model by">
-        <button class="btn on" data-mode="mc" title="Mechanical completion readiness: QCR sheets checked, then commissioning phase">Readiness</button>
-        <button class="btn" data-mode="phase" title="Commissioning phase per subsystem">Phase</button>
-        <button class="btn" data-mode="punch" title="Open Co-Consol punches on the elements they belong to">Punches</button>
-        <button class="btn" data-mode="ready" title="Ready for MC? A-punches, spools and QCR combined">Ready for MC</button>
-        <button class="btn" data-mode="spool" title="Spool installation % per line">Spools</button>
-        <button class="btn" data-mode="sprint" title="Colour by sprint">Sprint</button>
-        <button class="btn" data-mode="cleared" title="Where punches were cleared recently">Cleared</button>
-        <button class="btn" data-mode="qcr" title="QCR sheets checked per line and equipment">QCR</button>
-        <button class="btn" data-mode="asbuilt" title="As-built isometrics in ACC per line (Bilfinger, AS-BUILT stamp checked)">As-built</button>
-      </div>
-    </div>
-
-    <div id="showbar" class="glass">
-      <span class="sb-h">Show</span>
-      <label class="chip" title="Walls and steel as see-through context">Structure<input type="checkbox" id="ctx"></label>
-      <label class="chip" title="Electrical and instrumentation models (panels are not tagged yet, so not coloured)">E&amp;I<input type="checkbox" id="ei"></label>
-      <label class="chip">Area names<input type="checkbox" id="alb"></label>
-      <label class="chip">Tags<input type="checkbox" id="lbl"></label>
-      <label class="chip" title="Badges on elements with open A/B punches (Punches colouring)">Punch pins<input type="checkbox" id="pins"></label>
-      <span class="tb-sep"></span>
-      <label class="chip" title="Details card under the mouse">Hover card<input type="checkbox" id="hov"></label>
-      <label class="chip" title="Hide subsystems that have no elements in the model">Linked only<input type="checkbox" id="inm"></label>
-    </div>
-    </div>
-
-    <div id="legend" class="glass"></div>
-    <div id="info" class="glass"></div>
-    <div id="map"></div>
-    <div id="status" class="glass">starting…</div>
-  </main>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}
+/* Layout: one working screen. 3D viewport top-left, readout panel top-right, programme (Gantt) across the bottom. Stacks on phones. */
+:root{
+  --bg:#eef1f3; --panel:#ffffff; --ink:#18222b; --mute:#5c6b78; --line:#d3dae0; --view:#dfe5ea;
+  --accent:#0b6e8e; --ghost:#cfd7dd; --built:#9aa5ae; --cursor:#d1495b; --rowalt:#f6f8f9;
+  --f-body:"Barlow",system-ui,sans-serif; --f-lab:"Barlow Condensed","Arial Narrow",sans-serif; --f-num:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12181d; --panel:#1a2229; --ink:#e6ecf0; --mute:#93a2af; --line:#2c3842; --view:#0d1216;
+  --accent:#4fb6d6; --ghost:#27323b; --built:#56636e; --cursor:#ff6b7d; --rowalt:#1e2830; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#12181d; --panel:#1a2229; --ink:#e6ecf0; --mute:#93a2af; --line:#2c3842; --view:#0d1216;
+  --accent:#4fb6d6; --ghost:#27323b; --built:#56636e; --cursor:#ff6b7d; --rowalt:#1e2830; color-scheme:dark }
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;display:flex;flex-direction:column}
+button,input,select{font:inherit;color:inherit}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar h1{font-family:var(--f-lab);font-weight:600;font-size:20px;letter-spacing:.02em;margin:0;white-space:nowrap}
+.bar h1 small{display:block;font-family:var(--f-body);font-weight:400;font-size:11.5px;color:var(--mute);white-space:normal;letter-spacing:0}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 320px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)} .btn:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+#play{min-width:70px;font-weight:600}
+#slider{flex:1 1 120px;min-width:80px;accent-color:var(--accent)}
+#date{font-family:var(--f-num);font-weight:500;font-size:15px;min-width:104px;text-align:right}
+select{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:4px 6px}
+.note{background:color-mix(in srgb,var(--cursor) 12%,var(--panel));border-bottom:1px solid var(--line);padding:5px 16px;font-size:12.5px}
+.main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 330px;grid-template-rows:minmax(0,1.15fr) minmax(0,1fr)}
+#view{position:relative;background:var(--view);min-height:0;overflow:hidden}
+#fv{position:absolute;inset:0}
+#load{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 16px;max-width:80%;text-align:center}
+#signin{position:absolute;left:50%;top:56%;transform:translateX(-50%);z-index:5}
+.legend{z-index:4}
+.legend{position:absolute;left:12px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;max-width:calc(100% - 24px);pointer-events:none}
+.legend span{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--panel) 80%,transparent);padding:1px 6px;border-radius:3px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.hint{position:absolute;right:12px;top:8px;font-size:11.5px;color:var(--mute)}
+#side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.kpi{border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+.kpi b{display:block;font-family:var(--f-num);font-size:18px;font-weight:500}
+.kpi span,.lab{font-family:var(--f-lab);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+h2{font-family:var(--f-lab);font-size:15px;font-weight:600;letter-spacing:.03em;margin:0 0 4px;text-wrap:balance}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+th{font-family:var(--f-lab);font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);font-size:11.5px}
+.st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--ghost);border:1px solid var(--mute)}
+.st.s1{background:var(--cursor);border-color:var(--cursor)} .st.s2{background:var(--built);border-color:var(--built)}
+.pbar{height:6px;background:var(--ghost);border-radius:3px;overflow:hidden;min-width:60px}.pbar i{display:block;height:100%}
+#gantt{grid-column:1 / -1;border-top:1px solid var(--line);background:var(--panel);overflow:auto;position:relative;min-height:0}
+.g{position:relative;min-width:max-content}
+.ghead{position:sticky;top:0;z-index:3;display:flex;background:var(--panel);border-bottom:1px solid var(--line);height:26px}
+.gl{position:sticky;left:0;z-index:2;flex:0 0 var(--lw);width:var(--lw);background:inherit;border-right:1px solid var(--line);padding:0 8px;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap}
+.gt{position:relative;flex:0 0 auto}
+.mon{position:absolute;top:0;height:26px;border-left:1px solid var(--line);padding:5px 5px 0;font-family:var(--f-lab);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.row{display:flex;height:22px;background:var(--panel);cursor:pointer}
+.row:nth-child(even){background:var(--rowalt)}
+.row.z{height:26px;font-weight:600;border-top:1px solid var(--line)}
+.row.sel .gl{box-shadow:inset 3px 0 0 var(--accent);color:var(--accent)}
+.row .gl{font-size:12.5px}.row.t .gl{padding-left:24px;font-weight:400}
+.row .gl em{font-style:normal;color:var(--mute);font-size:11.5px;overflow:hidden;text-overflow:ellipsis}
+.tw{font-size:10px;width:10px;color:var(--mute)}
+.b{position:absolute;top:5px;height:12px;border-radius:2px;min-width:3px}
+.row.z .b{top:8px;height:10px;background:var(--ghost)}.row.z .b i{display:block;height:100%;background:var(--built);border-radius:2px}
+.b.s0{opacity:.38}.b.s2{filter:saturate(.45)}
+#cur{position:absolute;top:0;bottom:0;width:2px;background:var(--cursor);z-index:1;pointer-events:none}
+#msg{font-size:12.5px;color:var(--mute)}
+@media (max-width:820px){
+  html,body{height:auto} body{display:block}
+  .main{display:block}
+  #view{height:46vh;min-height:260px}
+  #side{border-left:0;border-top:1px solid var(--line)}
+  #gantt{max-height:70vh}
+  .hint,.bar h1 small{display:none}
+  #date{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<div class="bar">
+  <h1>MPB Build Sequence<small id="ver"></small></h1>
+  <div class="ctl">
+    <button class="btn" id="play" type="button">Play</button>
+    <select id="speed" aria-label="Animation speed"><option value="7">1 week / s</option><option value="14" selected>2 weeks / s</option><option value="30">1 month / s</option></select>
+    <input id="slider" type="range" min="0" max="100" value="0" aria-label="Programme date">
+    <span id="date"></span>
+  </div>
+  <button class="btn" id="ghost" type="button" aria-pressed="true">Not started: shown</button>
+  <label class="btn" for="file">Load planner Excel<input id="file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
 </div>
-<div id="passport"></div>
+<div class="note" id="note"><b>Example dates.</b> Placeholder dates from the proposed sequence, until the planner's dates are loaded. <span id="msg"></span></div>
+<div class="main">
+  <div id="view"><div id="fv"></div><div id="load">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend" id="legend"></div></div>
+  <div id="side">
+    <div class="kpis">
+      <div class="kpi"><b id="k2">0</b><span>Tags built</span></div>
+      <div class="kpi"><b id="k1">0</b><span>In progress</span></div>
+      <div class="kpi"><b id="k0">0</b><span>To start</span></div>
+    </div>
+    <div id="selbox"></div>
+  </div>
+  <div id="gantt"><div class="g" id="g"></div></div>
+</div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>window.CX_VERSION = "2026-10-05a";</script>
-<script src="config.js?v=2026-10-05a"></script>
-<script src="auth.js?v=2026-10-05a"></script>
-<script src="harvest.js?v=2026-10-05a"></script>
-<script src="app.js?v=2026-10-05a"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js?v=2026-10-06a"></script>
+<script src="auth.js?v=2026-10-06a"></script>
 <script>
-/* interface only: popovers, filter disclosure, badge; the viewer logic stays in app.js */
-(function () {
-  const $ = (s) => document.querySelector(s);
-  const pops = [['#dispbtn', '#display']];
-  const closeAll = (except) => pops.forEach(([, m]) => { const el = $(m); if (el && el !== except) el.classList.remove('show'); });
-  pops.forEach(([b, m]) => { const btn = $(b), menu = $(m); if (!btn) return;
-    btn.addEventListener('click', (e) => { e.stopPropagation(); const on = !menu.classList.contains('show'); closeAll(); menu.classList.toggle('show', on); }); });
-  document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) closeAll(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
-  // filters: folded away until needed; the badge counts the active ones
-  const disc = $('#disc'), box = $('#filters');
-  const setOpen = (on) => { box.classList.toggle('show', on); disc.classList.toggle('opened', on); };
-  $('#discbtn').onclick = () => setOpen(!box.classList.contains('show'));
-  let opened = false;
-  setInterval(() => {
-    const n = document.querySelectorAll('#filters select.set').length + (($('#group') || {}).value ? 1 : 0);
-    const b = $('#fbadge'); b.textContent = n; b.style.display = n ? 'inline-block' : 'none';
-    if (n && !opened) { opened = true; setOpen(true); }             // a shared link with filters shows them
-  }, 600);
+(function(){
+const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
+const DN={CI:'Civil',ST:'Structure',FA:'Facade and roof',AR:'Interior',HV:'HVAC',FF:'Sprinkler',PH:'Plumbing',PI:'Lab gas',EL:'Electrical',FU:'Furniture and equipment'};
+const DAY=864e5, $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const d2n=s=>Math.round(Date.parse(s+'T00:00:00Z')/DAY), n2s=n=>{const d=new Date(n*DAY);return String(d.getUTCDate()).padStart(2,'0')+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+d.getUTCFullYear()};
+const fmt=(v,u)=>(u==='no.'?Math.round(v):v>=100?Math.round(v):Math.round(v*10)/10).toLocaleString('en-GB')+' '+u;
+
+let D,tags,T=0,t0,t1,playing=false,sel=null,ghost=true,open={},PX=3,LW=250;
+let viewer=null,models={},tagIds=[],id2tag={},tstat=[],muting=false,status={fill(){tstat=[]}};
+const CFG=window.CX_CONFIG,A=window.CX_AUTH;
+const say=t=>{$('load').textContent=t};
+start().catch(e=>{say('Error: '+e.message);console.error(e)});
+
+async function start(){
+  const tok=await A.init();
+  if(!tok){$('signin').hidden=false;$('signin').onclick=()=>A.login();say('Sign in with your Autodesk account to load the models.');return}
+  say('Reading data from ACC…');
+  const d=await A.readDataFile(CFG.dataFile);
+  if(!d){say('The file '+CFG.dataFile+' was not found in the ACC data folder, or you have no access to that folder.');return}
+  D=d; tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2]}));
+  $('ver').textContent='66A · data '+D.built.split('-').reverse().join('-');
+  $('legend').innerHTML=Object.keys(DC).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+'<span>bright = in progress · muted = built</span>';
+  try{const b=await A.readDataBlob(CFG.scheduleFile); if(b){readBook(await b.arrayBuffer(),CFG.scheduleFile+' (ACC)')}}catch(e){console.warn('no schedule file',e)}
+  range(); buildGantt(); bind(); setT(t0);
+  await initViewer();
+}
+function range(){t0=Math.min(...tags.map(t=>t.s))-7;t1=Math.max(...tags.map(t=>t.f))+14;$('slider').min=t0;$('slider').max=t1}
+function st(t){return T<t.s?0:T<=t.f?1:2}
+function inSel(t){return !sel||(sel.tag!=null?sel.tag===t.i:sel.zone===t.zone)}
+
+/* ---------- Autodesk viewer ---------- */
+async function initViewer(){
+  const getToken=async cb=>{const t=await A.token(); if(!t)return A.login(); cb(t.access,Math.floor((t.exp-Date.now())/1000))};
+  await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
+  viewer=new Autodesk.Viewing.GuiViewer3D($('fv'),{extensions:[]});
+  viewer.start(); viewer.setGhosting(true); viewer.setGroundShadow(false); viewer.setLightPreset(1); viewer.setQualityLevel(false,true); viewer.setOptimizeNavigation(true);
+  try{viewer.setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark-theme':'light-theme')}catch(e){}
+  viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
+  // newest version of every model file in the coordination folder
+  say('Listing models…'); const files={}; let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
+  while(url){const j=await A.api(url); const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v])); for(const it of j.data||[]){const v=inc[it.id]; if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber,date:v.attributes.lastModifiedTime}} url=j.links?.next?.href||null}
+  const want=Object.keys(D.map); let n=0,miss=[],globalOffset=null; const rep=[];
+  for(const code of want){
+    const fn=D.files[code],f=files[fn]; n++; if(!f){miss.push(fn);continue}
+    say('Loading '+n+' / '+want.length+'  '+fn+' (v'+f.n+')');
+    const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    try{
+      const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0]; if(!g)return rej(new Error('no 3D view'));
+        const o={keepCurrentModels:true,applyRefPoint:true,preserveView:n>1}; if(globalOffset)o.globalOffset=globalOffset;
+        try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(msg||('code '+c)))));
+      if(!globalOffset)globalOffset=m.getData().globalOffset; m._code=code; models[code]=m;
+      rep.push(await mapModel(code,m)); tstat=[]; paint();
+    }catch(e){console.warn('load failed',fn,e);miss.push(fn+' ('+e.message+')')}
+  }
+  const tot=rep.reduce((a,r)=>a+r[1],0),hit=rep.reduce((a,r)=>a+r[2],0);
+  say(''); $('load').hidden=true;
+  $('msg').textContent='Models: '+rep.length+' loaded. Elements linked to tags: '+hit.toLocaleString('en-GB')+' of '+tot.toLocaleString('en-GB')+'.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':'')+' '+rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
+  console.table(rep);
+}
+// link the IFC GlobalIds in the data file to this model's element ids
+async function mapModel(code,m){
+  let e2id=await new Promise(r=>m.getExternalIdMapping(r,()=>r({})));
+  const groups=D.map[code]; let tot=0,hit=0; const all=groups.map(g=>g[1].split(' ')); all.forEach(a=>tot+=a.length);
+  const test=()=>{let h=0;for(const a of all)for(const g of a)if(e2id[g]!=null)h++;return h};
+  if(test()<tot*0.2){ // external ids are not the IFC GlobalId in this translation: read the GlobalId property instead
+    try{const alt=await m.getPropertyDb().executeUserFunction(function(pdb){var ai=[];pdb.enumAttributes(function(i,def){if(/^(globalid|ifcguid|ifc guid|guid)$/i.test(def.name))ai.push(i)});var out={};pdb.enumObjects(function(dbId){pdb.enumObjectProperties(dbId,function(a,v){if(ai.indexOf(a)>=0){out[pdb.getAttrValue(a,v)]=dbId}})});return out});
+      if(alt&&Object.keys(alt).length)e2id=alt}catch(e){console.warn('GlobalId property scan failed',code,e)}
+  }
+  tagIds[code]={}; id2tag[code]={};
+  groups.forEach((g,k)=>{const ids=[];for(const guid of all[k]){const id=e2id[guid];if(id!=null){ids.push(id);id2tag[code][id]=g[0];hit++}} tagIds[code][g[0]]=ids});
+  viewer.hide(m.getRootId(),m);           // everything starts hidden; tags switch elements on
+  return [code,tot,hit];
+}
+const v4=(hex,mix,to)=>{const c=new THREE.Color(hex); if(to)c.lerp(new THREE.Color(to),mix); return new THREE.Vector4(c.r,c.g,c.b,1)};
+function paint(){
+  if(!viewer)return; const builtC=css('--built');
+  tags.forEach(t=>{const s=st(t); if(tstat[t.i]===s)return; tstat[t.i]=s;
+    for(const code in models){const ids=tagIds[code]&&tagIds[code][t.i]; if(!ids||!ids.length)continue; const m=models[code];
+      if(s===0){viewer.hide(ids,m)}else{viewer.show(ids,m); const col=s===1?v4(DC[t.disc]):v4(DC[t.disc],.6,builtC); for(const id of ids)viewer.setThemingColor(id,col,m,true)}}});
+  viewer.impl.invalidate(true,true,true);
+}
+function highlight(){
+  if(!viewer)return; muting=true; viewer.clearSelection();
+  if(sel){const s=[]; for(const code in models){const ids=[]; tags.filter(inSel).forEach(t=>{const a=tagIds[code]&&tagIds[code][t.i]; if(a&&st(t)>0)for(const id of a)ids.push(id)}); if(ids.length)s.push({model:models[code],ids})}
+    if(s.length){viewer.impl.selector.setAggregateSelection(s.map(x=>({model:x.model,ids:x.ids}))); try{viewer.fitToView(s.map(x=>({model:x.model,selection:x.ids})))}catch(e){}}}
+  setTimeout(()=>muting=false,50);
+}
+function onPick(ev){
+  if(muting)return; const s=ev.selections&&ev.selections[0]; if(!s||!s.dbIdArray.length)return; const m=s.model,code=m._code,map=id2tag[code]; if(!map)return;
+  const tree=m.getInstanceTree(); let id=s.dbIdArray[0],k=0; while(id!=null&&map[id]==null&&tree&&k++<12)id=tree.getNodeParentId(id);
+  if(id==null||map[id]==null)return; const t=tags[map[id]]; open[t.zone]=true; select({tag:t.i},true); const r=document.querySelector('.row[data-t="'+t.i+'"]'); if(r)r.scrollIntoView({block:'nearest'});
+}
+function select(s,fromViewer){sel=s; buildGantt(); panel(); if(!fromViewer)highlight()}
+
+/* ---------- time ---------- */
+let last=0;
+(function loop(){requestAnimationFrame(loop);if(tags)tick()})();
+function tick(){const now=performance.now(); if(playing){const dt=(now-last)/1000; let nt=T+dt*+$('speed').value; if(nt>=t1){nt=t1;toggle(false)} setT(nt)} last=now}
+function toggle(v){playing=v==null?!playing:v; if(playing&&T>=t1-1)setT(t0); $('play').textContent=playing?'Pause':'Play'; $('play').classList.toggle('on',playing)}
+function setT(v){T=v; $('slider').value=v; $('date').textContent=n2s(Math.floor(v)); paint(); gantState(); panel()}
+
+/* ---------- Gantt ---------- */
+function buildGantt(){
+  const g=$('g'); LW=innerWidth<820?150:250; g.style.setProperty('--lw',LW+'px'); const W=(t1-t0)*PX; let h='<div class="ghead"><div class="gl lab">Zone · model item group</div><div class="gt" style="width:'+W+'px">';
+  const a=new Date(t0*DAY); let m=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1));
+  while(m.getTime()/DAY<t1){const x=(m.getTime()/DAY-t0)*PX; if(x>=0)h+='<div class="mon" style="left:'+x+'px">'+m.toLocaleString('en-GB',{month:'short',year:'2-digit',timeZone:'UTC'})+'</div>'; m=new Date(Date.UTC(m.getUTCFullYear(),m.getUTCMonth()+1,1))}
+  h+='</div></div>';
+  for(const z of D.zones){const ts=tags.filter(t=>t.zone===z[0]); if(!ts.length)continue; const s=Math.min(...ts.map(t=>t.s)),f=Math.max(...ts.map(t=>t.f));
+    h+='<div class="row z" tabindex="0" data-z="'+z[0]+'"><div class="gl"><span class="tw">'+(open[z[0]]?'▾':'▸')+'</span>'+z[1]+' <em>'+ts.length+' tags</em></div><div class="gt" style="width:'+W+'px"><div class="b" data-zs="'+s+'" data-zf="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div></div></div>';
+    if(open[z[0]])for(const t of ts)h+='<div class="row t" tabindex="0" data-t="'+t.i+'" title="'+t.tag+' · '+t.pkg+'"><div class="gl">'+t.name+' <em>'+t.pkg+'</em></div><div class="gt" style="width:'+W+'px"><div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div></div></div>'}
+  h+='<div id="cur"></div>'; g.innerHTML=h; gantState();
+}
+function gantState(){
+  const c=$('cur'); if(!c)return; c.style.left=(LW+(T-t0)*PX)+'px';
+  document.querySelectorAll('.row.t').forEach(r=>{const t=tags[+r.dataset.t],b=r.querySelector('.b');b.className='b s'+st(t);r.classList.toggle('sel',!!sel&&sel.tag===t.i)});
+  document.querySelectorAll('.row.z').forEach(r=>{const b=r.querySelector('.b'),s=+b.dataset.zs,f=+b.dataset.zf;b.firstChild.style.width=Math.max(0,Math.min(1,(T-s)/(f-s+1)))*100+'%';r.classList.toggle('sel',!!sel&&sel.zone===r.dataset.z)});
+}
+
+
+/* ---------- side panel ---------- */
+function panel(){
+  const k=[0,0,0]; tags.forEach(t=>k[st(t)]++); $('k0').textContent=k[0];$('k1').textContent=k[1];$('k2').textContent=k[2];
+  let h='';
+  if(sel){const ts=tags.filter(inSel), z=D.zones.find(z=>z[0]===ts[0].zone);
+    h+='<h2>'+(sel.tag!=null?ts[0].tag:z[1])+'</h2>';
+    if(sel.tag!=null){const t=ts[0];h+='<div>'+t.name+'<br><span class="lab">'+t.pkg+' · '+z[1]+'</span></div><div style="font-family:var(--f-num);margin-top:4px">'+n2s(t.s)+' → '+n2s(t.f)+'</div>'}
+    h+='<table><tr><th>Group</th><th class="n">Quantity</th><th class="n">Elements</th></tr>'+ts.map(t=>'<tr><td><span class="st s'+st(t)+'"></span>'+t.name+'</td><td class="n">'+fmt(t.qty,t.unit)+'</td><td class="n">'+t.n.toLocaleString('en-GB')+'</td></tr>').join('')+'</table><button class="btn" type="button" id="clr">Clear selection</button>';
+  }else{
+    h+='<h2>In place on '+n2s(Math.floor(T))+'</h2><table><tr><th>Discipline</th><th class="n">Elements</th><th></th></tr>';
+    for(const d in DC){const ts=tags.filter(t=>t.disc===d); if(!ts.length)continue; const tot=ts.reduce((a,t)=>a+t.n,0); let done=0; ts.forEach(t=>{const s=st(t);done+=s===2?t.n:s===1?t.n*(T-t.s)/(t.f-t.s+1):0});
+      h+='<tr><td>'+DN[d]+'</td><td class="n">'+Math.round(done).toLocaleString('en-GB')+' / '+tot.toLocaleString('en-GB')+'</td><td><div class="pbar"><i style="width:'+(done/tot*100)+'%;background:'+DC[d]+'"></i></div></td></tr>'}
+    h+='</table><div class="lab" style="text-transform:none;letter-spacing:0">Select a zone or a group to see its quantities.</div>';
+  }
+  $('selbox').innerHTML=h; const c=$('clr'); if(c)c.onclick=()=>select(null);
+}
+
+/* ---------- planner Excel ---------- */
+function applyDates(map,quiet){let n=0; tags.forEach(t=>{const d=map[t.tag]; if(d&&d[0]&&d[1]){t.s=d[0];t.f=Math.max(d[0],d[1]);n++}}); if(n&&!quiet){$('note').firstElementChild.textContent='Planner dates loaded.'} if(n&&quiet){$('note').firstElementChild.textContent='Planner dates (saved in this browser).'} return n}
+function xl(v){if(v==null||v==='')return null; if(v instanceof Date)return Math.round((Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()))/DAY); if(typeof v==='number')return Math.round(v-25569); const m=String(v).match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); if(m)return Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/DAY); const p=Date.parse(v); return isNaN(p)?null:Math.round(p/DAY)}
+function loadFile(f){const r=new FileReader(); r.onload=()=>readBook(r.result,f.name); r.readAsArrayBuffer(f)}
+function readBook(buf,fname){const f={name:fname};{try{const wb=XLSX.read(buf,{type:'array',cellDates:true}); const map={}; let seen=0;
+    wb.SheetNames.forEach(sn=>{const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true}); const hi=rows.findIndex(x=>x&&x.some(c=>String(c).trim().toUpperCase()==='TAG')); if(hi<0)return; const H=rows[hi].map(c=>String(c||'').trim().toUpperCase()),ct=H.indexOf('TAG'),cs=H.indexOf('START'),cf=H.indexOf('FINISH'); if(cs<0||cf<0)return;
+      rows.slice(hi+1).forEach(x=>{if(!x||!x[ct])return; seen++; const s=xl(x[cs]),e=xl(x[cf]); if(s&&e)map[String(x[ct]).trim()]=[s,e]})});
+    const n=applyDates(map); $('msg').textContent=n?n+' of '+tags.length+' tags got dates from '+f.name+'. Tags without dates keep the example dates.':(seen?'No Start and Finish dates found in '+f.name+'.':'No sheet with TAG, Start and Finish columns found in '+f.name+'.');
+    if(n){try{localStorage.setItem('mpb4d-dates',JSON.stringify(map))}catch(e){} if(t0!=null){range(); tstat=[]; buildGantt(); setT(Math.max(t0,Math.min(T,t1)))}}
+  }catch(e){$('msg').textContent='Could not read '+f.name+': '+e.message}}}
+
+function bind(){
+  $('play').onclick=()=>toggle(); $('slider').oninput=e=>{toggle(false);setT(+e.target.value)};
+  $('ghost').onclick=e=>{ghost=!ghost;e.target.setAttribute('aria-pressed',ghost);e.target.textContent=ghost?'Not started: shown':'Not started: hidden';if(viewer){viewer.setGhosting(ghost);viewer.impl.invalidate(true,true,true)}};
+  $('ghost').textContent='Not started: shown';
+  $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
+  const act=e=>{const r=e.target.closest('.row'); if(!r)return; if(r.dataset.z){const z=r.dataset.z; if(e.target.closest('.gl')){open[z]=!open[z]; select(open[z]?{zone:z}:null)}else select(sel&&sel.zone===z&&sel.tag==null?null:{zone:z})}else{const i=+r.dataset.t; select(sel&&sel.tag===i?{zone:tags[i].zone}:{tag:i})}};
+  $('g').addEventListener('click',act); $('g').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(e)}});
+  $('g').querySelector('.ghead');
+  $('gantt').addEventListener('dblclick',e=>{const gt=e.target.closest('.gt'); if(!gt)return; const x=e.clientX-gt.getBoundingClientRect().left; toggle(false); setT(t0+x/PX)});
+  addEventListener('resize',()=>{const lw=innerWidth<820?150:250; if(lw!==LW)buildGantt(); if(viewer)viewer.resize()});
+}
 })();
-</script>
-</body>
-</html>
+</script></body></html>
