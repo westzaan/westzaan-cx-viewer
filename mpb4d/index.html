@@ -2,133 +2,224 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MPB Build Sequence</title>
 <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: toolbar rows on top (zones, view options); model viewer + side panel in the middle; inventory grid with Gantt bars at the bottom. */
+/* Design (shared with OneTag): the model is the content; controls sit on quiet dark layers and glass panels.
+   Colour carries status only; one accent (blue) marks what is selected or switched on. */
 :root{
-  --bg:#eef1f3; --panel:#ffffff; --ink:#18222b; --mute:#5c6b78; --line:#d3dae0; --view:#dfe5ea;
-  --accent:#0b6e8e; --ghost:#cfd7dd; --built:#9aa5ae; --cursor:#d1495b; --rowalt:#f6f8f9; --selrow:#dbeef5;
-  --f-body:"Barlow",system-ui,sans-serif; --f-lab:"Barlow Condensed","Arial Narrow",sans-serif; --f-num:"IBM Plex Mono",ui-monospace,monospace;
+  --bg:#1c1c1e; --panel:#242426; --panel2:#2c2c2e; --glass:rgba(30,30,32,.82); --line:rgba(255,255,255,.09);
+  --ink:#f2f2f7; --mute:#98989f; --accent:#0a84ff; --ok:#30d158; --fill:rgba(118,118,128,.24); --cursor:#ff453a;
+  --ghost:#3a3a3c; --built:#8e8e93; --rowalt:#28282a; --selrow:#173a5e; --view:#111; --r:12px;
+  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --f-lab:var(--f-body); --f-num:ui-monospace,"SF Mono",Menlo,Consolas,monospace; color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#12181d; --panel:#1a2229; --ink:#e6ecf0; --mute:#93a2af; --line:#2c3842; --view:#0d1216;
-  --accent:#4fb6d6; --ghost:#27323b; --built:#56636e; --cursor:#ff6b7d; --rowalt:#1e2830; --selrow:#17384a; color-scheme:dark } }
 *{box-sizing:border-box} [hidden]{display:none!important}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;display:flex;flex-direction:column}
+body{background:var(--bg);color:var(--ink);font:13px/1.4 var(--f-body);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
 button,input,select{font:inherit;color:inherit}
-.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-.bar h1{font-family:var(--f-lab);font-weight:600;font-size:19px;letter-spacing:.02em;margin:0 6px 0 0;white-space:nowrap}
-.lab{font-family:var(--f-lab);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
-.grp{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.seg button{border:0;border-right:1px solid var(--line);background:var(--panel);padding:4px 9px;cursor:pointer;white-space:nowrap}
-.seg button:last-child{border-right:0}
-.seg button:hover{background:var(--rowalt)}
-.btn{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:4px 10px;cursor:pointer;white-space:nowrap}
-.btn:hover{border-color:var(--accent)}
-.on,.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
-.btn:focus-visible,.seg button:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-select,input[type=search],input[type=text]{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:4px 6px}
+::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:7px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar h1{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 6px 0 0;white-space:nowrap}
+.lab{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.grp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:4px 10px;cursor:pointer;white-space:nowrap;font-size:12.5px;font-weight:500;transition:background .15s}
+.seg button:hover{background:rgba(255,255,255,.07)}
+.seg button.on{background:#636366;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.btn{border:0;background:var(--fill);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap;font-weight:500;line-height:18px;transition:background .15s}
+.btn:hover{background:rgba(118,118,128,.36)} .btn.on{background:var(--accent);color:#fff}
+.btn:focus-visible,.seg button:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible{outline:0;box-shadow:0 0 0 3px rgba(10,132,255,.45)}
+select,input[type=search]{background:var(--fill);border:0;border-radius:8px;padding:6px 10px;min-width:0;outline:none}
+select option{background:#2c2c2e}
 .ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 300px;min-width:0}
-#play{min-width:64px;font-weight:600}
+#play{min-width:68px;font-weight:600}
 #slider{flex:1 1 120px;min-width:80px;accent-color:var(--accent)}
-#date{font-family:var(--f-num);font-weight:500;font-size:15px}
-.note{background:color-mix(in srgb,var(--cursor) 12%,var(--panel));border-bottom:1px solid var(--line);padding:4px 14px;font-size:12.5px}
-.main{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1.2fr) minmax(0,1fr)}
-#view{position:relative;background:var(--view);min-height:0;overflow:hidden}
-#fv{position:absolute;inset:0}
-#load{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 16px;max-width:80%;text-align:center}
+#date{font-family:var(--f-num);font-weight:500;font-size:14px;font-variant-numeric:tabular-nums}
+.note{background:rgba(255,159,10,.13);border-bottom:1px solid var(--line);padding:5px 14px;font-size:12px;color:#ffd8a0}
+.note b{color:#ffb340}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 30px rgba(0,0,0,.35)}
 #signin{position:absolute;left:50%;top:56%;transform:translateX(-50%);z-index:5}
-.legend{position:absolute;left:10px;top:8px;z-index:4;display:flex;flex-direction:column;gap:2px;font-size:11.5px;pointer-events:none;max-height:70%;overflow:hidden}
-#rpanel{position:absolute;right:0;top:0;bottom:0;width:300px;max-width:92%;z-index:6;background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:10px 12px;font-size:12.5px;box-shadow:-6px 0 18px rgba(0,0,0,.18)}
-#rpanel h3{font-family:var(--f-lab);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:12px 0 4px;font-weight:600}
-#rpanel .r{display:grid;grid-template-columns:112px minmax(0,1fr) 40px;align-items:center;gap:6px;min-height:26px}
-#rpanel .r output{font-family:var(--f-num);font-size:11px;text-align:right;color:var(--mute)}
-#rpanel input[type=range]{width:100%;accent-color:var(--accent)} #rpanel input[type=color]{width:44px;height:22px;padding:0;border:1px solid var(--line);border-radius:3px;background:none}
-#rpanel select{width:100%} #rpanel textarea{width:100%;height:110px;font-family:var(--f-num);font-size:10.5px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);margin-top:6px}
-#rpanel .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.legend span{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--panel) 82%,transparent);padding:1px 6px;border-radius:3px;width:max-content;max-width:240px}
-.legend i{flex:0 0 9px;width:9px;height:9px;border-radius:2px;display:inline-block}
-#side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.kpi{border:1px solid var(--line);border-radius:4px;padding:5px 7px}
-.kpi b{display:block;font-family:var(--f-num);font-size:17px;font-weight:500}
-h2{font-family:var(--f-lab);font-size:15px;font-weight:600;letter-spacing:.03em;margin:0 0 4px}
+.legend{position:absolute;left:12px;top:12px;z-index:4;display:flex;flex-direction:column;gap:3px;font-size:11.5px;pointer-events:none;max-height:45%;overflow:hidden;padding:8px 12px}
+.legend:empty{display:none}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{flex:0 0 10px;width:10px;height:10px;border-radius:3px;display:inline-block}
+#active{position:absolute;left:12px;bottom:12px;z-index:4;width:270px;max-width:60%;padding:8px 6px 6px;font-size:12px}
+#active:empty{display:none}
+#active h4{margin:0 6px 4px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between}
+#active .a{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 6px;border-radius:8px;cursor:pointer}
+#active .a:hover{background:rgba(255,255,255,.06)}
+#active .a i{width:10px;height:10px;border-radius:50%}
+#active .a span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} #active .a em{font-style:normal;color:var(--mute)}
+#active .a b{font-family:var(--f-num);font-weight:500;font-size:11px;color:var(--mute)}
+#side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.kpi{background:var(--panel2);border-radius:10px;padding:7px 9px}
+.kpi b{display:block;font-size:19px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+h2{font-size:14px;font-weight:700;margin:0 0 6px}
 table{border-collapse:collapse;width:100%;font-size:12.5px}
-td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-td.n,th.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
-th{font-family:var(--f-lab);font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);font-size:11.5px}
-.st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--ghost);border:1px solid var(--mute)}
-.st.s1{background:var(--cursor);border-color:var(--cursor)} .st.s2{background:var(--built);border-color:var(--built)}
-.pbar{height:6px;background:var(--ghost);border-radius:3px;overflow:hidden;min-width:50px}.pbar i{display:block;height:100%}
-#grid{grid-column:1 / -1;border-top:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+td,th{padding:4px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th{font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);font-size:11px}
+.st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--ghost)}
+.st.s1{background:#ff9f0a} .st.s2{background:var(--ok)}
+.pbar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;min-width:50px;margin-top:6px}.pbar i{display:block;height:100%}
 #gbar{border-bottom:1px solid var(--line)}
 #gantt{flex:1 1 auto;overflow:auto;position:relative;min-height:0}
 .g{position:relative;min-width:max-content}
-.ghead{position:sticky;top:0;z-index:3;display:flex;background:var(--panel);border-bottom:1px solid var(--line);height:24px}
+.ghead{position:sticky;top:0;z-index:3;display:flex;background:var(--panel2);border-bottom:1px solid var(--line);height:26px}
 .gl{position:sticky;left:0;z-index:2;flex:0 0 var(--lw);width:var(--lw);background:inherit;border-right:1px solid var(--line);display:flex;align-items:center;overflow:hidden;white-space:nowrap}
 .gl .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
-.gl .c{flex:0 0 62px;text-align:right;padding-right:8px;font-family:var(--f-num);font-size:11.5px;font-variant-numeric:tabular-nums}
+.gl .c{flex:0 0 62px;text-align:right;padding-right:8px;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--mute)}
 .gl .c.q{flex-basis:92px}
 .gt{position:relative;flex:0 0 auto}
-.mon{position:absolute;top:0;height:24px;border-left:1px solid var(--line);padding:4px 5px 0;font-family:var(--f-lab);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
-.row{display:flex;height:22px;background:var(--panel);cursor:pointer;font-size:12.5px}
+.mon{position:absolute;top:0;height:26px;border-left:1px solid var(--line);padding:6px 6px 0;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.row{display:flex;height:24px;background:var(--panel);cursor:pointer;font-size:12.5px}
 .row:nth-child(even){background:var(--rowalt)}
 .row.gp{font-weight:600}
 .row.sel,.row.sel:nth-child(even){background:var(--selrow)}
 .row.sel .gl{box-shadow:inset 3px 0 0 var(--accent)}
+.row.hid .nm,.row.hid .c{opacity:.38}
 .row em{font-style:normal;color:var(--mute);font-size:11.5px;font-weight:400}
-.tw{flex:0 0 18px;text-align:center;font-size:10px;color:var(--mute);height:22px;line-height:22px}
-.b{position:absolute;top:5px;height:12px;border-radius:2px;min-width:3px}
-.row.gp .b{top:7px;height:8px;background:var(--ghost)}.row.gp .b i{display:block;height:100%;background:var(--built);border-radius:2px}
-.b.s0{opacity:.38}.b.s2{filter:saturate(.45)}
-.site{position:sticky;left:calc(var(--lw) + 8px);display:inline-block;margin-top:3px;font-family:var(--f-lab);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);border:1px solid var(--line);border-radius:3px;padding:0 6px;line-height:15px;background:var(--panel)}
+.tw{flex:0 0 18px;text-align:center;font-size:10px;color:var(--mute);height:24px;line-height:24px}
+.eye{flex:0 0 22px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.eye::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px rgba(10,132,255,.25)}
+.row.hid .eye::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--mute)}
+.b{position:absolute;top:6px;height:12px;border-radius:4px;min-width:3px}
+.row.gp .b{top:8px;height:8px;background:rgba(255,255,255,.14)}.row.gp .b i{display:block;height:100%;background:var(--ok);border-radius:4px}
+.b.s0{opacity:.4}.b.s2{filter:saturate(.5) brightness(.8)}.b.s1{box-shadow:0 0 0 1.5px #fff}
+.site{position:sticky;left:calc(var(--lw) + 8px);display:inline-block;margin-top:4px;font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:rgba(48,209,88,.14);border-radius:6px;padding:0 7px;line-height:16px}
 #cur{position:absolute;top:0;bottom:0;width:13px;margin-left:-6px;z-index:4;cursor:ew-resize;touch-action:none}
 #cur::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:3px;background:var(--cursor);border-radius:2px}
-#cur b{position:sticky;top:3px;display:block;width:max-content;transform:translateX(-50%);margin-left:6px;background:var(--cursor);color:#fff;font-family:var(--f-num);font-size:11px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap}
-#today{position:absolute;top:24px;bottom:0;width:0;border-left:1px dashed var(--mute);z-index:1;pointer-events:none}
+#cur b{position:sticky;top:4px;display:block;width:max-content;transform:translateX(-50%);margin-left:6px;background:var(--cursor);color:#fff;font-family:var(--f-num);font-size:11px;font-weight:500;padding:1px 7px;border-radius:6px;white-space:nowrap}
+#today{position:absolute;top:26px;bottom:0;width:0;border-left:1px dashed var(--mute);z-index:1;pointer-events:none}
 .ghead .gt{cursor:ew-resize;touch-action:none}
 body.scrub{user-select:none;cursor:ew-resize}
 #msg{color:var(--mute)}
+#rpanel{position:absolute;right:12px;top:12px;bottom:12px;width:300px;max-width:92%;z-index:6;overflow:auto;padding:12px 14px;font-size:12.5px}
+#rpanel h3{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:14px 0 4px}
+#rpanel .r{display:grid;grid-template-columns:112px minmax(0,1fr) 40px;align-items:center;gap:6px;min-height:30px}
+#rpanel .r output{font-family:var(--f-num);font-size:11px;text-align:right;color:var(--mute)}
+#rpanel input[type=range]{width:100%;accent-color:var(--accent)} #rpanel input[type=color]{width:44px;height:24px;padding:0;border:0;border-radius:6px;background:none}
+#rpanel input[type=checkbox]{appearance:none;-webkit-appearance:none;width:36px;height:22px;border-radius:11px;background:rgba(120,120,128,.4);position:relative;cursor:pointer;margin:0;transition:background .2s}
+#rpanel input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .2s}
+#rpanel input[type=checkbox]:checked{background:var(--ok)} #rpanel input[type=checkbox]:checked::after{transform:translateX(14px)}
+#rpanel select{width:100%} #rpanel textarea{width:100%;height:110px;font-family:var(--f-num);font-size:10.5px;border:0;border-radius:8px;background:var(--fill);color:var(--ink);margin-top:6px;padding:6px}
+#rpanel .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+#main{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#stage{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px}
+#stage.noside{grid-template-columns:minmax(0,1fr)} #stage.noside #side{display:none}
+#vws{display:flex;min-width:0;min-height:0;gap:2px;background:#000}
+.view{position:relative;flex:1 1 0;min-width:0;background:var(--view);overflow:hidden}
+.fv{position:absolute;inset:0}
+.load{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:5;padding:12px 18px;max-width:80%;text-align:center}
+.vlab{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:4;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis;pointer-events:none;border-radius:999px}
+#vws.two .adsk-viewing-viewer .viewcubeWrapper{transform:scale(.7);transform-origin:top right}
+#vws.two #active{bottom:70px}
+#split{flex:0 0 9px;cursor:ns-resize;background:var(--panel);border-top:1px solid var(--line);position:relative;touch-action:none}
+#split::after{content:'';position:absolute;left:50%;top:2px;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:rgba(255,255,255,.28)}
+#split:hover::after,body.rsz #split::after{background:var(--accent)}
+body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
+#grid{flex:0 0 auto;height:38%;background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:6px}
+.st.s3{background:#bf5af2}
+.mwrap{position:relative}
+.mb::after{content:'';display:inline-block;margin-left:7px;border:4px solid transparent;border-top-color:currentColor;border-bottom:0;vertical-align:middle;opacity:.7}
+.mb.open{background:rgba(118,118,128,.5)}
+.mb b{font-weight:600}
+.menu{position:absolute;top:calc(100% + 6px);left:0;z-index:30;width:320px;max-width:calc(100vw - 16px);max-height:min(76vh,640px);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.menu.rt{left:auto;right:0}
+.menu .mh{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin-top:4px}
+.menu .mr{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.menu .mr>span:first-child{color:var(--ink)}
+.menu select{max-width:100%}
+.ml{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:9px;padding:7px 10px;cursor:pointer}
+.ml:hover{background:rgba(255,255,255,.07)} .ml.on{background:var(--accent);color:#fff}
+.ml b{display:block;font-weight:600} .ml span{display:block;font-size:11.5px;color:var(--mute)} .ml.on span{color:rgba(255,255,255,.8)}
+.mz{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:0;background:var(--fill);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12.5px}
+.chip:hover{background:rgba(118,118,128,.4)} .chip.on{background:var(--accent);color:#fff}
+.sw{appearance:none;border:0;width:38px;height:23px;border-radius:12px;background:rgba(120,120,128,.4);position:relative;cursor:pointer;flex:0 0 38px;transition:background .2s;font-size:0}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .2s}
+.sw.on{background:var(--ok)} .sw.on::after{transform:translateX(15px)}
+#scard{background:var(--panel2);border-radius:var(--r);padding:11px 12px;font-size:12.5px}
+#scard:empty{display:none}
+#scard p{margin:6px 0} #scard .lab{margin-bottom:6px;white-space:normal}
+#scard .warn{background:rgba(255,159,10,.13);color:#ffd8a0;border-radius:8px;padding:6px 8px}
+#scard .fine{font-size:11px;color:var(--mute)}
+#scard .chipline{display:flex;align-items:center;gap:7px;font-weight:600} #scard .chipline i{flex:0 0 10px;height:10px;border-radius:3px}
+#scard tr.tot td{font-weight:700;border-top:1px solid rgba(255,255,255,.3)} #scard .sub{color:var(--mute);font-size:11.5px;padding-left:14px}
+#scard #splay{width:100%;margin-top:8px}
+.site.ph2{color:#d9a6f7;background:rgba(191,90,242,.16)}
 @media (max-width:820px){
-  html,body{height:auto} body{display:block} .main{display:block}
-  #view{height:50vh;min-height:280px} #side{border-left:0;border-top:1px solid var(--line)} #grid{height:70vh}
-  .gl .c{display:none}
+  html,body{height:auto} body{display:block} #main{display:block} #stage{display:block}
+  #vws{display:block} .view{height:50vh;min-height:280px;margin-bottom:2px} #side{border-left:0;border-top:1px solid var(--line)} #grid{height:70vh!important} #split{display:none}
+  .gl .c{display:none} #active{display:none}
+  .mwrap{position:static} .bar{position:relative} .menu,.menu.rt{left:8px;right:8px;width:auto;top:auto;margin-top:6px}
 }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
-<div class="bar">
+<div class="bar" id="top">
   <h1>MPB Build Sequence</h1>
+  <div class="mwrap"><button class="btn mb" data-m="mScen" type="button"><b id="bScen">Scenario</b></button>
+    <div class="menu glass" id="mScen" hidden><div id="mScenList" data-close="1"></div>
+      <div class="mh">Scenario card</div><div class="mr"><span title="Rough-order estimate from the decision sheet">Show cost figures</span><button class="sw" id="fig" type="button" aria-label="Show cost figures"></button></div><div class="mr"><span title="The same scope under a bouwteam agreement">Bouwteam variant</span><button class="sw" id="bt" type="button" aria-label="Bouwteam variant"></button></div>
+      <div id="bmodeRow" hidden><div class="mh">Right-hand view</div><span class="seg" id="bmode"><button type="button" data-v="follow">Follows the work</button><button type="button" data-v="compare">Base | scenario</button></span></div>
+    </div></div>
+  <div class="mwrap"><button class="btn mb" data-m="mZone" type="button"><b id="bZone">Whole building</b></button>
+    <div class="menu glass" id="mZone" hidden><div id="mZoneList" data-close="1" style="display:flex;flex-direction:column;gap:6px"></div><div class="mr"><span>Section box around the zone</span><button class="sw" id="clip" type="button" aria-label="Section box around the zone"></button></div></div></div>
   <div class="ctl">
     <button class="btn" id="play" type="button">Play</button>
     <select id="speed" aria-label="Animation speed"><option value="7">1 week / s</option><option value="14" selected>2 weeks / s</option><option value="30">1 month / s</option></select>
     <input id="slider" type="range" min="0" max="100" value="0" aria-label="Programme date">
     <span id="date"></span>
   </div>
-  <button class="btn on" id="t4d" type="button" title="Off: show the whole model regardless of dates">4D time: on</button>
-  <label class="btn" for="file">Load planner Excel<input id="file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
-  <button class="btn" id="export" type="button">Export Excel</button>
-</div>
-<div class="bar" id="zbar"><span class="lab">Zone views</span></div>
-<div class="bar" id="vbar">
-  <div class="grp"><span class="lab">Colour by</span><select id="colorBy"><option value="real">Build status</option><option value="status">Status by discipline</option><option value="disc">Discipline</option><option value="pkg">Package</option><option value="zone">Zone</option><option value="floor">Floor</option><option value="group">Model item group</option></select></div>
-  <div class="grp"><span class="lab">Selection</span><span class="seg" id="vis"><button type="button" data-v="normal" class="on">Highlight</button><button type="button" data-v="isolate">Isolate</button><button type="button" data-v="ghost">Ghost others</button><button type="button" data-v="hide">Hide</button></span><button class="btn" id="clear" type="button">Clear</button></div>
-  <div class="grp"><span class="lab">Click selects</span><span class="seg" id="pick"><button type="button" data-v="tag" class="on">Group</button><button type="button" data-v="el">Element</button></span></div>
-  <div class="grp"><button class="btn on" id="clip" type="button" title="Cut the model to the chosen zone">Section box: on</button><button class="btn on" id="ghost" type="button">Not started: ghosted</button><button class="btn" id="fit" type="button">Fit</button></div>
-  <div class="grp"><button class="btn" id="rbtn" type="button">Render settings</button><button class="btn" id="orbit" type="button" title="Slowly turn the camera around the building while playing">Orbit: off</button></div>
-  <div class="grp"><span class="lab">Saved views</span><select id="views"><option value="">—</option></select><button class="btn" id="vsave" type="button">Save</button><button class="btn" id="vdel" type="button">Delete</button></div>
+  <span class="seg" id="dual" title="One model view, or two side by side"><button type="button" data-v="1">1 view</button><button type="button" data-v="2">2 views</button></span>
+  <div class="mwrap"><button class="btn mb" data-m="mDisp" type="button">Display</button>
+    <div class="menu glass rt" id="mDisp" hidden>
+      <div class="mr"><span>Colour by</span><select id="colorBy"><option value="real">Build status</option><option value="phase">Phase in this scenario</option><option value="status">Status by discipline</option><option value="disc">Discipline</option><option value="pkg">Package</option><option value="zone">Zone</option><option value="floor">Floor</option><option value="group">Model item group</option></select></div>
+      <div class="mh">How work is drawn</div>
+      <div class="mr"><span>Not started</span><span class="seg" id="ns"><button type="button" data-v="off">Hidden</button><button type="button" data-v="ghost">Faint</button></span></div>
+      <div class="mr"><span>Built earlier</span><span class="seg" id="bu"><button type="button" data-v="solid">Solid</button><button type="button" data-v="ghost">X-ray</button><button type="button" data-v="off">Hidden</button></span></div>
+      <div class="mr"><span>Stays solid after finish</span><select id="recent"><option value="0">not at all</option><option value="14">2 weeks</option><option value="28">4 weeks</option><option value="56">8 weeks</option></select></div>
+      <div class="mr"><span>Deferred to Phase 2</span><span class="seg" id="df"><button type="button" data-v="mark">Purple</button><button type="button" data-v="ghost">X-ray</button><button type="button" data-v="off">Hidden</button></span></div>
+      <div class="mr"><span title="Elements of a running activity appear step by step">Grow from the bottom up</span><button class="sw" id="grow" type="button" aria-label="Grow from the bottom up"></button></div><div class="mr"><span title="Off: show the whole model regardless of dates">4D time</span><button class="sw" id="t4d" type="button" aria-label="4D time"></button></div><div class="mr"><span>Turn the camera while playing</span><button class="sw" id="orbit" type="button" aria-label="Turn the camera while playing"></button></div>
+      <div class="mh">Layout</div>
+      <div class="mr"><span>Gantt size</span><span class="seg" id="gsize"><button type="button" data-v="s">Small</button><button type="button" data-v="m">Medium</button><button type="button" data-v="l">Large</button></span></div>
+      <div class="mr"><span>Side panel</span><button class="sw" id="sideT" type="button" aria-label="Side panel"></button></div>
+      <div class="mr"><button class="btn" id="rbtn" type="button">Render settings</button><button class="btn" id="fit" type="button">Fit to view</button></div>
+    </div></div>
+  <div class="mwrap"><button class="btn mb" data-m="mSel" type="button">Selection</button>
+    <div class="menu glass rt" id="mSel" hidden>
+      <div class="mh">Selected items are</div><span class="seg" id="vis"><button type="button" data-v="normal">Highlighted</button><button type="button" data-v="isolate">Isolated</button><button type="button" data-v="ghost">Others x-ray</button><button type="button" data-v="hide">Hidden</button></span>
+      <div class="mr"><span>A click in the model selects</span><span class="seg" id="pick"><button type="button" data-v="tag">Group</button><button type="button" data-v="el">Element</button></span></div>
+      <div class="mr"><button class="btn" id="clear" type="button">Clear selection</button></div>
+    </div></div>
+  <div class="mwrap"><button class="btn mb" data-m="mData" type="button">Data</button>
+    <div class="menu glass rt" id="mData" hidden>
+      <div class="mr"><label class="btn" for="file">Load planner Excel<input id="file" type="file" accept=".xlsx,.xls,.csv" hidden></label><button class="btn" id="export" type="button">Export Excel</button></div>
+      <div class="mh">Saved views (this browser)</div>
+      <select id="views"><option value="">Saved views</option></select>
+      <div class="mr"><button class="btn" id="vsave" type="button">Save current</button><button class="btn" id="vdel" type="button">Delete</button></div>
+    </div></div>
 </div>
 <div class="note" id="note"><b id="dnote">Example dates.</b> <span id="msg"></span></div>
-<div class="main">
-  <div id="view"><div id="fv"></div><div id="load">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend" id="legend"></div><div id="rpanel" hidden></div></div>
-  <div id="side">
-    <div class="kpis">
-      <div class="kpi"><b id="k2">0</b><span class="lab">Built</span></div>
-      <div class="kpi"><b id="k1">0</b><span class="lab">In progress</span></div>
-      <div class="kpi"><b id="k0">0</b><span class="lab">To start</span></div>
+<div id="main">
+  <div id="stage">
+    <div id="vws">
+      <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div></div>
+      <div class="view" id="vwB" hidden><div class="fv" id="fvB"></div><div class="vlab glass" id="labB" hidden></div><div class="load glass" id="loadB" hidden></div></div>
     </div>
-    <div id="selbox"></div>
+    <div id="side">
+      <div class="kpis">
+        <div class="kpi"><b id="k2">0</b><span class="lab">Built</span></div>
+        <div class="kpi"><b id="k1">0</b><span class="lab">Working</span></div>
+        <div class="kpi"><b id="k0">0</b><span class="lab">To start</span></div>
+        <div class="kpi" id="k3box" hidden><b id="k3" style="color:#d9a6f7">0</b><span class="lab">Deferred</span></div>
+      </div>
+      <div id="scard"></div>
+      <div id="selbox"></div>
+    </div>
   </div>
+  <div id="split" title="Drag to resize the Gantt. Double-click: small, medium, large" role="separator" aria-orientation="horizontal"></div>
   <div id="grid">
     <div class="bar" id="gbar">
       <div class="grp"><span class="lab">Group by</span><select id="g1"></select><span class="lab">then</span><select id="g2"></select></div>
@@ -142,15 +233,14 @@ body.scrub{user-select:none;cursor:ew-resize}
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06b"></script>
-<script src="auth.js?v=2026-10-06b"></script>
+<script src="config.js?v=2026-10-06v7"></script>
+<script src="auth.js?v=2026-10-06v7"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
 const DN={CI:'Civil',ST:'Structure',FA:'Facade and roof',AR:'Interior',HV:'HVAC',FF:'Sprinkler',PH:'Plumbing',PI:'Lab gas',EL:'Electrical',FU:'Furniture and equipment'};
 const PAL=['#2e86ab','#d9a021','#d1495b','#3aa17e','#7b5ea7','#e07a3f','#5b6c8f','#b0408f','#946b4a','#6aa84f','#c2185b','#00838f','#8d6e63','#5c6bc0','#f4b400','#455a64'];
-const SN=['Not started','In progress','Built'];
-const span=ts=>{const a=ts.filter(t=>!t.built); return a.length?[Math.min(...a.map(t=>t.s)),Math.max(...a.map(t=>t.f))]:null};
+const SN=['Not started','In progress','Built','Deferred'], DEFC='#bf5af2', SELC='#35c9ff';
 const DAY=864e5, $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const d2n=s=>Math.round(Date.parse(s+'T00:00:00Z')/DAY), n2s=n=>{const d=new Date(n*DAY);return String(d.getUTCDate()).padStart(2,'0')+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+d.getUTCFullYear()};
@@ -158,66 +248,84 @@ const num=v=>v.toLocaleString('en-GB'), fmt=(v,u)=>num(u==='no.'?Math.round(v):v
 const CFG=window.CX_CONFIG,A=window.CX_AUTH;
 const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catch(e){return null}},set(k,v){try{localStorage.setItem('mpb4d.'+k,JSON.stringify(v))}catch(e){}}};
 
-let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430;
-// view state
-const S={sel:new Set(),vis:'normal',colorBy:'real',pick:'tag',time:true,ghost:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set()};
-let viewer=null,models={},tagIds={},id2tag={},applied={},muting=false,boundsCache={};
-const say=t=>{$('load').hidden=!t;$('load').textContent=t};
+let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430,views=[],VA=null,VB=null,autoZ=null,MAP={},pkgs=[],colorMap={},rows=[];
+// everything the user can switch. Shared by both 3D views; each view only differs in zone and scenario.
+const S={sel:new Set(),off:new Set(),ns:'off',bu:'ghost',df:'mark',recent:28,grow:true,vis:'normal',colorBy:'real',pick:'tag',time:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set(),
+  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true};
 
 const floorOf=z=>{const m=/^(?:STR-)?(GF|1F|2F|3F)/.exec(z);return m?m[1]:(z==='ROOF'?'Roof':z==='SUB'?'Substructure':'Building')};
-const KEY={zone:t=>t.zoneName,floor:t=>t.floor,block:t=>t.block,disc:t=>DN[t.disc],pkg:t=>t.pkg,group:t=>t.name,status:t=>SN[st(t)]};
-const KN={zone:'Zone',floor:'Floor',block:'Shell / fit-out',disc:'Discipline',pkg:'Package',group:'Model item group',status:'Status'};
+const KEY={zone:t=>t.zoneName,floor:t=>t.floor,block:t=>t.block,disc:t=>DN[t.disc],pkg:t=>t.pkg,group:t=>t.name,status:t=>SN[real(t)],phase:t=>t.built?'On site':deferred(t,S.scen)?'Deferred (Phase 2)':'Phase 1'};
+const KN={zone:'Zone',floor:'Floor',block:'Shell / fit-out',disc:'Discipline',pkg:'Package',group:'Model item group',status:'Status',phase:'Phase in this scenario'};
 
-start().catch(e=>{say('Error: '+e.message);console.error(e)});
+/* ---------- scenarios: the same tags, with a rule that says which of them wait for Phase 2 ---------- */
+const scenOf=id=>(D.scen||[]).find(s=>s.id===id)||null;
+const defSets={};
+function deferred(t,sid){
+  if(!sid||sid==='BASE'||t.built)return false; let set=defSets[sid];
+  if(!set){set=defSets[sid]=new Set(); const sc=scenOf(sid); if(sc)tags.forEach(x=>{if(x.built)return; for(const r of sc.defer){const zok=r.z==='*'||(r.z==='DZ'?(D.dz||[]).includes(x.zone):r.z===x.zone); if(zok&&((r.d||[]).includes(x.disc)||(r.g||[]).includes(x.group))){set.add(x.i);break}}})}
+  return set.has(t.i);
+}
+// 0 not started, 1 in progress, 2 built, 3 deferred (its Phase 1 slot has passed and it was left out)
+function real(t,sid){sid=sid||S.scen; const r=t.built?2:T<t.s?0:T<=t.f?1:2; return deferred(t,sid)?(r===0?0:3):r}
+function st(t,sid){sid=sid||S.scen; return S.time?real(t,sid):(deferred(t,sid)?3:2)}
+const span=ts=>{const a=ts.filter(t=>!t.built&&!deferred(t,S.scen)); return a.length?[Math.min(...a.map(t=>t.s)),Math.max(...a.map(t=>t.f))]:null};
+function inZone(t,z){return !z||(z.length===2||z==='Roof'?t.floor===z:t.zone===z)}
+function pass(t,z){if(z===undefined)z=S.zone; if(!inZone(t,z))return false; if(S.disc.size&&!S.disc.has(t.disc))return false; if(S.q){const q=S.q.toLowerCase(); if(!(t.tag+' '+t.name+' '+t.pkg+' '+t.zoneName).toLowerCase().includes(q))return false} return true}
+const zoneLabel=z=>{if(!z)return 'Whole building'; const d=D.zones.find(x=>x[0]===z); return d?d[1]:(z.length===2?z+' floor':z)};
+
+start().catch(e=>{$('loadA').hidden=false;$('loadA').textContent='Error: '+e.message;console.error(e)});
 
 async function start(){
   const tok=await A.init();
-  if(!tok){$('signin').hidden=false;$('signin').onclick=()=>A.login();say('Sign in with your Autodesk account to load the models.');return}
-  say('Reading data from ACC…');
+  if(!tok){$('signin').hidden=false;$('signin').onclick=()=>A.login();$('loadA').textContent='Sign in with your Autodesk account to load the models.';return}
+  $('loadA').textContent='Reading data from ACC…';
   const alt=n=>n.replace(/_/g,' '); const d=await A.readDataFile(CFG.dataFile)||await A.readDataFile(alt(CFG.dataFile));
-  if(!d){say('The file '+CFG.dataFile+' was not found in the ACC data folder, or you have no access to that folder.');return}
+  if(!d){$('loadA').textContent='The file '+CFG.dataFile+' was not found in the ACC data folder, or you have no access to that folder.';return}
   D=d; const zn=Object.fromEntries(D.zones.map(z=>[z[0],z]));
   tags=D.tags.map((t,i)=>({i,tag:t[0],zone:t[1],group:t[2],n:t[3],qty:t[4],unit:t[5],s:d2n(t[6]),f:d2n(t[7]),built:!!t[8],name:D.groups[t[2]][0],pkg:D.groups[t[2]][1],disc:D.groups[t[2]][2],
     zoneName:zn[t[1]][1],block:zn[t[1]][2]==='A'?'Shell':'Fit-out',floor:floorOf(t[1]),zo:D.zones.indexOf(zn[t[1]])}));
+  pkgs=[...new Set(tags.map(t=>t.pkg))].sort();
   try{const b=await A.readDataBlob(CFG.scheduleFile)||await A.readDataBlob(alt(CFG.scheduleFile)); if(b)readBook(await b.arrayBuffer(),CFG.scheduleFile+' in ACC')}catch(e){console.warn('no schedule file',e)}
-  buildBars(); range(); bind(); setT(t0); refresh();
-  await initViewer();
+  const lay=store.get('layout')||{}; if(lay.gh)setGridH(lay.gh,true);
+  buildMenus(); range(); bind(); setT(t0); refresh();
+  VA=makeView('A'); views.push(VA); await VA.load();
 }
 function range(){const ts=tags.filter(t=>!t.built); if(!ts.length)ts.push(...tags); t0=Math.min(...ts.map(t=>t.s))-7;t1=Math.max(...ts.map(t=>t.f))+14;$('slider').min=t0;$('slider').max=t1}
-function st(t){return !S.time||t.built?2:T<t.s?0:T<=t.f?1:2}
-function real(t){return t.built?2:T<t.s?0:T<=t.f?1:2}
-function inZone(t){const z=S.zone; return !z||(z.length===2||z==='Roof'?t.floor===z:t.zone===z)}
-function pass(t){if(!inZone(t))return false; if(S.disc.size&&!S.disc.has(t.disc))return false; if(S.q){const q=S.q.toLowerCase(); if(!(t.tag+' '+t.name+' '+t.pkg+' '+t.zoneName).toLowerCase().includes(q))return false} return true}
 
-/* ---------- toolbars ---------- */
-function buildBars(){
-  // zone buttons from the zone list: All | per floor: floor button + its zones | shell zones
-  const zb=$('zbar'); let h='<span class="lab">Zone views</span><span class="seg"><button type="button" data-z="">All</button></span>';
+/* ---------- menus ---------- */
+function buildMenus(){
+  $('mScenList').innerHTML=(D.scen||[]).map(s=>'<button type="button" class="ml" data-s="'+s.id+'"><b>'+esc(s.name)+'</b><span>'+esc(s.sub)+'</span></button>').join('')||'<div class="mh">No scenarios in the data file</div>';
+  let h='<button type="button" class="ml" data-z=""><b>Whole building</b></button>';
   for(const f of ['GF','1F','2F','3F']){const zs=D.zones.filter(z=>z[2]==='B'&&z[0].startsWith(f)&&tags.some(t=>t.zone===z[0])); if(!zs.length)continue;
-    h+='<span class="seg"><button type="button" data-z="'+f+'" title="Whole floor"><b>'+f+'</b></button>'+zs.map(z=>'<button type="button" data-z="'+z[0]+'">'+esc(z[1].replace(/^.. - /,''))+'</button>').join('')+'</span>'}
-  const sh=D.zones.filter(z=>z[2]==='A'&&tags.some(t=>t.zone===z[0]));
-  h+='<span class="seg">'+sh.map(z=>'<button type="button" data-z="'+z[0]+'">'+esc(z[1])+'</button>').join('')+'</span>'; zb.innerHTML=h;
-  zb.onclick=e=>{const b=e.target.closest('button[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); applyZone(); const sp=span(tags.filter(pass)); $('gantt').scrollLeft=sp?Math.max(0,(sp[0]-t0)*PX-40):0};
-  const opts=Object.keys(KN).map(k=>'<option value="'+k+'">'+KN[k]+'</option>').join(''); $('g1').innerHTML=opts; $('g2').innerHTML='<option value="">(none)</option>'+opts; $('g1').value=S.g1; $('g2').value=S.g2;
+    h+='<div class="mh">'+f+'</div><div class="mz"><button type="button" class="chip" data-z="'+f+'">Whole floor</button>'+zs.map(z=>'<button type="button" class="chip" data-z="'+z[0]+'">'+esc(z[1].replace(/^.. - /,''))+'</button>').join('')+'</div>'}
+  h+='<div class="mh">Shell</div><div class="mz">'+D.zones.filter(z=>z[2]==='A'&&tags.some(t=>t.zone===z[0])).map(z=>'<button type="button" class="chip" data-z="'+z[0]+'">'+esc(z[1])+'</button>').join('')+'</div>';
+  $('mZoneList').innerHTML=h;
+  const opts=Object.keys(KN).map(k=>'<option value="'+k+'">'+KN[k]+'</option>').join(''); $('g1').innerHTML=opts; $('g2').innerHTML='<option value="">(none)</option>'+opts;
   $('fdisc').innerHTML=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<button type="button" data-d="'+k+'" title="'+DN[k]+'">'+k+'</button>').join('');
   loadViews();
 }
+const segSync=(id,v)=>document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v)));
+const tog=(id,on,txt)=>{const b=$(id); if(!b)return; b.classList.toggle('on',!!on); if(txt)b.textContent=txt};
 function syncBars(){
-  document.querySelectorAll('#zbar button').forEach(b=>b.classList.toggle('on',(b.dataset.z||null)===S.zone));
-  document.querySelectorAll('#vis button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.vis));
-  document.querySelectorAll('#pick button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.pick));
+  const sc=scenOf(S.scen); $('bScen').textContent=sc?(innerWidth<1100?sc.name.split(':')[0]:sc.name):'Scenario'; $('bZone').textContent=S.zone?zoneLabel(S.zone).replace(/^.. - /,''):'Whole building';
+  document.querySelectorAll('#mScenList .ml').forEach(b=>b.classList.toggle('on',b.dataset.s===S.scen));
+  document.querySelectorAll('#mZoneList [data-z]').forEach(b=>b.classList.toggle('on',(b.dataset.z||null)===S.zone));
+  segSync('vis',S.vis); segSync('pick',S.pick); segSync('ns',S.ns); segSync('bu',S.bu); segSync('df',S.df); segSync('dual',S.dual?2:1); segSync('bmode',S.bmode);
   document.querySelectorAll('#fdisc button').forEach(b=>b.classList.toggle('on',S.disc.has(b.dataset.d)));
-  $('t4d').classList.toggle('on',S.time); $('t4d').textContent='4D time: '+(S.time?'on':'off');
-  $('clip').classList.toggle('on',S.clip); $('clip').textContent='Section box: '+(S.clip?'on':'off');
-  $('ghost').classList.toggle('on',S.ghost); $('ghost').textContent='Not started: '+(S.ghost?'ghosted':'hidden');
-  $('colorBy').value=S.colorBy; $('g1').value=S.g1; $('g2').value=S.g2; $('q').value=S.q;
+  tog('t4d',S.time); tog('clip',S.clip); tog('grow',S.grow); tog('orbit',S.orbit); tog('fig',S.fig); tog('bt',S.bt); tog('sideT',S.side);
+  $('recent').value=S.recent; $('colorBy').value=S.colorBy; $('g1').value=S.g1; $('g2').value=S.g2; $('q').value=S.q;
+  $('stage').classList.toggle('noside',!S.side); $('vwB').hidden=!S.dual; $('vws').classList.toggle('two',S.dual); $('bmodeRow').hidden=!S.dual;
+  views.forEach(V=>V.label());
 }
-function refresh(){syncBars(); buildGrid(); panel(); legend(); apply3D()}
+function refresh(){syncBars(); buildGrid(); panel(); scard(); legend(); applyAll(); activeList()}
+function applyAll(){views.forEach(V=>V.apply())}
+function resetApplied(){views.forEach(V=>{V.applied={}})}
+function resizeAll(){views.forEach(V=>{try{V.viewer&&V.viewer.resize()}catch(e){}})}
+function syncZones(force){views.forEach(V=>V.syncZone(force))}
 
 /* ---------- inventory grid with Gantt bars ---------- */
-let rows=[];
 function tree(){
-  const list=tags.filter(pass), levels=[S.g1,S.g2].filter((k,i,a)=>k&&a.indexOf(k)===i); rows=[];
+  const list=tags.filter(t=>pass(t)), levels=[S.g1,S.g2].filter((k,i,a)=>k&&a.indexOf(k)===i); rows=[];
   const walk=(ts,lv,path)=>{
     if(lv>=levels.length){ts.forEach(t=>rows.push({leaf:true,t,depth:lv,tags:[t]}));return}
     const k=levels[lv],m=new Map(); ts.forEach(t=>{const v=KEY[k](t); if(!m.has(v))m.set(v,[]); m.get(v).push(t)});
@@ -232,93 +340,207 @@ function buildGrid(){
   let h='<div class="ghead"><div class="gl lab"><span class="nm">'+[S.g1,S.g2].filter(Boolean).map(k=>KN[k]).join(' › ')+' › tag</span><span class="c">Elements</span><span class="c q">Quantity</span></div><div class="gt" style="width:'+W+'px">';
   const a=new Date(t0*DAY); let m=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1));
   while(m.getTime()/DAY<t1){const x=(m.getTime()/DAY-t0)*PX; if(x>=0)h+='<div class="mon" style="left:'+x+'px">'+m.toLocaleString('en-GB',{month:'short',year:'2-digit',timeZone:'UTC'})+'</div>'; m=new Date(Date.UTC(m.getUTCFullYear(),m.getUTCMonth()+1,1))}
-  h+='</div></div>';
-  rows.forEach((r,i)=>{const ts=r.tags,sp=span(ts),s=sp?sp[0]:0,f=sp?sp[1]:0,n=ts.reduce((a,t)=>a+t.n,0),pad=6+r.depth*16,nb=ts.filter(t=>t.built).length, site='<span class="site">on site</span>';
-    if(r.leaf){const t=r.t; h+='<div class="row" tabindex="0" data-i="'+i+'" title="'+esc(t.tag+' · '+t.pkg+' · '+(t.built?'on site':n2s(t.s)+' → '+n2s(t.f)))+'"><div class="gl"><span class="tw" style="margin-left:'+pad+'px"></span><span class="nm">'+esc(t.name)+' <em>'+esc(S.g1==='zone'||S.g2==='zone'?t.pkg:t.zoneName)+'</em></span><span class="c">'+num(t.n)+'</span><span class="c q">'+fmt(t.qty,t.unit)+'</span></div><div class="gt" style="width:'+W+'px">'+(t.built?site:'<div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div>')+'</div></div>'}
-    else h+='<div class="row gp" tabindex="0" data-i="'+i+'"><div class="gl"><span class="tw" data-tw="1" style="margin-left:'+pad+'px">'+(r.open?'▾':'▸')+'</span><span class="nm">'+esc(r.label)+' <em>'+ts.length+' tags'+(nb?', '+nb+' on site':'')+'</em></span><span class="c">'+num(n)+'</span><span class="c q">'+qsum(ts)+'</span></div><div class="gt" style="width:'+W+'px">'+(sp?'<div class="b" data-s="'+s+'" data-f="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div>':site)+'</div></div>'});
+  h+='</div></div>'; const site='<span class="site">on site</span>', ph2='<span class="site ph2">Phase 2 · date open</span>';
+  rows.forEach((r,i)=>{const ts=r.tags,sp=span(ts),s=sp?sp[0]:0,f=sp?sp[1]:0,n=ts.reduce((a,t)=>a+t.n,0),pad=6+r.depth*16,nb=ts.filter(t=>t.built).length,nd=ts.filter(t=>deferred(t,S.scen)).length;
+    if(r.leaf){const t=r.t,df=nd>0; h+='<div class="row" tabindex="0" data-i="'+i+'" title="'+esc(t.tag+' · '+t.pkg+' · '+(t.built?'on site':df?'deferred to Phase 2':n2s(t.s)+' → '+n2s(t.f)))+'"><div class="gl"><span class="tw" style="margin-left:'+pad+'px"></span><span class="eye" data-eye="1" title="Show or hide in the model"></span><span class="nm">'+esc(t.name)+' <em>'+esc(S.g1==='zone'||S.g2==='zone'?t.pkg:t.zoneName)+'</em></span><span class="c">'+num(t.n)+'</span><span class="c q">'+fmt(t.qty,t.unit)+'</span></div><div class="gt" style="width:'+W+'px">'+(t.built?site:df?ph2:'<div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div>')+'</div></div>'}
+    else h+='<div class="row gp" tabindex="0" data-i="'+i+'"><div class="gl"><span class="tw" data-tw="1" style="margin-left:'+pad+'px">'+(r.open?'▾':'▸')+'</span><span class="eye" data-eye="1" title="Show or hide in the model"></span><span class="nm">'+esc(r.label)+' <em>'+ts.length+' tags'+(nb?', '+nb+' on site':'')+(nd?', '+nd+' deferred':'')+'</em></span><span class="c">'+num(n)+'</span><span class="c q">'+qsum(ts)+'</span></div><div class="gt" style="width:'+W+'px">'+(sp?'<div class="b" data-s="'+s+'" data-f="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div>':nd===ts.length-nb&&nd?ph2:site)+'</div></div>'});
   const td=Math.floor(Date.now()/DAY); h+=(td>t0&&td<t1?'<div id="today" title="Today" style="left:'+(LW+(td-t0)*PX)+'px"></div>':'')+'<div id="cur" title="Drag to change the date"><b></b></div>'; g.innerHTML=h; $('count').textContent=list.length+' of '+tags.length+' tags'; gridState();
 }
 function gridState(){
   const c=$('cur'); if(!c)return; c.style.left=(LW+(T-t0)*PX)+'px'; c.firstChild.textContent=n2s(Math.floor(T));
   document.querySelectorAll('#g .row').forEach(el=>{const r=rows[+el.dataset.i],b=el.querySelector('.b'); if(!r)return;
     if(!b){} else if(r.leaf)b.className='b s'+real(r.t); else{const s=+b.dataset.s,f=+b.dataset.f; b.firstChild.style.width=Math.max(0,Math.min(1,(T-s)/(f-s+1)))*100+'%'}
-    el.classList.toggle('sel',r.tags.length>0&&r.tags.every(t=>S.sel.has(t.i)))});
+    el.classList.toggle('sel',r.tags.length>0&&r.tags.every(t=>S.sel.has(t.i))); el.classList.toggle('hid',r.tags.length>0&&r.tags.every(t=>S.off.has(t.i)))});
 }
+function openTo(t){let p=''; [S.g1,S.g2].filter((k,i,a)=>k&&a.indexOf(k)===i).forEach(k=>{p+='/'+KEY[k](t);S.open.add(p)})}
 function rowClick(e){
   const el=e.target.closest('.row'); if(!el)return; const r=rows[+el.dataset.i]; if(!r)return;
+  if(e.target.dataset.eye){const all=r.tags.every(t=>S.off.has(t.i)); r.tags.forEach(t=>all?S.off.delete(t.i):S.off.add(t.i)); gridState(); applyAll(); activeList(); return}
   if(e.target.dataset.tw){S.open.has(r.path)?S.open.delete(r.path):S.open.add(r.path); buildGrid(); return}
   const ids=r.tags.map(t=>t.i), all=ids.every(i=>S.sel.has(i));
   if(e.ctrlKey||e.metaKey||e.shiftKey){ids.forEach(i=>all?S.sel.delete(i):S.sel.add(i))}else{const same=all&&S.sel.size===ids.length; S.sel.clear(); if(!same)ids.forEach(i=>S.sel.add(i))}
   if(!r.leaf&&!r.open&&!(e.ctrlKey||e.metaKey||e.shiftKey)){S.open.add(r.path); buildGrid()}
-  gridState(); panel(); apply3D(); if(S.sel.size&&S.vis!=='hide')fitSel();
+  gridState(); panel(); applyAll(); if(S.sel.size&&S.vis!=='hide'&&!S.dual&&VA)VA.fitSel();
 }
 
 /* ---------- side panel ---------- */
+const eur=v=>v==null?'—':v===0?'—':'€'+v.toFixed(2)+'m';
+function scard(){
+  if(!tags)return; const sc=scenOf(S.scen), el=$('scard'); if(!sc){el.innerHTML='';return}
+  const ds=tags.filter(t=>deferred(t,S.scen)), n=ds.reduce((a,t)=>a+t.n,0);
+  let h='<h2>'+esc(sc.name)+'</h2><div class="lab">'+esc(sc.sub)+'</div><p><b>Built.</b> '+esc(sc.built)+'</p><p><b>Deferred.</b> '+esc(sc.deferred)+'</p>';
+  if(ds.length)h+='<p class="chipline"><i style="background:'+DEFC+'"></i>'+ds.length+' tags, '+num(n)+' elements wait for Phase 2 (date open)</p>';
+  h+='<p><b>To contractors.</b> '+esc(sc.pm)+'</p>';
+  if(sc.works&&sc.works.length)h+='<p><b>Phasing works, not in the model.</b> '+esc(sc.works.join('; '))+'.</p>';
+  if(sc.note)h+='<p class="warn">'+esc(sc.note)+'</p>';
+  if(S.fig&&sc.money){const base=scenOf('BASE'), m=(S.bt&&sc.money.bt)?Object.assign({},sc.money,sc.money.bt):sc.money, bf=base&&base.money?base.money.final:null;
+    const total=(S.bt&&sc.money.bt)?null:m.total, dl=bf!=null?m.final-bf:null;
+    h+='<table><tr><th>'+(S.bt&&sc.money.bt?'With bouwteam':'As tendered')+'</th><th class="n">€ m</th></tr>'
+      +'<tr><td>Committed, signed</td><td class="n">'+eur(m.committed)+'</td></tr>'
+      +(S.bt&&sc.money.bt?'':'<tr><td>To commit in Phase 1</td><td class="n">'+eur(m.etc1)+'</td></tr><tr><td class="sub">range</td><td class="n sub">'+esc(m.range)+'</td></tr>')
+      +'<tr><td>Deferred to Phase 2</td><td class="n">'+eur(m.deferred)+'</td></tr><tr><td>Extra cost, certain</td><td class="n">'+eur(m.extra)+'</td></tr><tr><td>Deferral risk</td><td class="n">'+eur(m.risk)+'</td></tr>'
+      +(total!=null?'<tr><td>Still to spend</td><td class="n">'+eur(total)+'</td></tr>':'')
+      +'<tr class="tot"><td>Final cost, incl. spent</td><td class="n">'+eur(m.final)+'</td></tr>'
+      +(dl!=null&&S.scen!=='BASE'?'<tr><td>Against base</td><td class="n">'+(dl>=0?'+':'−')+'€'+Math.abs(dl).toFixed(2)+'m</td></tr>':'')
+      +(m.per&&!(S.bt&&sc.money.bt)?'<tr><td>Extra + risk per €1 deferred</td><td class="n">€'+m.per.toFixed(2)+'</td></tr>':'')+'</table><p class="fine">'+esc(D.scenNote||'')+'</p>'}
+  h+='<button class="btn on" id="splay" type="button">Play this scenario</button>';
+  el.innerHTML=h;
+}
 function panel(){
-  if(!tags)return; const k=[0,0,0]; tags.forEach(t=>k[real(t)]++); $('k0').textContent=k[0];$('k1').textContent=k[1];$('k2').textContent=k[2];
+  if(!tags)return; const k=[0,0,0,0]; tags.forEach(t=>k[real(t)]++); $('k0').textContent=k[0];$('k1').textContent=k[1];$('k2').textContent=k[2];$('k3').textContent=k[3]; $('k3box').hidden=S.scen==='BASE';
   let h=''; const sel=tags.filter(t=>S.sel.has(t.i));
   if(sel.length){
     const u={}; sel.forEach(t=>{u[t.unit]=(u[t.unit]||0)+t.qty}); const n=sel.reduce((a,t)=>a+t.n,0);
     h+='<h2>Selection: '+(sel.length===1?esc(sel[0].tag):sel.length+' tags')+'</h2>';
-    if(sel.length===1){const t=sel[0];h+='<div>'+esc(t.name)+'<br><span class="lab">'+esc(t.pkg+' · '+t.zoneName)+'</span></div><div style="font-family:var(--f-num)">'+(t.built?'Already on site':n2s(t.s)+' → '+n2s(t.f))+'</div>'}
+    if(sel.length===1){const t=sel[0];h+='<div>'+esc(t.name)+'<br><span class="lab">'+esc(t.pkg+' · '+t.zoneName)+'</span></div><div style="font-family:var(--f-num)">'+(t.built?'Already on site':deferred(t,S.scen)?'Deferred to Phase 2 (date open)':n2s(t.s)+' → '+n2s(t.f))+'</div>'}
     h+='<table><tr><th>Total</th><th class="n">'+num(n)+' elements</th></tr>'+Object.keys(u).map(x=>'<tr><td>Quantity</td><td class="n">'+fmt(u[x],x)+'</td></tr>').join('')+'</table>';
     if(sel.length>1)h+='<table><tr><th>Tag</th><th class="n">Quantity</th></tr>'+sel.slice(0,60).map(t=>'<tr><td><span class="st s'+real(t)+'"></span>'+esc(t.zone+' · '+t.name)+'</td><td class="n">'+fmt(t.qty,t.unit)+'</td></tr>').join('')+(sel.length>60?'<tr><td colspan="2">… '+(sel.length-60)+' more (use Export Excel)</td></tr>':'')+'</table>';
   }
-  const list=tags.filter(pass);
+  const list=tags.filter(t=>pass(t));
   h+='<h2>In place on '+n2s(Math.floor(T))+(S.zone?' · '+esc(S.zone):'')+'</h2><table><tr><th>Discipline</th><th class="n">Elements</th><th></th></tr>';
   for(const d in DC){const ts=list.filter(t=>t.disc===d); if(!ts.length)continue; const tot=ts.reduce((a,t)=>a+t.n,0); let done=0; ts.forEach(t=>{const s=real(t);done+=s===2?t.n:s===1?t.n*(T-t.s)/(t.f-t.s+1):0});
     h+='<tr><td>'+DN[d]+'</td><td class="n">'+num(Math.round(done))+' / '+num(tot)+'</td><td><div class="pbar"><i style="width:'+(done/tot*100)+'%;background:'+DC[d]+'"></i></div></td></tr>'}
   h+='</table>'; $('selbox').innerHTML=h;
 }
-let colorMap={};
 function legend(){
-  if(!tags)return; let h='';
-  if(S.colorBy==='real'){h='<span><i style="background:'+R.wip+'"></i>Work in progress</span><span><i style="background:transparent;border:1px solid var(--mute)"></i>Built: '+(R.mat==='original'?'model materials':R.mat==='arctic'?'white':'discipline tint')+'</span><span>faint = not started</span>'; colorMap={}}
-  else if(S.colorBy==='status'){h=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+'<span>bright = in progress · muted = built</span>'; colorMap={}}
-  else{const ks=[...new Set(tags.filter(pass).map(KEY[S.colorBy]))]; if(S.colorBy!=='zone'&&S.colorBy!=='floor')ks.sort(); colorMap={}; ks.forEach((k,i)=>colorMap[k]=S.colorBy==='disc'?DC[Object.keys(DN).find(x=>DN[x]===k)]:PAL[i%PAL.length]);
+  if(!tags)return; let h=''; const dfl=S.scen!=='BASE'&&S.df!=='off'?'<span><i style="background:'+(S.df==='mark'?DEFC:'transparent;box-shadow:inset 0 0 0 1px '+DEFC)+'"></i>Deferred to Phase 2</span>':'';
+  if(S.colorBy==='real'){const bl={solid:'solid',ghost:'x-ray',off:'hidden'}; h='<span><i style="background:'+(R.wipBy==='single'?R.wip:'linear-gradient(90deg,#ff9f0a,#0a84ff)')+'"></i>Working now'+(R.wipBy==='single'?'':' (by '+(R.wipBy==='disc'?'discipline':'package')+')')+'</span><span><i style="background:#c7c7cc"></i>Just built: solid</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Built earlier: '+bl[S.bu]+'</span>'+dfl+'<span><i style="background:transparent"></i>Not started: '+(S.ns==='off'?'hidden':'faint')+'</span>'; colorMap={}}
+  else if(S.colorBy==='status'){h=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+dfl+'<span>bright = in progress · muted = built</span>'; colorMap={}}
+  else{const ks=[...new Set(tags.filter(t=>pass(t)).map(KEY[S.colorBy]))]; if(S.colorBy!=='zone'&&S.colorBy!=='floor')ks.sort(); colorMap={}; ks.forEach((k,i)=>colorMap[k]=S.colorBy==='disc'?DC[Object.keys(DN).find(x=>DN[x]===k)]:S.colorBy==='phase'?(k==='Deferred (Phase 2)'?DEFC:k==='On site'?'#8e8e93':'#30d158'):PAL[i%PAL.length]);
     h=ks.slice(0,18).map(k=>'<span><i style="background:'+colorMap[k]+'"></i>'+esc(k)+'</span>').join('')+(ks.length>18?'<span>… '+(ks.length-18)+' more</span>':'')}
   $('legend').innerHTML=h;
+}
+const wipCol=t=>R.wipBy==='disc'?DC[t.disc]:R.wipBy==='pkg'?PAL[pkgs.indexOf(t.pkg)%PAL.length]:R.wip;
+// list of the activities running on the current date, drawn over the model (as a 4D player shows them)
+function activeList(){
+  const el=$('active'); if(!el||!tags)return; const ts=S.time?tags.filter(t=>real(t)===1&&pass(t)&&!S.off.has(t.i)):[]; if(!ts.length){el.innerHTML='';return}
+  el.innerHTML='<h4><span>Working now</span><span>'+ts.length+'</span></h4>'+ts.slice(0,6).map(t=>'<div class="a" data-t="'+t.i+'"><i style="background:'+wipCol(t)+'"></i><span>'+esc(t.name)+' <em>'+esc(t.zoneName.replace(/^.. - /,''))+'</em></span><b>'+Math.round((T-t.s)/(t.f-t.s+1)*100)+'%</b></div>').join('')+(ts.length>6?'<div class="a" style="cursor:default"><i></i><span><em>and '+(ts.length-6)+' more</em></span><b></b></div>':'');
 }
 
 /* ---------- time ---------- */
 let last=0;
-(function loop(){requestAnimationFrame(loop); const now=performance.now(); if(playing&&tags){const dt=(now-last)/1000; let nt=T+dt*+$('speed').value; if(nt>=t1){nt=t1;toggle(false)} setT(nt); if(S.orbit&&viewer)orbit(dt)} last=now})();
-function orbit(dt){try{const nav=viewer.navigation,p=nav.getPosition(),c=nav.getPivotPoint?nav.getPivotPoint():nav.getTarget(),a=dt*0.12,dx=p.x-c.x,dy=p.y-c.y,cs=Math.cos(a),sn=Math.sin(a); nav.setView(new THREE.Vector3(c.x+dx*cs-dy*sn,c.y+dx*sn+dy*cs,p.z),nav.getTarget().clone().sub(p).applyAxisAngle(new THREE.Vector3(0,0,1),a).add(new THREE.Vector3(c.x+dx*cs-dy*sn,c.y+dx*sn+dy*cs,p.z)))}catch(e){}}
+(function loop(){requestAnimationFrame(loop); const now=performance.now(); if(playing&&tags){const dt=(now-last)/1000; let nt=T+dt*+$('speed').value; if(nt>=t1){nt=t1;toggle(false)} setT(nt); if(S.orbit&&VA)VA.orbit(dt)} last=now})();
 function toggle(v){playing=v==null?!playing:v; if(playing&&T>=t1-1)setT(t0); if(playing&&!S.time){S.time=true;syncBars()} $('play').textContent=playing?'Pause':'Play'; $('play').classList.toggle('on',playing)}
-function setT(v){T=v; $('slider').value=v; $('date').textContent=n2s(Math.floor(v)); gridState(); panel(); apply3D()}
-
-/* ---------- Autodesk viewer ---------- */
-async function initViewer(){
-  const getToken=async cb=>{const t=await A.token(); if(!t)return A.login(); cb(t.access,Math.floor((t.exp-Date.now())/1000))};
-  await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
-  viewer=new Autodesk.Viewing.GuiViewer3D($('fv'));
-  viewer.start(); viewer.setGhosting(true); viewer.setOptimizeNavigation(true); S.ghost=!!R.ghost; applyRender();
-  viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
-  // geometry keeps streaming in after a model is linked: re-apply visibility and colours when it has all arrived
-  viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT,ev=>{const m=ev.model; if(!m||!m._code||!models[m._code])return; try{viewer.hide(m.getRootId(),m)}catch(e){} applied={}; boundsCache={}; apply3D(); clearTimeout(refit); refit=setTimeout(()=>{if(S.zone||!moved)applyZone()},400)});
-  $('fv').addEventListener('pointerdown',()=>{moved=true},true);
-  say('Listing models…'); const files={}; let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
-  while(url){const j=await A.api(url); const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v])); for(const it of j.data||[]){const v=inc[it.id]; if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber}} url=j.links?.next?.href||null}
-  // a main contractor model goes first: it sets the shared origin and units for all the others
-  const pri=['ST-01','CI-01','ST-03','AR-01','FF-01'], want=Object.keys(D.map).filter(c=>!CFG.onlyModels||CFG.onlyModels.includes(c)).sort((x,y)=>((pri.indexOf(x)+1)||99)-((pri.indexOf(y)+1)||99)); let n=0,miss=[],globalOffset=null,units=null; const rep=[];
-  for(const code of want){
-    const fn=D.files[code],f=files[fn]; n++; if(!f){miss.push(fn);continue}
-    say('Loading '+n+' / '+want.length+'  '+fn+' (v'+f.n+')');
-    const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    try{
-      const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0]; if(!g)return rej(new Error('no 3D view'));
-        const o={keepCurrentModels:true,applyRefPoint:true,preserveView:n>1}; if(globalOffset)o.globalOffset=globalOffset; if(units)o.applyScaling=units;
-        try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(msg||('code '+c)))));
-      if(!globalOffset){globalOffset=m.getData().globalOffset; try{units=m.getUnitString()}catch(e){}} m._code=code;
-      const r=await mapModel(code,m); models[code]=m; rep.push(r); applied={}; boundsCache={}; apply3D();
-    }catch(e){console.warn('load failed',fn,e);miss.push(fn+' ('+(e.message||e)+')')}
-  }
-  const tot=rep.reduce((a,r)=>a+r[1],0),hit=rep.reduce((a,r)=>a+r[2],0); say('');
-  $('msg').textContent='Models: '+rep.length+' loaded. Elements linked to tags: '+num(hit)+' of '+num(tot)+'.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':'')+' '+rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
-  window.MPB4D={rep,miss,models,S,boundsOf,pass,applyZone,fit}; applyZone();
+function setT(v){T=v; $('slider').value=v; $('date').textContent=n2s(Math.floor(v)); gridState(); panel(); follow(); applyAll(); activeList()}
+// second view: go to the zone where most work is running, and stay a moment before moving on
+let azCand=null,azSince=0;
+function follow(){
+  if(!(S.dual&&S.bmode==='follow'&&!S.zone&&VB))return; const w={}; tags.forEach(t=>{if(real(t)===1&&!S.off.has(t.i)&&pass(t,null))w[t.zone]=(w[t.zone]||0)+t.n});
+  let best=null,bw=0; for(const z in w)if(w[z]>bw){bw=w[z];best=z} if(!best||best===autoZ){azCand=null;return}
+  const now=performance.now(); if(azCand!==best){azCand=best;azSince=now}
+  if(!autoZ||!(w[autoZ]>0)||!playing||now-azSince>1800){autoZ=best;azCand=null;VB.syncZone()}
 }
-// link the IFC GlobalIds in the data file to this model's element ids (external id = GlobalId, children carry a /n suffix)
+
+/* ---------- 3D views ---------- */
+let initP=null,filesP=null;
+const initViewing=()=>initP||(initP=new Promise(res=>{const getToken=async cb=>{const t=await A.token(); if(!t)return A.login(); cb(t.access,Math.floor((t.exp-Date.now())/1000))}; Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res)}));
+const listFiles=()=>filesP||(filesP=(async()=>{const files={}; let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
+  while(url){const j=await A.api(url); const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v])); for(const it of j.data||[]){const v=inc[it.id]; if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber}} url=j.links?.next?.href||null}
+  return files})());
+const v4=(hex,mix,to)=>{const c=new THREE.Color(hex); if(to)c.lerp(new THREE.Color(to),mix); return new THREE.Vector4(c.r,c.g,c.b,1)};
+function colOf(col){const k0=col[0]; if(k0==='m')return v4(col.slice(1),.6,css('--built')); if(k0==='t'){const c=v4(col.slice(1,8)); c.w=+R.tint; return c} if(k0==='w'){const c=v4(col.slice(1,8)); c.w=+R.wipS; return c} if(k0==='o')return new THREE.Vector4(1,1,1,0); if(k0==='a')return new THREE.Vector4(.93,.94,.95,1); return v4(col)}
+
+function makeView(key){
+  const V={key,viewer:null,models:{},applied:{},tint:{},bounds:{},order:{},zone:undefined,cubed:false,moved:false,muting:false,refit:0,rep:[],miss:[]};
+  const say=t=>{const l=$('load'+key); l.hidden=!t; l.textContent=t};
+  V.scen=()=>(key==='A'&&S.dual&&S.bmode==='compare')?'BASE':S.scen;
+  V.wantZone=()=>!S.dual?S.zone:S.bmode==='compare'?S.zone:(key==='A'?null:(S.zone||autoZ));
+  V.label=()=>{const l=$('lab'+key); if(!l)return; if(!S.dual){l.hidden=true;return} l.hidden=false; const sc=scenOf(V.scen());
+    l.textContent=zoneLabel(V.zone===undefined?V.wantZone():V.zone)+(S.bmode==='compare'?' · '+(sc?sc.name:V.scen()):(key==='B'&&!S.zone?' · following the work':''))};
+  V.load=async()=>{
+    say('Starting the viewer…'); await initViewing();
+    const viewer=V.viewer=new Autodesk.Viewing.GuiViewer3D($('fv'+key)); viewer.start(); viewer.setGhosting(true); viewer.setOptimizeNavigation(true); applyRenderV(V);
+    viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,ev=>onPick(V,ev));
+    // geometry keeps streaming in after a model is linked: re-apply visibility and colours when it has all arrived
+    viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT,ev=>{const m=ev.model; if(!m||!m._code||!V.models[m._code])return; try{viewer.hide(m.getRootId(),m); setOff([m.getRootId()],m,true)}catch(e){} V.applied={}; V.bounds={}; V.order={}; V.apply(); clearTimeout(V.refit); V.refit=setTimeout(()=>{if(V.zone||!V.moved)V.frame()},400)});
+    $('fv'+key).addEventListener('pointerdown',()=>{V.moved=true},true);
+    say('Listing models…'); const files=await listFiles();
+    // a main contractor model goes first: it sets the shared origin and units for all the others
+    const pri=['ST-01','CI-01','ST-03','AR-01','FF-01'], want=Object.keys(D.map).filter(c=>!CFG.onlyModels||CFG.onlyModels.includes(c)).sort((x,y)=>((pri.indexOf(x)+1)||99)-((pri.indexOf(y)+1)||99)); let n=0,globalOffset=null,units=null;
+    for(const code of want){
+      const fn=D.files[code],f=files[fn]; n++; if(!f){V.miss.push(fn);continue}
+      say('Loading '+n+' / '+want.length+'  '+fn+' (v'+f.n+')');
+      const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      try{
+        const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0]; if(!g)return rej(new Error('no 3D view'));
+          const o={keepCurrentModels:true,applyRefPoint:true,preserveView:n>1}; if(globalOffset)o.globalOffset=globalOffset; if(units)o.applyScaling=units;
+          try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(msg||('code '+c)))));
+        if(!globalOffset){globalOffset=m.getData().globalOffset; try{units=m.getUnitString()}catch(e){}} m._code=code;
+        const r=await mapModel(code,m); await new Promise(r2=>m.getObjectTree(()=>r2(),()=>r2()));
+        viewer.hide(m.getRootId(),m); setOff([m.getRootId()],m,true);   // everything starts switched off; tags switch elements on
+        V.models[code]=m; V.rep.push(r); V.applied={}; V.bounds={}; V.apply(); if(n===1)applyRenderV(V,'bg');
+      }catch(e){console.warn('load failed',fn,e);V.miss.push(fn+' ('+(e.message||e)+')')}
+    }
+    say(''); const tot=V.rep.reduce((a,r)=>a+r[1],0),hit=V.rep.reduce((a,r)=>a+r[2],0);
+    if(key==='A'){$('msg').textContent='Models: '+V.rep.length+' loaded. Elements linked to tags: '+num(hit)+' of '+num(tot)+'.'+(V.miss.length?' Not loaded: '+V.miss.join(', ')+'.':'')+' '+V.rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
+      window.MPB4D={rep:V.rep,miss:V.miss,models:V.models,S,views}}
+    V.syncZone(true); applyRenderV(V,'bg');
+  };
+  // ---- three ways an element can be drawn: solid (visible, coloured), ghost (x-ray) or off (not drawn at all)
+  const CLR=new THREE.Vector4(1,1,1,0), draw=(ids,m,state,c,clr)=>{
+    if(!ids.length)return; if(state==='off'){setOff(ids,m,true);return} setOff(ids,m,false);
+    if(state==='ghost'){if(clr){const rc=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{V.viewer.setThemingColor(id,CLR,m,rc)}catch(e){}}} V.viewer.hide(ids,m);return}   // an x-ray element must not keep the colour it had while solid
+    V.viewer.show(ids,m); const rec=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{V.viewer.setThemingColor(id,c,m,rec)}catch(e){try{V.viewer.setThemingColor(id,c,m,false)}catch(e2){}}}
+  };
+  // ids of one tag in one model, sorted from the lowest element to the highest: lets work "grow" during an activity
+  const ordered=(code,ti)=>{
+    const k=code+':'+ti; if(V.order[k])return V.order[k]; const m=V.models[code],ids=(MAP[code]&&MAP[code].tagIds[ti])||[],tree=m.getInstanceTree(),fl=m.getFragmentList();
+    if(!tree||!fl||ids.length<2)return V.order[k]=ids; const b=new THREE.Box3(),z=new Map();
+    for(const id of ids){let lo=Infinity; tree.enumNodeFragments(id,f=>{fl.getWorldBounds(f,b); if(b.min.z<lo)lo=b.min.z},true); z.set(id,lo)}
+    return V.order[k]=ids.slice().sort((x,y)=>z.get(x)-z.get(y));
+  };
+  // what a tag looks like right now in this view: [state, colour key, grown step]
+  const lookOf=(t,hasSel,sid)=>{
+    if(!pass(t,V.zone)||S.off.has(t.i))return ['off','',0];
+    const isSel=S.sel.has(t.i); if(hasSel){if(S.vis==='isolate'&&!isSel)return ['off','',0]; if(S.vis==='hide'&&isSel)return ['off','',0]; if(S.vis==='ghost'&&!isSel)return ['ghost','',0]}
+    const s=st(t,sid); if(s===0)return [S.ns,'',0];
+    if(s===3)return S.df==='mark'?['solid','d',0]:[S.df,'',0];
+    const gs=s===1&&S.grow&&S.time?Math.max(1,Math.ceil((T-t.s)/(t.f-t.s+1)*16)):0;
+    if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',gs];
+    if(s===1)return ['solid',S.colorBy==='status'?DC[t.disc]:'w'+wipCol(t)+R.wipS,gs];
+    const old=S.time&&(t.built||T-t.f>S.recent), state=old&&!(S.dual&&S.bmode==='compare')?S.bu:'solid';   // side by side with Base, finished work stays solid so the two can be compared
+    return [state, state==='solid'?(S.colorBy==='status'?'m'+DC[t.disc]:R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint):'',0];
+  };
+  V.apply=()=>{
+    const viewer=V.viewer; if(!viewer||!tags)return; const hasSel=S.sel.size>0, sid=V.scen(); let changed=false;
+    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), key=L.join('|'), prev=V.applied[t.i]; if(prev===key)return; V.applied[t.i]=key; changed=true; const clr=L[0]==='ghost'&&!!V.tint[t.i]; if(L[0]==='solid')V.tint[t.i]=L[1]!=='o'; else if(clr)V.tint[t.i]=false;
+      const c=L[0]==='solid'?(L[1]==='d'?v4(DEFC):colOf(L[1])):null;
+      for(const code in V.models){const all=MAP[code]&&MAP[code].tagIds[t.i]; if(!all||!all.length)continue; const m=V.models[code];
+        if(L[2]>0&&L[2]<16){const ids=ordered(code,t.i),k=Math.max(1,Math.round(ids.length*L[2]/16)); draw(ids.slice(0,k),m,'solid',c); draw(ids.slice(k),m,S.ns,null)}
+        else draw(all,m,L[0],c,clr)}});
+    const hk=S.vis==='normal'?[...S.sel].sort().join(','):''; if(V.applied._h!==hk){V.applied._h=hk; V.muting=true; viewer.clearSelection();
+      if(hk){const s=[]; for(const code in V.models){const ids=[]; S.sel.forEach(i=>{const a=MAP[code]&&MAP[code].tagIds[i]; if(a&&String(V.applied[i]).startsWith('solid'))for(const id of a)ids.push(id)}); if(ids.length)s.push({model:V.models[code],ids})} if(s.length)viewer.impl.selector.setAggregateSelection(s)}
+      setTimeout(()=>V.muting=false,80); changed=true}
+    if(changed)viewer.impl.invalidate(true,true,true);
+  };
+  V.boundsOf=(pred,key2)=>{
+    if(V.bounds[key2])return V.bounds[key2]; const xs=[[],[],[],[],[],[]], b=new THREE.Box3();
+    for(const code in V.models){const m=V.models[code],tree=m.getInstanceTree(),fl=m.getFragmentList(); if(!tree||!fl||!MAP[code])continue;
+      tags.filter(pred).forEach(t=>{const ids=MAP[code].tagIds[t.i]||[]; for(const id of ids)tree.enumNodeFragments(id,f=>{fl.getWorldBounds(f,b); if(b.min.x<=b.max.x){xs[0].push(b.min.x);xs[1].push(b.min.y);xs[2].push(b.min.z);xs[3].push(b.max.x);xs[4].push(b.max.y);xs[5].push(b.max.z)}},true)})}
+    if(!xs[0].length)return null; const pc=(a,p)=>{a.sort((x,y)=>x-y);return a[Math.min(a.length-1,Math.max(0,Math.floor(p*(a.length-1))))]};
+    const lo=xs[0].length>200?.01:0, bx=new THREE.Box3(new THREE.Vector3(pc(xs[0],lo),pc(xs[1],lo),pc(xs[2],lo)),new THREE.Vector3(pc(xs[3],1-lo),pc(xs[4],1-lo),pc(xs[5],1-lo)));
+    return V.bounds[key2]=bx;
+  };
+  const look=bx=>{const go=()=>{try{V.viewer.navigation.fitBounds(true,bx)}catch(e){}}; if(!V.cubed){V.cubed=true; try{const x=V.viewer.getExtension('Autodesk.ViewCubeUi'); if(x){x.setViewCube('front top right'); setTimeout(go,900); return}}catch(e){}} go()};
+  V.syncZone=force=>{const z=V.wantZone()||null; if(!force&&z===V.zone)return; V.zone=z; V.label(); V.apply(); V.frame()};
+  V.frame=()=>{
+    const viewer=V.viewer; if(!viewer)return; const z=V.zone, zoned=z&&(/^(GF|1F|2F|3F)/.test(z));
+    if(!z){viewer.setCutPlanes([]); V.fit(); return}
+    const bx=V.boundsOf(t=>inZone(t,z),'z:'+z); if(!bx){viewer.setCutPlanes([]);return}
+    if(S.clip&&zoned){const e=bx.clone().expandByScalar(Math.max(bx.max.x-bx.min.x,bx.max.y-bx.min.y)*0.004+0.05), P=[];
+      P.push(new THREE.Vector4(0,0,1,-e.max.z),new THREE.Vector4(0,0,-1,e.min.z),new THREE.Vector4(1,0,0,-e.max.x),new THREE.Vector4(-1,0,0,e.min.x),new THREE.Vector4(0,1,0,-e.max.y),new THREE.Vector4(0,-1,0,e.min.y));
+      viewer.setCutPlanes(P)} else viewer.setCutPlanes([]);
+    look(bx);
+  };
+  V.fit=()=>{if(!V.viewer)return; const bx=V.boundsOf(t=>pass(t,V.zone),'f:'+V.zone+[...S.disc].join('')+S.q); if(bx)look(bx)};
+  V.fitSel=()=>{if(!V.viewer||V.zone)return; const bx=V.boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)look(bx)};
+  V.orbit=dt=>{try{const nav=V.viewer.navigation,p=nav.getPosition(),c=nav.getPivotPoint?nav.getPivotPoint():nav.getTarget(),a=dt*0.12,dx=p.x-c.x,dy=p.y-c.y,cs=Math.cos(a),sn=Math.sin(a),np=new THREE.Vector3(c.x+dx*cs-dy*sn,c.y+dx*sn+dy*cs,p.z); nav.setView(np,nav.getTarget().clone().sub(p).applyAxisAngle(new THREE.Vector3(0,0,1),a).add(np))}catch(e){}};
+  return V;
+}
+function setOff(ids,m,off){const vm=m.visibilityManager; if(!vm)return; for(const id of ids){try{vm.setNodeOff(id,off)}catch(e){}}}
+// link the IFC GlobalIds in the data file to the model's element ids. Done once per model and shared by both views.
 async function mapModel(code,m){
+  if(MAP[code])return MAP[code].rep;
   const all=D.map[code].map(g=>g[1].split(' ')); let tot=0; all.forEach(a=>tot+=a.length);
   let e2id=await new Promise(r=>m.getExternalIdMapping(r,()=>r({})));
   let h=0; for(const a of all)for(const g of a)if(e2id[g]!=null)h++;
@@ -327,32 +549,43 @@ async function mapModel(code,m){
         if(!Object.keys(ai).length)ai=any; var out={};pdb.enumObjects(function(dbId){pdb.enumObjectProperties(dbId,function(a,v){if(ai[a]){var g=pdb.getAttrValue(a,v);if(g&&out[g]==null)out[g]=dbId}})});return out});
       if(alt&&Object.keys(alt).length)e2id=alt}catch(e){console.warn('IfcGUID property scan failed',code,e)}
   }
-  let hit=0; tagIds[code]={}; id2tag[code]={};
-  D.map[code].forEach((g,k)=>{const ids=[]; for(const guid of all[k]){const id=e2id[guid]; if(id!=null){ids.push(id);id2tag[code][id]=g[0];hit++}} tagIds[code][g[0]]=ids});
-  await new Promise(r=>m.getObjectTree(()=>r(),()=>r()));
-  viewer.hide(m.getRootId(),m);           // everything starts hidden; tags switch elements on
-  return [code,tot,hit];
+  let hit=0; const M=MAP[code]={tagIds:{},id2tag:{},rep:null};
+  D.map[code].forEach((g,k)=>{const ids=[]; for(const guid of all[k]){const id=e2id[guid]; if(id!=null){ids.push(id);M.id2tag[id]=g[0];hit++}} M.tagIds[g[0]]=ids});
+  return M.rep=[code,tot,hit];
 }
+function onPick(V,ev){
+  if(V.muting||S.pick!=='tag')return; const s=ev.selections&&ev.selections[0]; if(!s||!s.dbIdArray.length)return; const m=s.model,M=MAP[m._code]; if(!M)return; const map=M.id2tag;
+  const tree=m.getInstanceTree(); let id=s.dbIdArray[0],k=0; while(id!=null&&map[id]==null&&tree&&k++<12)id=tree.getNodeParentId(id);
+  if(id==null||map[id]==null)return; const t=tags[map[id]]; S.sel.clear(); S.sel.add(t.i); openTo(t);
+  views.forEach(x=>{x.applied._h=null}); buildGrid(); panel(); applyAll(); const i=rows.findIndex(r=>r.leaf&&r.t===t), el=document.querySelector('#g .row[data-i="'+i+'"]'); if(el)el.scrollIntoView({block:'nearest'});
+}
+function setDual(on){
+  S.dual=on; syncBars(); resizeAll();
+  if(on&&!VB){VB=makeView('B'); views.push(VB); VB.load().catch(e=>{$('loadB').hidden=false;$('loadB').textContent='Error: '+e.message})}
+  setTimeout(()=>{resizeAll(); follow(); syncZones(true)},60); applyAll();
+}
+
 // ---------- render settings: every knob is live, saved in this browser, and can be copied out as text ----------
-const SELC='#35c9ff';
-const RDEF={mat:'original',tint:0.35,wip:'#ff6a1a',wipS:1,preset:4,tone:1,expo:0,envExpo:0,envRot:0,dirInt:1,sun:false,sunAz:135,sunEl:50,ao:true,aoRad:0,aoInt:1,aa:true,prog:true,edges:false,edgeCol:'#1b2228',edgeOp:0.35,gShadow:true,gAlpha:0.35,gRefl:false,bgTop:'#e9edf1',bgBot:'#ffffff',fov:35,ortho:false,explode:0,ghost:true};
+const RDEF={mat:'original',tint:0.35,wipBy:'single',wip:'#ff9f0a',wipS:1,preset:4,tone:1,expo:0,envExpo:0,envRot:0,dirInt:1,sun:false,sunAz:135,sunEl:50,ao:true,aoRad:0,aoInt:1,aa:true,prog:true,edges:false,edgeCol:'#1b2228',edgeOp:0.35,gShadow:true,gAlpha:0.35,gRefl:false,bgTop:'#e9edf1',bgBot:'#ffffff',xrayDark:true,fov:35,ortho:false,explode:0};
 const RPRE={'Speckle-like':{},'Arctic (white model)':{mat:'arctic',edges:true,edgeOp:0.25,bgTop:'#eef1f4',bgBot:'#ffffff'},'Studio dark':{preset:2,bgTop:'#26323e',bgBot:'#090d12',gShadow:false},'Fast (weak laptop)':{ao:false,aa:false,gShadow:false,preset:0}};
-const RSCHEMA=[['Materials'],['mat','sel','Built elements',[['original','Original materials'],['arctic','Arctic (white)'],['tint','Discipline tint']]],['tint','rng','Tint strength',0,1,.05],['wip','col','Work in progress'],['wipS','rng','Its strength',0,1,.05],
+const RSCHEMA=[['Materials'],['mat','sel','Built elements',[['original','Original materials'],['arctic','Arctic (white)'],['tint','Discipline tint']]],['tint','rng','Tint strength',0,1,.05],['wipBy','sel','Work in progress',[['single','One colour'],['disc','By discipline'],['pkg','By package']]],['wip','col','Its colour'],['wipS','rng','Its strength',0,1,.05],
  ['Light'],['preset','sel','Light preset',[]],['tone','sel','Tone mapping',[[0,'None'],[1,'Filmic (brightness)'],[2,'Filmic (colour)']]],['expo','rng','Exposure',-4,4,.1],['envExpo','rng','Sky light',-4,4,.1],['envRot','rng','Sky rotation',0,360,5],['dirInt','rng','Lamp strength',0,3,.05],
  ['Shadows'],['ao','chk','Contact shadows'],['aoRad','rng','Their radius',0,60,0.5],['aoInt','rng','Their strength',0,3,.05],['sun','chk','Sun shadows'],['sunAz','rng','Sun direction',0,360,5],['sunEl','rng','Sun height',5,90,1],['gShadow','chk','Ground shadow'],['gAlpha','rng','Its darkness',0,1,.05],['gRefl','chk','Ground reflection'],
  ['Edges'],['edges','chk','Outlines'],['edgeCol','col','Colour'],['edgeOp','rng','Opacity',0,1,.05],
- ['Background'],['bgTop','col','Top'],['bgBot','col','Bottom'],
+ ['Background'],['bgTop','col','Top'],['bgBot','col','Bottom'],['xrayDark','chk','Dark when x-ray'],
  ['Camera'],['fov','rng','Field of view',10,90,1],['ortho','chk','Orthographic'],['explode','rng','Explode',0,1,.02],
- ['Quality'],['aa','chk','Smooth edges (AA)'],['prog','chk','Refine when still'],['ghost','chk','Faint not-started']];
-let R=Object.assign({},RDEF,store.get('render')||{}), baseDir=null;
+ ['Quality'],['aa','chk','Smooth edges (AA)'],['prog','chk','Refine when still']];
+let R=Object.assign({},RDEF,store.get('render')||{});
 const rgb=h=>{const c=new THREE.Color(h);return [Math.round(c.r*255),Math.round(c.g*255),Math.round(c.b*255)]};
-function applyRender(only){
-  if(!viewer)return; const I=viewer.impl, T_=f=>{try{f()}catch(e){console.warn('render setting',e.message)}}, is=k=>!only||only===k||(Array.isArray(only)&&only.includes(k));
-  if(is('preset')){T_(()=>viewer.setLightPreset(+R.preset)); baseDir=null; only=null}
-  T_(()=>viewer.setEnvMapBackground(false)); const a=rgb(R.bgTop),b=rgb(R.bgBot); T_(()=>viewer.setBackgroundColor(a[0],a[1],a[2],b[0],b[1],b[2]));
+function applyRender(only){views.forEach(V=>applyRenderV(V,only))}
+function applyRenderV(V,only){
+  const viewer=V.viewer; if(!viewer)return; const I=viewer.impl, T_=f=>{try{f()}catch(e){console.warn('render setting',e.message)}}, is=k=>!only||only===k||(Array.isArray(only)&&only.includes(k));
+  if(is('preset')){T_(()=>viewer.setLightPreset(+R.preset)); V.baseDir=null; only=null}
+  const xr=R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), a=rgb(xr?'#232a33':R.bgTop),b=rgb(xr?'#0c0f13':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
+  const bg=()=>{T_(()=>viewer.setEnvMapBackground(false)); T_(()=>viewer.setBackgroundColor(a[0],a[1],a[2],b[0],b[1],b[2])); I.invalidate(true,false,false)}; bg(); clearTimeout(V.bgT1); clearTimeout(V.bgT2); V.bgT1=setTimeout(bg,400); V.bgT2=setTimeout(bg,2000);   // a light preset loads its own background a moment later
   T_(()=>viewer.setTheme((a[0]+a[1]+a[2])/3<110?'dark-theme':'light-theme'));
   T_(()=>I.setTonemapMethod(+R.tone)); T_(()=>I.setTonemapExposureBias(+R.expo)); T_(()=>I.matman().setEnvExposure(+R.envExpo)); T_(()=>I.renderer().setEnvExposure(+R.envExpo)); T_(()=>{I.matman().setEnvRotation(R.envRot*Math.PI/180); I.renderer().setEnvRotation(R.envRot*Math.PI/180)});
-  T_(()=>{if(I.dir_light1){if(baseDir==null)baseDir=I.dir_light1.intensity; I.dir_light1.intensity=baseDir*R.dirInt}});
+  T_(()=>{if(I.dir_light1){if(V.baseDir==null)V.baseDir=I.dir_light1.intensity; I.dir_light1.intensity=V.baseDir*R.dirInt}});
   T_(()=>viewer.setQualityLevel(!!R.ao,!!R.aa)); T_(()=>{const r=I.renderer(); if(R.aoRad>0||R.aoInt!==1)r.setAOOptions(R.aoRad>0?R.aoRad:r.getAORadius(),+R.aoInt)});
   T_(()=>{const e=R.sunEl*Math.PI/180,z=R.sunAz*Math.PI/180; I.setShadowLightDirection(new THREE.Vector3(Math.cos(e)*Math.sin(z),Math.cos(e)*Math.cos(z),Math.sin(e))); I.toggleShadows(!!R.sun)});
   T_(()=>viewer.setGroundShadow(!!R.gShadow)); T_(()=>viewer.setGroundShadowAlpha(+R.gAlpha)); T_(()=>viewer.setGroundReflection(!!R.gRefl));
@@ -360,7 +593,7 @@ function applyRender(only){
   T_(()=>viewer.setProgressiveRendering(!!R.prog)); T_(()=>viewer.setFOV(+R.fov)); T_(()=>{R.ortho?viewer.navigation.toOrthographic():viewer.navigation.toPerspective()});
   if(is('explode'))T_(()=>viewer.explode(+R.explode));
   T_(()=>viewer.setSelectionColor(new THREE.Color(SELC),Autodesk.Viewing.SelectionType.MIXED));
-  if(is('mat')||is('tint')||is('wip')||is('wipS')||is('ghost')){S.ghost=!!R.ghost; applied={}; apply3D(); legend(); syncBars()}
+  if(is('mat')||is('tint')||is('wip')||is('wipS')||is('wipBy')){V.applied={}; V.apply(); legend()}
   I.invalidate(true,true,true);
 }
 function buildRender(){
@@ -377,108 +610,82 @@ function buildRender(){
     if(!el.id||el.id.slice(0,2)!=='r_')return; const k=el.id.slice(2), it=RSCHEMA.find(x=>x[0]===k); if(!it)return;
     R[k]=it[1]==='chk'?el.checked:it[1]==='rng'?+el.value:(k==='preset'||k==='tone')?+el.value:el.value; const o=$('o_'+k); if(o)o.textContent=R[k];
     store.set('render',R); $('rtext').value=JSON.stringify(R); applyRender(k)};
-  $('rclose').onclick=()=>{P.hidden=true; $('rbtn').classList.remove('on'); if(viewer)viewer.resize()};
+  $('rclose').onclick=()=>{P.hidden=true; $('rbtn').classList.remove('on'); resizeAll()};
   $('rreset').onclick=()=>{R=Object.assign({},RDEF); store.set('render',R); buildRender(); applyRender()};
   $('rcopy').onclick=()=>{const t=$('rtext'); t.focus(); t.select(); const ok=()=>{$('rmsg').textContent='Copied'}; if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(ok,()=>{try{document.execCommand('copy');ok()}catch(e){$('rmsg').textContent='Select and copy the text'}}); else{try{document.execCommand('copy');ok()}catch(e){}}};
 }
-const v4=(hex,mix,to)=>{const c=new THREE.Color(hex); if(to)c.lerp(new THREE.Color(to),mix); return new THREE.Vector4(c.r,c.g,c.b,1)};
-function apply3D(){
-  if(!viewer||!tags)return; const builtC=css('--built'), hasSel=S.sel.size>0; let changed=false;
-  const ghosting=S.vis==='ghost'&&hasSel || (S.ghost&&!(S.vis==='isolate'&&hasSel)); if(applied._g!==ghosting){viewer.setGhosting(ghosting);applied._g=ghosting;changed=true}
-  tags.forEach(t=>{const s=st(t),isSel=S.sel.has(t.i);
-    let show=pass(t)&&s>0; if(hasSel){if((S.vis==='isolate'||S.vis==='ghost')&&!isSel)show=false; if(S.vis==='hide'&&isSel)show=false}
-    let col=''; if(show)col=S.colorBy==='real'?(s===1?'w'+R.wip+R.wipS:R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint):S.colorBy==='status'?(s===1?DC[t.disc]:'m'+DC[t.disc]):(colorMap[KEY[S.colorBy](t)]||'#999999');
-    const key=show?col:'-'; if(applied[t.i]===key)return; applied[t.i]=key; changed=true;
-    let c=null; if(show){const k0=col[0]; if(k0==='m')c=v4(col.slice(1),.6,builtC); else if(k0==='t'){c=v4(col.slice(1,8)); c.w=+R.tint} else if(k0==='w'){c=v4(R.wip); c.w=+R.wipS} else if(k0==='o')c=new THREE.Vector4(1,1,1,0); else if(k0==='a')c=new THREE.Vector4(.93,.94,.95,1); else c=v4(col)}
-    for(const code in models){const ids=tagIds[code]&&tagIds[code][t.i]; if(!ids||!ids.length)continue; const m=models[code];
-      if(!show)viewer.hide(ids,m); else{viewer.show(ids,m); const rec=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{viewer.setThemingColor(id,c,m,rec)}catch(e){try{viewer.setThemingColor(id,c,m,false)}catch(e2){}}}}}});
-  // blue highlight only in Highlight mode
-  const hk=S.vis==='normal'?[...S.sel].sort().join(','):''; if(applied._h!==hk){applied._h=hk; muting=true; viewer.clearSelection();
-    if(hk){const s=[]; for(const code in models){const ids=[]; S.sel.forEach(i=>{const a=tagIds[code]&&tagIds[code][i]; if(a&&applied[i]!=='-')for(const id of a)ids.push(id)}); if(ids.length)s.push({model:models[code],ids})} if(s.length)viewer.impl.selector.setAggregateSelection(s)}
-    setTimeout(()=>muting=false,80); changed=true}
-  if(changed)viewer.impl.invalidate(true,true,true);
-}
-function boundsOf(pred,key){
-  if(boundsCache[key])return boundsCache[key]; const xs=[[],[],[],[],[],[]], b=new THREE.Box3();
-  for(const code in models){const m=models[code],tree=m.getInstanceTree(),fl=m.getFragmentList(); if(!tree||!fl)continue;
-    tags.filter(pred).forEach(t=>{const ids=tagIds[code][t.i]||[]; for(const id of ids)tree.enumNodeFragments(id,f=>{fl.getWorldBounds(f,b); if(b.min.x<=b.max.x){xs[0].push(b.min.x);xs[1].push(b.min.y);xs[2].push(b.min.z);xs[3].push(b.max.x);xs[4].push(b.max.y);xs[5].push(b.max.z)}},true)})}
-  if(!xs[0].length)return null; const pc=(a,p)=>{a.sort((x,y)=>x-y);return a[Math.min(a.length-1,Math.max(0,Math.floor(p*(a.length-1))))]};
-  const lo=xs[0].length>200?.01:0, bx=new THREE.Box3(new THREE.Vector3(pc(xs[0],lo),pc(xs[1],lo),pc(xs[2],lo)),new THREE.Vector3(pc(xs[3],1-lo),pc(xs[4],1-lo),pc(xs[5],1-lo)));
-  return boundsCache[key]=bx;
-}
-function applyZone(){
-  if(!viewer)return; const z=S.zone, zoned=z&&(/^(GF|1F|2F|3F)/.test(z));
-  if(!z){viewer.setCutPlanes([]); fit(); return}
-  const bx=boundsOf(inZone,'z:'+z); if(!bx){viewer.setCutPlanes([]);return}
-  if(S.clip&&zoned){const e=bx.clone().expandByScalar(Math.max(bx.max.x-bx.min.x,bx.max.y-bx.min.y)*0.004+0.05), P=[];
-    P.push(new THREE.Vector4(0,0,1,-e.max.z),new THREE.Vector4(0,0,-1,e.min.z),new THREE.Vector4(1,0,0,-e.max.x),new THREE.Vector4(-1,0,0,e.min.x),new THREE.Vector4(0,1,0,-e.max.y),new THREE.Vector4(0,-1,0,e.min.y));
-    viewer.setCutPlanes(P)} else viewer.setCutPlanes([]);
-  look(bx)
-}
-let cubed=false,moved=false,refit=0;
-function look(bx){const go=()=>{try{viewer.navigation.fitBounds(true,bx)}catch(e){}}; if(!cubed){cubed=true; try{const x=viewer.getExtension('Autodesk.ViewCubeUi'); if(x){x.setViewCube('front top right'); setTimeout(go,900); return}}catch(e){}} go()}
-function fit(){if(!viewer)return; const bx=boundsOf(pass,'f:'+S.zone+[...S.disc].join('')+S.q); if(bx)look(bx)}
-function fitSel(){if(!viewer||S.zone)return; const bx=boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)look(bx)}
-function onPick(ev){
-  if(muting||S.pick!=='tag')return; const s=ev.selections&&ev.selections[0]; if(!s||!s.dbIdArray.length)return; const m=s.model,map=id2tag[m._code]; if(!map)return;
-  const tree=m.getInstanceTree(); let id=s.dbIdArray[0],k=0; while(id!=null&&map[id]==null&&tree&&k++<12)id=tree.getNodeParentId(id);
-  if(id==null||map[id]==null)return; const t=tags[map[id]]; S.sel.clear(); S.sel.add(t.i);
-  // open the grid down to this tag
-  let p=''; [S.g1,S.g2].filter((k,i,a)=>k&&a.indexOf(k)===i).forEach(k=>{p+='/'+KEY[k](t);S.open.add(p)});
-  applied._h=null; buildGrid(); panel(); apply3D(); const i=rows.findIndex(r=>r.leaf&&r.t===t), el=document.querySelector('#g .row[data-i="'+i+'"]'); if(el)el.scrollIntoView({block:'nearest'});
-}
 
 /* ---------- saved views ---------- */
-function snap(){return {sel:[...S.sel].map(i=>tags[i].tag),vis:S.vis,colorBy:S.colorBy,time:S.time,ghost:S.ghost,clip:S.clip,zone:S.zone,g1:S.g1,g2:S.g2,disc:[...S.disc],q:S.q,open:[...S.open],T,cam:viewer?viewer.getState({viewport:true}):null}}
-function restore(v){const byTag=Object.fromEntries(tags.map(t=>[t.tag,t.i])); S.sel=new Set((v.sel||[]).map(x=>byTag[x]).filter(x=>x!=null)); Object.assign(S,{vis:v.vis,colorBy:v.colorBy,time:v.time,ghost:v.ghost,clip:v.clip,zone:v.zone,g1:v.g1,g2:v.g2,q:v.q||''}); S.disc=new Set(v.disc||[]); S.open=new Set(v.open||[]);
-  applied={}; refresh(); setT(Math.max(t0,Math.min(v.T||t0,t1))); applyZone(); if(viewer&&v.cam)viewer.restoreState(v.cam,{viewport:true},true)}
-function loadViews(){const vs=store.get('views')||{}; $('views').innerHTML='<option value="">—</option>'+Object.keys(vs).map(k=>'<option>'+esc(k)+'</option>').join('')}
+function snap(){return {sel:[...S.sel].map(i=>tags[i].tag),off:[...S.off].map(i=>tags[i].tag),vis:S.vis,colorBy:S.colorBy,time:S.time,ns:S.ns,bu:S.bu,df:S.df,recent:S.recent,grow:S.grow,clip:S.clip,zone:S.zone,g1:S.g1,g2:S.g2,disc:[...S.disc],q:S.q,open:[...S.open],scen:S.scen,dual:S.dual,bmode:S.bmode,T,cam:VA&&VA.viewer?VA.viewer.getState({viewport:true}):null}}
+function restore(v){const byTag=Object.fromEntries(tags.map(t=>[t.tag,t.i])), ids=a=>new Set((a||[]).map(x=>byTag[x]).filter(x=>x!=null)); S.sel=ids(v.sel); S.off=ids(v.off);
+  Object.assign(S,{vis:v.vis||'normal',colorBy:v.colorBy||'real',time:v.time!==false,ns:v.ns||'off',bu:v.bu||'ghost',df:v.df||'mark',recent:v.recent==null?28:v.recent,grow:v.grow!==false,clip:v.clip!==false,zone:v.zone||null,g1:v.g1||'zone',g2:v.g2||'',q:v.q||'',scen:scenOf(v.scen)?v.scen:'BASE',bmode:v.bmode||'follow'}); S.disc=new Set(v.disc||[]); S.open=new Set(v.open||[]);
+  resetApplied(); if(!!v.dual!==S.dual)setDual(!!v.dual); refresh(); setT(Math.max(t0,Math.min(v.T||t0,t1))); syncZones(true); applyRender('bg'); if(VA&&VA.viewer&&v.cam)setTimeout(()=>VA.viewer.restoreState(v.cam,{viewport:true},true),1200)}
+function loadViews(){const vs=store.get('views')||{}; $('views').innerHTML='<option value="">Saved views</option>'+Object.keys(vs).map(k=>'<option>'+esc(k)+'</option>').join('')}
 
 /* ---------- planner Excel in, Excel out ---------- */
-function applyDates(map){let n=0; tags.forEach(t=>{const d=map[t.tag]; if(!d)return; if(d[2]!=null)t.built=d[2]; if(d[0]&&d[1]){t.s=d[0];t.f=Math.max(d[0],d[1])} if(d[2]||(d[0]&&d[1]))n++}); return n}
+function applyDates(map){let n=0; for(const k in defSets)delete defSets[k]; tags.forEach(t=>{const d=map[t.tag]; if(!d)return; if(d[2]!=null)t.built=d[2]; if(d[0]&&d[1]){t.s=d[0];t.f=Math.max(d[0],d[1])} if(d[2]||(d[0]&&d[1]))n++}); return n}
 function xl(v){if(v==null||v==='')return null; if(v instanceof Date)return Math.round((Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()))/DAY); if(typeof v==='number')return Math.round(v-25569); const m=String(v).match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); if(m)return Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/DAY); const p=Date.parse(v); return isNaN(p)?null:Math.round(p/DAY)}
 function readBook(buf,fname){try{const wb=XLSX.read(buf,{type:'array',cellDates:true}); const map={}; let seen=0;
     wb.SheetNames.forEach(sn=>{const rs=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true}); const hi=rs.findIndex(x=>x&&x.some(c=>String(c).trim().toUpperCase()==='TAG')); if(hi<0)return; const H=rs[hi].map(c=>String(c||'').trim().toUpperCase()),ct=H.indexOf('TAG'),cs=H.indexOf('START'),cf=H.indexOf('FINISH'),cb=H.findIndex(c=>c.startsWith('BUILT')); if(cs<0||cf<0)return;
       rs.slice(hi+1).forEach(x=>{if(!x||!x[ct])return; seen++; const s=xl(x[cs]),e=xl(x[cf]),bv=cb<0?'':String(x[cb]==null?'':x[cb]).trim().toUpperCase(),b=/^(Y|YES|TRUE|X|1)$/.test(bv)?true:/^(N|NO|FALSE|0)$/.test(bv)?false:null; if((s&&e)||b!=null)map[String(x[ct]).trim()]=[s,e,b]})});
     const n=applyDates(map); if(n){$('dnote').textContent='Planner file '+fname+': '+n+' of '+tags.length+' tags set ('+tags.filter(t=>t.built).length+' on site).'+(n<tags.length?' The others keep example dates.':'')}
     else $('dnote').textContent='Example dates. '+(seen?'No Start and Finish dates found in '+fname+'.':'No sheet with TAG, Start and Finish columns in '+fname+'.');
-    if(n&&t0!=null){range(); applied={}; refresh(); setT(Math.max(t0,Math.min(T,t1)))}
+    if(n&&t0!=null){range(); resetApplied(); refresh(); setT(Math.max(t0,Math.min(T,t1)))}
   }catch(e){$('dnote').textContent='Could not read '+fname+': '+e.message}}
 function exportXlsx(){
-  const list=tags.filter(pass), rowsX=[['TAG','Zone','Floor','Model item group','Discipline','Package','Elements','Quantity','Unit','Built?','Start','Finish','Status on '+n2s(Math.floor(T)),'Selected']];
-  list.forEach(t=>rowsX.push([t.tag,t.zoneName,t.floor,t.name,DN[t.disc],t.pkg,t.n,t.qty,t.unit,t.built?'Y':'N',t.built?null:new Date(t.s*DAY),t.built?null:new Date(t.f*DAY),SN[real(t)],S.sel.has(t.i)?'yes':'']));
-  const ws=XLSX.utils.aoa_to_sheet(rowsX,{cellDates:true,dateNF:'dd-mm-yyyy'}); ws['!cols']=[22,22,10,30,20,22,10,10,6,7,12,12,16,9].map(w=>({wch:w}));
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Tag list'); XLSX.writeFile(wb,'66A-MPB_sequence_'+n2s(Math.floor(T))+'.xlsx');
+  const list=tags.filter(t=>pass(t)), sc=scenOf(S.scen), rowsX=[['TAG','Zone','Floor','Model item group','Discipline','Package','Elements','Quantity','Unit','Built?','Start','Finish','Phase in '+(sc?sc.name.split(':')[0]:'Base'),'Status on '+n2s(Math.floor(T)),'Selected']];
+  list.forEach(t=>rowsX.push([t.tag,t.zoneName,t.floor,t.name,DN[t.disc],t.pkg,t.n,t.qty,t.unit,t.built?'Y':'N',t.built?null:new Date(t.s*DAY),t.built?null:new Date(t.f*DAY),t.built?'On site':deferred(t,S.scen)?'Phase 2 (date open)':'Phase 1',SN[real(t)],S.sel.has(t.i)?'yes':'']));
+  const ws=XLSX.utils.aoa_to_sheet(rowsX,{cellDates:true,dateNF:'dd-mm-yyyy'}); ws['!cols']=[22,22,10,30,20,22,10,10,6,7,12,12,20,16,9].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Tag list'); XLSX.writeFile(wb,'66A-MPB_sequence_'+S.scen+'_'+n2s(Math.floor(T))+'.xlsx');
 }
+
+
+/* ---------- layout: the Gantt can be made larger or smaller ---------- */
+function setGridH(px,quiet){const main=$('main'),mh=main.clientHeight||innerHeight; px=Math.max(64,Math.min(mh-160,px)); $('grid').style.height=px+'px'; if(!quiet){store.set('layout',{gh:px}); resizeAll()}}
 
 function bind(){
   $('play').onclick=()=>toggle(); $('slider').oninput=e=>{toggle(false);setT(+e.target.value)};
-  $('t4d').onclick=()=>{S.time=!S.time; refresh()};
-  $('ghost').onclick=()=>{S.ghost=!S.ghost; R.ghost=S.ghost; store.set('render',R); syncBars(); apply3D()};
-  $('clip').onclick=()=>{S.clip=!S.clip; syncBars(); applyZone()};
-  $('fit').onclick=()=>{S.zone?applyZone():fit()};
-  $('colorBy').onchange=e=>{S.colorBy=e.target.value; legend(); apply3D()};
-  $('vis').onclick=e=>{const b=e.target.closest('button'); if(!b)return; S.vis=b.dataset.v; syncBars(); apply3D()};
-  $('pick').onclick=e=>{const b=e.target.closest('button'); if(!b)return; S.pick=b.dataset.v; syncBars()};
-  $('clear').onclick=()=>{S.sel.clear(); gridState(); panel(); apply3D()};
+  // menus: one open at a time, closed by a click elsewhere
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-m]'); document.querySelectorAll('.menu').forEach(m=>{if(b&&m.id===b.dataset.m)m.hidden=!m.hidden; else if(!e.target.closest('.menu')||e.target.closest('[data-close] button'))m.hidden=true}); document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('open',!$(x.dataset.m).hidden))});
+  const seg=(id,fn)=>{$(id).onclick=e=>{const b=e.target.closest('button'); if(b)fn(b.dataset.v)}};
+  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; refresh(); applyRender('bg')};
+  $('mZoneList').onclick=e=>{const b=e.target.closest('[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); syncZones(); const sp=span(tags.filter(t=>pass(t))); $('gantt').scrollLeft=sp?Math.max(0,(sp[0]-t0)*PX-40):0};
+  $('fig').onclick=()=>{S.fig=!S.fig; syncBars(); scard()}; $('bt').onclick=()=>{S.bt=!S.bt; if(S.bt)S.fig=true; syncBars(); scard()};
+  $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); setT(t0); toggle(true)}};
+  seg('dual',v=>setDual(v==='2')); seg('bmode',v=>{S.bmode=v; syncBars(); resetApplied(); applyAll(); syncZones(true)});
+  seg('vis',v=>{S.vis=v; syncBars(); applyAll()}); seg('pick',v=>{S.pick=v; syncBars()});
+  seg('ns',v=>{S.ns=v; syncBars(); legend(); applyAll(); applyRender('bg')}); seg('bu',v=>{S.bu=v; syncBars(); legend(); applyAll(); applyRender('bg')}); seg('df',v=>{S.df=v; syncBars(); legend(); applyAll()});
+  seg('gsize',v=>{const mh=$('main').clientHeight; setGridH(v==='s'?120:v==='m'?mh*0.38:mh*0.62)});
+  $('recent').onchange=e=>{S.recent=+e.target.value; applyAll()};
+  $('t4d').onclick=()=>{S.time=!S.time; refresh()}; $('grow').onclick=()=>{S.grow=!S.grow; syncBars(); applyAll()};
+  $('clip').onclick=()=>{S.clip=!S.clip; syncBars(); views.forEach(V=>V.frame())}; $('orbit').onclick=()=>{S.orbit=!S.orbit; syncBars()};
+  $('sideT').onclick=()=>{S.side=!S.side; syncBars(); resizeAll()};
+  $('fit').onclick=()=>views.forEach(V=>V.zone?V.frame():V.fit());
+  $('colorBy').onchange=e=>{S.colorBy=e.target.value; legend(); applyAll()};
+  $('clear').onclick=()=>{S.sel.clear(); gridState(); panel(); applyAll()};
   $('g1').onchange=e=>{S.g1=e.target.value; S.open.clear(); buildGrid()}; $('g2').onchange=e=>{S.g2=e.target.value; S.open.clear(); buildGrid()};
   $('fdisc').onclick=e=>{const b=e.target.closest('button'); if(!b)return; const d=b.dataset.d; S.disc.has(d)?S.disc.delete(d):S.disc.add(d); refresh()};
-  $('q').oninput=e=>{S.q=e.target.value; buildGrid(); panel(); legend(); apply3D()};
+  $('q').oninput=e=>{S.q=e.target.value; buildGrid(); panel(); legend(); applyAll()};
   $('expand').onclick=()=>{const all=rows.some(r=>!r.leaf&&!r.open); if(all){let more=true; while(more){more=false; tree(); rows.forEach(r=>{if(!r.leaf&&!S.open.has(r.path)){S.open.add(r.path);more=true}})}}else S.open.clear(); $('expand').textContent=all?'Collapse all':'Expand all'; buildGrid()};
   $('file').onchange=e=>{const f=e.target.files[0]; if(f){const r=new FileReader(); r.onload=()=>readBook(r.result,f.name); r.readAsArrayBuffer(f)} e.target.value=''};
   $('export').onclick=exportXlsx;
   $('rbtn').onclick=()=>{const P=$('rpanel'); P.hidden=!P.hidden; $('rbtn').classList.toggle('on',!P.hidden); if(!P.hidden)buildRender()};
-  $('orbit').onclick=()=>{S.orbit=!S.orbit; $('orbit').classList.toggle('on',S.orbit); $('orbit').textContent='Orbit: '+(S.orbit?'on':'off')};
+  $('active').onclick=e=>{const a=e.target.closest('.a'); if(!a||a.dataset.t==null)return; const t=tags[+a.dataset.t]; S.sel.clear(); S.sel.add(t.i); openTo(t); buildGrid(); panel(); applyAll()};
   $('g').addEventListener('click',rowClick); $('g').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();rowClick(e)}});
   // the date can be dragged in the Gantt: on the month strip or on the red line
   let scrub=false; const toT=e=>{const r=$('g').getBoundingClientRect(); return Math.max(t0,Math.min(t1,t0+(e.clientX-r.left-LW)/PX))};
   $('gantt').addEventListener('pointerdown',e=>{if(!(e.target.closest('#cur')||e.target.closest('.ghead .gt')))return; scrub=true; document.body.classList.add('scrub'); toggle(false); setT(toT(e)); e.preventDefault()});
-  addEventListener('pointermove',e=>{if(scrub)setT(toT(e))}); addEventListener('pointerup',()=>{if(scrub){scrub=false;document.body.classList.remove('scrub')}});
   $('gantt').addEventListener('dblclick',e=>{const gt=e.target.closest('.gt'); if(!gt)return; toggle(false); setT(toT(e))});
-  $('vsave').onclick=()=>{const cur=$('views').value, name=(cur||('View '+n2s(Math.floor(T))+' '+(S.zone||'all')+' '+new Date().toTimeString().slice(0,5))); const vs=store.get('views')||{}; vs[name]=snap(); store.set('views',vs); loadViews(); $('views').value=name};
+  // drag the bar between the model and the Gantt to resize; double-click steps through small, medium, large
+  let rs=false; $('split').addEventListener('pointerdown',e=>{rs=true; document.body.classList.add('rsz'); e.preventDefault()});
+  $('split').addEventListener('dblclick',()=>{const mh=$('main').clientHeight,h=$('grid').clientHeight; setGridH(h<mh*0.25?mh*0.38:h<mh*0.5?mh*0.62:120)});
+  addEventListener('pointermove',e=>{if(scrub)setT(toT(e)); if(rs){const r=$('main').getBoundingClientRect(); setGridH(r.bottom-e.clientY)}});
+  addEventListener('pointerup',()=>{if(scrub){scrub=false;document.body.classList.remove('scrub')} if(rs){rs=false;document.body.classList.remove('rsz');resizeAll()}});
+  $('vsave').onclick=()=>{const cur=$('views').value, name=(cur||('View '+n2s(Math.floor(T))+' '+S.scen+' '+(S.zone||'all')+' '+new Date().toTimeString().slice(0,5))); const vs=store.get('views')||{}; vs[name]=snap(); store.set('views',vs); loadViews(); $('views').value=name};
   $('vdel').onclick=()=>{const vs=store.get('views')||{}; delete vs[$('views').value]; store.set('views',vs); loadViews()};
   $('views').onchange=e=>{const v=(store.get('views')||{})[e.target.value]; if(v)restore(v)};
-  addEventListener('resize',()=>{buildGrid(); if(viewer)viewer.resize()});
+  addEventListener('resize',()=>{buildGrid(); resizeAll()});
 }
 })();
+
 </script></body></html>
