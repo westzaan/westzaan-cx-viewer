@@ -149,10 +149,19 @@ body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
 #scard tr.tot td{font-weight:700;border-top:1px solid rgba(255,255,255,.3)} #scard .sub{color:var(--mute);font-size:11.5px;padding-left:14px}
 #scard #splay{width:100%;margin-top:8px}
 .site.ph2{color:#d9a6f7;background:rgba(191,90,242,.16)}
+#gtools{display:contents}
+#msbar{flex-wrap:nowrap} #msn{font-family:var(--f-num);font-size:12.5px;color:var(--mute);white-space:nowrap}
+#msprev,#msnext{font-size:18px;line-height:18px;padding:6px 14px;font-weight:600}
+#mst{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px} #mst span{color:var(--mute);font-size:12.5px;margin-left:6px}
+#mspane{flex:1 1 auto;overflow:auto;min-height:0}
+.mrow{display:grid;grid-template-columns:30px 86px minmax(0,1fr) 110px 150px;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:6px 14px;cursor:pointer;font-size:12.5px}
+.mrow:hover{background:rgba(255,255,255,.05)} .mrow.on{background:var(--selrow);box-shadow:inset 3px 0 0 var(--accent)}
+.mrow .n,.mrow .d{font-family:var(--f-num);color:var(--mute);font-size:11.5px} .mrow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .mrow em{font-style:normal;color:var(--mute)} .mrow .c{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
+.ph2chip{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#d9a6f7;background:rgba(191,90,242,.16);border-radius:6px;padding:1px 7px;white-space:nowrap}
 @media (max-width:820px){
   html,body{height:auto} body{display:block} #main{display:block} #stage{display:block}
   #vws{display:block} .view{height:50vh;min-height:280px;margin-bottom:2px} #side{border-left:0;border-top:1px solid var(--line)} #grid{height:70vh!important} #split{display:none}
-  .gl .c{display:none} #active{display:none}
+  .gl .c{display:none} #active{display:none} .mrow{grid-template-columns:24px 78px minmax(0,1fr)} .mrow .c,.mrow .p{display:none} .mrow .t{white-space:normal} #msbar{flex-wrap:wrap} #mst{flex-basis:100%;white-space:normal}
   .mwrap{position:static} .bar{position:relative} .menu,.menu.rt{left:8px;right:8px;width:auto;top:auto;margin-top:6px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -166,15 +175,22 @@ body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
     </div></div>
   <div class="mwrap"><button class="btn mb" data-m="mZone" type="button"><b id="bZone">Whole building</b></button>
     <div class="menu glass" id="mZone" hidden><div id="mZoneList" data-close="1" style="display:flex;flex-direction:column;gap:6px"></div><div class="mr"><span>Section box around the zone</span><button class="sw" id="clip" type="button" aria-label="Section box around the zone"></button></div></div></div>
-  <div class="ctl">
+  <div class="ctl" id="msbar">
+    <button class="btn" id="msprev" type="button" aria-label="Previous milestone" title="Previous (left arrow key)">&#8249;</button><span id="msn"></span><button class="btn" id="msnext" type="button" aria-label="Next milestone" title="Next (right arrow key)">&#8250;</button>
+    <span id="mst"></span>
+  </div>
+  <div class="ctl" id="tlbar" hidden>
     <button class="btn" id="play" type="button">Play</button>
     <select id="speed" aria-label="Animation speed"><option value="7">1 week / s</option><option value="14" selected>2 weeks / s</option><option value="30">1 month / s</option></select>
     <input id="slider" type="range" min="0" max="100" value="0" aria-label="Programme date">
     <span id="date"></span>
   </div>
+  <button class="btn" id="shot" type="button" title="Save what is on screen as a picture with title and legend">Save picture</button>
   <span class="seg" id="dual" title="One model view, or two side by side"><button type="button" data-v="1">1 view</button><button type="button" data-v="2">2 views</button></span>
   <div class="mwrap"><button class="btn mb" data-m="mDisp" type="button">Display</button>
     <div class="menu glass rt" id="mDisp" hidden>
+      <div class="mr"><span>Show the plan as</span><span class="seg" id="mode"><button type="button" data-v="ms">Milestones</button><button type="button" data-v="tl">Timeline</button></span></div>
+      <div class="mr"><span>Zoom to the zone of the milestone</span><button class="sw" id="mszoom" type="button" aria-label="Zoom to the zone of the milestone"></button></div>
       <div class="mr"><span>Colour by</span><select id="colorBy"><option value="real">Build status</option><option value="phase">Phase in this scenario</option><option value="status">Status by discipline</option><option value="disc">Discipline</option><option value="pkg">Package</option><option value="zone">Zone</option><option value="floor">Floor</option><option value="group">Model item group</option></select></div>
       <div class="mh">How work is drawn</div>
       <div class="mr"><span>Not started</span><span class="seg" id="ns"><button type="button" data-v="off">Hidden</button><button type="button" data-v="ghost">Faint</button></span></div>
@@ -222,19 +238,24 @@ body.rsz{user-select:none;cursor:ns-resize} body.rsz .view{pointer-events:none}
   <div id="split" title="Drag to resize the Gantt. Double-click: small, medium, large" role="separator" aria-orientation="horizontal"></div>
   <div id="grid">
     <div class="bar" id="gbar">
+      <span class="seg" id="btab"><button type="button" data-v="ms">Milestones</button><button type="button" data-v="gantt">Tag list and Gantt</button></span>
+      <div class="grp" id="mstools"><span class="lab">One step per</span><span class="seg" id="mslev"><button type="button" data-v="zone">Zone</button><button type="button" data-v="pkg">Package in a zone</button></span></div>
+      <div id="gtools" hidden>
       <div class="grp"><span class="lab">Group by</span><select id="g1"></select><span class="lab">then</span><select id="g2"></select></div>
       <div class="grp"><span class="lab">Discipline</span><span class="seg" id="fdisc"></span></div>
       <input type="search" id="q" placeholder="Search tag, group, package" aria-label="Search">
       <button class="btn" id="expand" type="button">Expand all</button>
       <span class="lab" id="count"></span>
+      </div>
     </div>
-    <div id="gantt"><div class="g" id="g"></div></div>
+    <div id="mspane"><div id="mslist"></div></div>
+    <div id="gantt" hidden><div class="g" id="g"></div></div>
   </div>
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v7"></script>
-<script src="auth.js?v=2026-10-06v7"></script>
+<script src="config.js?v=2026-10-06v8"></script>
+<script src="auth.js?v=2026-10-06v8"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -251,7 +272,8 @@ const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catc
 let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430,views=[],VA=null,VB=null,autoZ=null,MAP={},pkgs=[],colorMap={},rows=[];
 // everything the user can switch. Shared by both 3D views; each view only differs in zone and scenario.
 const S={sel:new Set(),off:new Set(),ns:'off',bu:'ghost',df:'mark',recent:28,grow:true,vis:'normal',colorBy:'real',pick:'tag',time:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set(),
-  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true};
+  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'ms',mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
+let MS=[],HI=new Set(),msZone=null,msFinal=false; const HIC='#34c759';
 
 const floorOf=z=>{const m=/^(?:STR-)?(GF|1F|2F|3F)/.exec(z);return m?m[1]:(z==='ROOF'?'Roof':z==='SUB'?'Substructure':'Building')};
 const KEY={zone:t=>t.zoneName,floor:t=>t.floor,block:t=>t.block,disc:t=>DN[t.disc],pkg:t=>t.pkg,group:t=>t.name,status:t=>SN[real(t)],phase:t=>t.built?'On site':deferred(t,S.scen)?'Deferred (Phase 2)':'Phase 1'};
@@ -310,18 +332,41 @@ function syncBars(){
   const sc=scenOf(S.scen); $('bScen').textContent=sc?(innerWidth<1100?sc.name.split(':')[0]:sc.name):'Scenario'; $('bZone').textContent=S.zone?zoneLabel(S.zone).replace(/^.. - /,''):'Whole building';
   document.querySelectorAll('#mScenList .ml').forEach(b=>b.classList.toggle('on',b.dataset.s===S.scen));
   document.querySelectorAll('#mZoneList [data-z]').forEach(b=>b.classList.toggle('on',(b.dataset.z||null)===S.zone));
-  segSync('vis',S.vis); segSync('pick',S.pick); segSync('ns',S.ns); segSync('bu',S.bu); segSync('df',S.df); segSync('dual',S.dual?2:1); segSync('bmode',S.bmode);
+  segSync('vis',S.vis); segSync('pick',S.pick); segSync('ns',S.ns); segSync('bu',S.bu); segSync('df',S.df); segSync('dual',S.dual?2:1); segSync('bmode',S.bmode); segSync('mode',S.mode); segSync('mslev',S.mslev); segSync('btab',S.btab); tog('mszoom',S.mszoom);
   document.querySelectorAll('#fdisc button').forEach(b=>b.classList.toggle('on',S.disc.has(b.dataset.d)));
   tog('t4d',S.time); tog('clip',S.clip); tog('grow',S.grow); tog('orbit',S.orbit); tog('fig',S.fig); tog('bt',S.bt); tog('sideT',S.side);
   $('recent').value=S.recent; $('colorBy').value=S.colorBy; $('g1').value=S.g1; $('g2').value=S.g2; $('q').value=S.q;
   $('stage').classList.toggle('noside',!S.side); $('vwB').hidden=!S.dual; $('vws').classList.toggle('two',S.dual); $('bmodeRow').hidden=!S.dual;
   views.forEach(V=>V.label());
 }
-function refresh(){syncBars(); buildGrid(); panel(); scard(); legend(); applyAll(); activeList()}
+function refresh(){
+  buildMS(); if(S.mode==='ms'){const o=MS[S.msI]; HI=new Set(o.tags.map(t=>t.i)); msZone=o.zone; msFinal=o.kind==='end'; autoZ=o.zone; T=o.kind==='start'?t0:o.date+0.999; $('slider').value=T; $('date').textContent=n2s(Math.floor(T))}
+  syncBars(); buildGrid(); panel(); scard(); legend(); msUI(); applyAll(); activeList(); syncZones()}
 function applyAll(){views.forEach(V=>V.apply())}
 function resetApplied(){views.forEach(V=>{V.applied={}})}
 function resizeAll(){views.forEach(V=>{try{V.viewer&&V.viewer.resize()}catch(e){}})}
 function syncZones(force){views.forEach(V=>V.syncZone(force))}
+
+/* ---------- milestones: instead of an animation, a short list of still moments ----------
+   Base: one step each time a package is finished in a zone. Scenarios: one step per zone, then the end of Phase 1. */
+function buildMS(){
+  const sid=S.scen, live=tags.filter(t=>!t.built&&!deferred(t,sid)), m=new Map(), zi=z=>D.zones.findIndex(x=>x[0]===z);
+  live.forEach(t=>{const k=S.mslev==='pkg'?t.zone+'|'+t.pkg:t.zone; if(!m.has(k))m.set(k,{zone:t.zone,zoneName:t.zoneName,pkg:S.mslev==='pkg'?t.pkg:null,tags:[],date:0}); const o=m.get(k); o.tags.push(t); o.date=Math.max(o.date,t.f)});
+  const list=[...m.values()].sort((a,b)=>a.date-b.date||zi(a.zone)-zi(b.zone));
+  list.forEach(o=>{o.title=o.zoneName+(o.pkg?' · '+o.pkg:''); o.sub=o.pkg?'package complete in this zone':'zone complete'+(sid==='BASE'?'':' for Phase 1')});
+  const end=list.length?list[list.length-1].date:t1, out=[{kind:'start',zone:null,tags:[],date:t0,title:'Today: on site',sub:'what is already built'}].concat(list);
+  if(sid!=='BASE')D.zones.forEach(z=>{if(tags.some(t=>t.zone===z[0]&&deferred(t,sid))&&!live.some(t=>t.zone===z[0]))out.push({kind:'wait',zone:z[0],zoneName:z[1],tags:[],date:end,title:z[1],sub:'nothing more in Phase 1, waits for Phase 2'})});
+  out.push({kind:'end',zone:null,tags:[],date:end,title:sid==='BASE'?'Building complete':'End of Phase 1',sub:sid==='BASE'?'everything built':'what is built, and what waits for Phase 2'});
+  out.forEach(o=>{o.nd=tags.filter(t=>(!o.zone||t.zone===o.zone)&&deferred(t,sid)).length; o.n=o.tags.reduce((a,t)=>a+t.n,0)});
+  MS=out; S.msI=Math.max(0,Math.min(S.msI,MS.length-1));
+  $('mslist').innerHTML=MS.map((o,i)=>'<button type="button" class="mrow" data-i="'+i+'"><span class="n">'+(i+1)+'</span><span class="d">'+(o.kind==='start'?'now':n2s(o.date))+'</span><span class="t"><b>'+esc(o.title)+'</b> <em>'+esc(o.sub)+'</em></span><span class="c">'+(o.n?num(o.n)+' elements':'')+'</span><span class="p">'+(o.nd&&sid!=='BASE'?'<span class="ph2chip">'+o.nd+' tags to Phase 2</span>':'')+'</span></button>').join('');
+}
+function msUI(){
+  const ms=S.mode==='ms', tab=S.btab==='ms'; $('msbar').hidden=!ms; $('tlbar').hidden=ms; $('mspane').hidden=!tab; $('gantt').hidden=tab; $('gtools').hidden=tab; $('mstools').hidden=!tab;
+  const o=MS[S.msI]; if(o){$('msn').textContent=(S.msI+1)+' / '+MS.length; $('mst').innerHTML='<b>'+esc(o.title)+'</b> <span>'+esc(o.sub)+(o.kind==='start'?'':' · '+n2s(o.date))+'</span>'}
+  document.querySelectorAll('#mslist .mrow').forEach((el,i)=>el.classList.toggle('on',ms&&i===S.msI)); const el=document.querySelector('#mslist .mrow.on'); if(el&&tab)el.scrollIntoView({block:'nearest'});
+}
+function goMS(i){if(!MS.length)return; S.msI=i; S.mode='ms'; toggle(false); refresh()}
 
 /* ---------- inventory grid with Gantt bars ---------- */
 function tree(){
@@ -383,7 +428,7 @@ function scard(){
       +'<tr class="tot"><td>Final cost, incl. spent</td><td class="n">'+eur(m.final)+'</td></tr>'
       +(dl!=null&&S.scen!=='BASE'?'<tr><td>Against base</td><td class="n">'+(dl>=0?'+':'−')+'€'+Math.abs(dl).toFixed(2)+'m</td></tr>':'')
       +(m.per&&!(S.bt&&sc.money.bt)?'<tr><td>Extra + risk per €1 deferred</td><td class="n">€'+m.per.toFixed(2)+'</td></tr>':'')+'</table><p class="fine">'+esc(D.scenNote||'')+'</p>'}
-  h+='<button class="btn on" id="splay" type="button">Play this scenario</button>';
+  h+='<button class="btn on" id="splay" type="button">'+(S.mode==='ms'?(S.scen==='BASE'?'Show the finished building':'Show the end of Phase 1'):'Play this scenario')+'</button>';
   el.innerHTML=h;
 }
 function panel(){
@@ -404,7 +449,8 @@ function panel(){
 }
 function legend(){
   if(!tags)return; let h=''; const dfl=S.scen!=='BASE'&&S.df!=='off'?'<span><i style="background:'+(S.df==='mark'?DEFC:'transparent;box-shadow:inset 0 0 0 1px '+DEFC)+'"></i>Deferred to Phase 2</span>':'';
-  if(S.colorBy==='real'){const bl={solid:'solid',ghost:'x-ray',off:'hidden'}; h='<span><i style="background:'+(R.wipBy==='single'?R.wip:'linear-gradient(90deg,#ff9f0a,#0a84ff)')+'"></i>Working now'+(R.wipBy==='single'?'':' (by '+(R.wipBy==='disc'?'discipline':'package')+')')+'</span><span><i style="background:#c7c7cc"></i>Just built: solid</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Built earlier: '+bl[S.bu]+'</span>'+dfl+'<span><i style="background:transparent"></i>Not started: '+(S.ns==='off'?'hidden':'faint')+'</span>'; colorMap={}}
+  if(S.mode==='ms'&&(S.colorBy==='real'||S.colorBy==='status')){h='<span><i style="background:'+HIC+'"></i>Completed at this milestone</span><span><i style="background:#e5e5ea"></i>Built before (own colours)</span><span><i style="background:'+R.wip+'"></i>Under way on this date</span>'+dfl; colorMap={}}
+  else if(S.colorBy==='real'){const bl={solid:'solid',ghost:'x-ray',off:'hidden'}; h='<span><i style="background:'+(R.wipBy==='single'?R.wip:'linear-gradient(90deg,#ff9f0a,#0a84ff)')+'"></i>Working now'+(R.wipBy==='single'?'':' (by '+(R.wipBy==='disc'?'discipline':'package')+')')+'</span><span><i style="background:#c7c7cc"></i>Just built: solid</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Built earlier: '+bl[S.bu]+'</span>'+dfl+'<span><i style="background:transparent"></i>Not started: '+(S.ns==='off'?'hidden':'faint')+'</span>'; colorMap={}}
   else if(S.colorBy==='status'){h=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+dfl+'<span>bright = in progress · muted = built</span>'; colorMap={}}
   else{const ks=[...new Set(tags.filter(t=>pass(t)).map(KEY[S.colorBy]))]; if(S.colorBy!=='zone'&&S.colorBy!=='floor')ks.sort(); colorMap={}; ks.forEach((k,i)=>colorMap[k]=S.colorBy==='disc'?DC[Object.keys(DN).find(x=>DN[x]===k)]:S.colorBy==='phase'?(k==='Deferred (Phase 2)'?DEFC:k==='On site'?'#8e8e93':'#30d158'):PAL[i%PAL.length]);
     h=ks.slice(0,18).map(k=>'<span><i style="background:'+colorMap[k]+'"></i>'+esc(k)+'</span>').join('')+(ks.length>18?'<span>… '+(ks.length-18)+' more</span>':'')}
@@ -413,7 +459,7 @@ function legend(){
 const wipCol=t=>R.wipBy==='disc'?DC[t.disc]:R.wipBy==='pkg'?PAL[pkgs.indexOf(t.pkg)%PAL.length]:R.wip;
 // list of the activities running on the current date, drawn over the model (as a 4D player shows them)
 function activeList(){
-  const el=$('active'); if(!el||!tags)return; const ts=S.time?tags.filter(t=>real(t)===1&&pass(t)&&!S.off.has(t.i)):[]; if(!ts.length){el.innerHTML='';return}
+  const el=$('active'); if(!el||!tags)return; const ts=S.time&&S.mode!=='ms'?tags.filter(t=>real(t)===1&&pass(t)&&!S.off.has(t.i)):[]; if(!ts.length){el.innerHTML='';return}
   el.innerHTML='<h4><span>Working now</span><span>'+ts.length+'</span></h4>'+ts.slice(0,6).map(t=>'<div class="a" data-t="'+t.i+'"><i style="background:'+wipCol(t)+'"></i><span>'+esc(t.name)+' <em>'+esc(t.zoneName.replace(/^.. - /,''))+'</em></span><b>'+Math.round((T-t.s)/(t.f-t.s+1)*100)+'%</b></div>').join('')+(ts.length>6?'<div class="a" style="cursor:default"><i></i><span><em>and '+(ts.length-6)+' more</em></span><b></b></div>':'');
 }
 
@@ -425,7 +471,7 @@ function setT(v){T=v; $('slider').value=v; $('date').textContent=n2s(Math.floor(
 // second view: go to the zone where most work is running, and stay a moment before moving on
 let azCand=null,azSince=0;
 function follow(){
-  if(!(S.dual&&S.bmode==='follow'&&!S.zone&&VB))return; const w={}; tags.forEach(t=>{if(real(t)===1&&!S.off.has(t.i)&&pass(t,null))w[t.zone]=(w[t.zone]||0)+t.n});
+  if(S.mode==='ms')return; if(!(S.dual&&S.bmode==='follow'&&!S.zone&&VB))return; const w={}; tags.forEach(t=>{if(real(t)===1&&!S.off.has(t.i)&&pass(t,null))w[t.zone]=(w[t.zone]||0)+t.n});
   let best=null,bw=0; for(const z in w)if(w[z]>bw){bw=w[z];best=z} if(!best||best===autoZ){azCand=null;return}
   const now=performance.now(); if(azCand!==best){azCand=best;azSince=now}
   if(!autoZ||!(w[autoZ]>0)||!playing||now-azSince>1800){autoZ=best;azCand=null;VB.syncZone()}
@@ -438,14 +484,14 @@ const listFiles=()=>filesP||(filesP=(async()=>{const files={}; let url='/data/v1
   while(url){const j=await A.api(url); const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v])); for(const it of j.data||[]){const v=inc[it.id]; if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber}} url=j.links?.next?.href||null}
   return files})());
 const v4=(hex,mix,to)=>{const c=new THREE.Color(hex); if(to)c.lerp(new THREE.Color(to),mix); return new THREE.Vector4(c.r,c.g,c.b,1)};
-function colOf(col){const k0=col[0]; if(k0==='m')return v4(col.slice(1),.6,css('--built')); if(k0==='t'){const c=v4(col.slice(1,8)); c.w=+R.tint; return c} if(k0==='w'){const c=v4(col.slice(1,8)); c.w=+R.wipS; return c} if(k0==='o')return new THREE.Vector4(1,1,1,0); if(k0==='a')return new THREE.Vector4(.93,.94,.95,1); return v4(col)}
+function colOf(col){const k0=col[0]; if(k0==='m')return v4(col.slice(1),.6,css('--built')); if(k0==='t'){const c=v4(col.slice(1,8)); c.w=+R.tint; return c} if(k0==='w'){const c=v4(col.slice(1,8)); c.w=+R.wipS; return c} if(k0==='o')return new THREE.Vector4(1,1,1,0); if(k0==='a')return new THREE.Vector4(.93,.94,.95,.8); const c=v4(col); c.w=.8; return c}   // not fully opaque: the shading of the material stays readable
 
 function makeView(key){
   const V={key,viewer:null,models:{},applied:{},tint:{},bounds:{},order:{},zone:undefined,cubed:false,moved:false,muting:false,refit:0,rep:[],miss:[]};
   const say=t=>{const l=$('load'+key); l.hidden=!t; l.textContent=t};
   V.scen=()=>(key==='A'&&S.dual&&S.bmode==='compare')?'BASE':S.scen;
-  V.wantZone=()=>!S.dual?S.zone:S.bmode==='compare'?S.zone:(key==='A'?null:(S.zone||autoZ));
-  V.label=()=>{const l=$('lab'+key); if(!l)return; if(!S.dual){l.hidden=true;return} l.hidden=false; const sc=scenOf(V.scen());
+  V.wantZone=()=>{const mz=S.mode==='ms'&&S.mszoom?autoZ:null; return !S.dual?(S.zone||mz):S.bmode==='compare'?(S.zone||mz):(key==='A'?null:(S.zone||autoZ))};
+  V.label=()=>{const l=$('lab'+key); if(!l)return; if(!S.dual&&S.mode!=='ms'){l.hidden=true;return} l.hidden=false; const sc=scenOf(V.scen());
     l.textContent=zoneLabel(V.zone===undefined?V.wantZone():V.zone)+(S.bmode==='compare'?' · '+(sc?sc.name:V.scen()):(key==='B'&&!S.zone?' · following the work':''))};
   V.load=async()=>{
     say('Starting the viewer…'); await initViewing();
@@ -493,6 +539,13 @@ function makeView(key){
   const lookOf=(t,hasSel,sid)=>{
     if(!pass(t,V.zone)||S.off.has(t.i))return ['off','',0];
     const isSel=S.sel.has(t.i); if(hasSel){if(S.vis==='isolate'&&!isSel)return ['off','',0]; if(S.vis==='hide'&&isSel)return ['off','',0]; if(S.vis==='ghost'&&!isSel)return ['ghost','',0]}
+    if(S.mode==='ms'){   // a still moment: everything solid, no x-ray. Green = finished at this step, white = built before, purple = waits for Phase 2
+      if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
+      const r=t.built?2:T<t.s?0:T<=t.f?1:2; if(r===0)return ['off','',0];
+      if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',0];
+      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0];
+      return ['solid',R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint,0];
+    }
     const s=st(t,sid); if(s===0)return [S.ns,'',0];
     if(s===3)return S.df==='mark'?['solid','d',0]:[S.df,'',0];
     const gs=s===1&&S.grow&&S.time?Math.max(1,Math.ceil((T-t.s)/(t.f-t.s+1)*16)):0;
@@ -504,7 +557,7 @@ function makeView(key){
   V.apply=()=>{
     const viewer=V.viewer; if(!viewer||!tags)return; const hasSel=S.sel.size>0, sid=V.scen(); let changed=false;
     tags.forEach(t=>{const L=lookOf(t,hasSel,sid), key=L.join('|'), prev=V.applied[t.i]; if(prev===key)return; V.applied[t.i]=key; changed=true; const clr=L[0]==='ghost'&&!!V.tint[t.i]; if(L[0]==='solid')V.tint[t.i]=L[1]!=='o'; else if(clr)V.tint[t.i]=false;
-      const c=L[0]==='solid'?(L[1]==='d'?v4(DEFC):colOf(L[1])):null;
+      const c=L[0]==='solid'?colOf(L[1]==='d'?DEFC:L[1]):null;
       for(const code in V.models){const all=MAP[code]&&MAP[code].tagIds[t.i]; if(!all||!all.length)continue; const m=V.models[code];
         if(L[2]>0&&L[2]<16){const ids=ordered(code,t.i),k=Math.max(1,Math.round(ids.length*L[2]/16)); draw(ids.slice(0,k),m,'solid',c); draw(ids.slice(k),m,S.ns,null)}
         else draw(all,m,L[0],c,clr)}});
@@ -575,13 +628,13 @@ const RSCHEMA=[['Materials'],['mat','sel','Built elements',[['original','Origina
  ['Background'],['bgTop','col','Top'],['bgBot','col','Bottom'],['xrayDark','chk','Dark when x-ray'],
  ['Camera'],['fov','rng','Field of view',10,90,1],['ortho','chk','Orthographic'],['explode','rng','Explode',0,1,.02],
  ['Quality'],['aa','chk','Smooth edges (AA)'],['prog','chk','Refine when still']];
-let R=Object.assign({},RDEF,store.get('render')||{});
+let R=Object.assign({},RDEF,store.get('render3')||{});
 const rgb=h=>{const c=new THREE.Color(h);return [Math.round(c.r*255),Math.round(c.g*255),Math.round(c.b*255)]};
 function applyRender(only){views.forEach(V=>applyRenderV(V,only))}
 function applyRenderV(V,only){
   const viewer=V.viewer; if(!viewer)return; const I=viewer.impl, T_=f=>{try{f()}catch(e){console.warn('render setting',e.message)}}, is=k=>!only||only===k||(Array.isArray(only)&&only.includes(k));
   if(is('preset')){T_(()=>viewer.setLightPreset(+R.preset)); V.baseDir=null; only=null}
-  const xr=R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), a=rgb(xr?'#232a33':R.bgTop),b=rgb(xr?'#0c0f13':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
+  const xr=S.mode!=='ms'&&R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), a=rgb(xr?'#232a33':R.bgTop),b=rgb(xr?'#0c0f13':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
   const bg=()=>{T_(()=>viewer.setEnvMapBackground(false)); T_(()=>viewer.setBackgroundColor(a[0],a[1],a[2],b[0],b[1],b[2])); I.invalidate(true,false,false)}; bg(); clearTimeout(V.bgT1); clearTimeout(V.bgT2); V.bgT1=setTimeout(bg,400); V.bgT2=setTimeout(bg,2000);   // a light preset loads its own background a moment later
   T_(()=>viewer.setTheme((a[0]+a[1]+a[2])/3<110?'dark-theme':'light-theme'));
   T_(()=>I.setTonemapMethod(+R.tone)); T_(()=>I.setTonemapExposureBias(+R.expo)); T_(()=>I.matman().setEnvExposure(+R.envExpo)); T_(()=>I.renderer().setEnvExposure(+R.envExpo)); T_(()=>{I.matman().setEnvRotation(R.envRot*Math.PI/180); I.renderer().setEnvRotation(R.envRot*Math.PI/180)});
@@ -606,20 +659,35 @@ function buildRender(){
     else h+='<div class="r"><label for="r_'+k+'">'+l+'</label><input type="checkbox" id="r_'+k+'"'+(v?' checked':'')+' style="justify-self:start"><span></span></div>'}
   h+='<h3>Send to Claude</h3><div class="top"><button class="btn" id="rcopy" type="button">Copy settings</button><button class="btn" id="rreset" type="button">Reset</button><span id="rmsg" class="lab"></span></div><textarea id="rtext" readonly aria-label="Settings as text"></textarea>';
   P.innerHTML=h; $('rtext').value=JSON.stringify(R);
-  P.oninput=P.onchange=e=>{const el=e.target; if(el.id==='rpre'){if(el.value){R=Object.assign({},RDEF,RPRE[el.value]); store.set('render',R); buildRender(); applyRender()} return}
+  P.oninput=P.onchange=e=>{const el=e.target; if(el.id==='rpre'){if(el.value){R=Object.assign({},RDEF,RPRE[el.value]); store.set('render3',R); buildRender(); applyRender()} return}
     if(!el.id||el.id.slice(0,2)!=='r_')return; const k=el.id.slice(2), it=RSCHEMA.find(x=>x[0]===k); if(!it)return;
     R[k]=it[1]==='chk'?el.checked:it[1]==='rng'?+el.value:(k==='preset'||k==='tone')?+el.value:el.value; const o=$('o_'+k); if(o)o.textContent=R[k];
-    store.set('render',R); $('rtext').value=JSON.stringify(R); applyRender(k)};
+    store.set('render3',R); $('rtext').value=JSON.stringify(R); applyRender(k)};
   $('rclose').onclick=()=>{P.hidden=true; $('rbtn').classList.remove('on'); resizeAll()};
-  $('rreset').onclick=()=>{R=Object.assign({},RDEF); store.set('render',R); buildRender(); applyRender()};
+  $('rreset').onclick=()=>{R=Object.assign({},RDEF); store.set('render3',R); buildRender(); applyRender()};
   $('rcopy').onclick=()=>{const t=$('rtext'); t.focus(); t.select(); const ok=()=>{$('rmsg').textContent='Copied'}; if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(ok,()=>{try{document.execCommand('copy');ok()}catch(e){$('rmsg').textContent='Select and copy the text'}}); else{try{document.execCommand('copy');ok()}catch(e){}}};
 }
 
+/* ---------- save what is on screen as one picture, with title and legend, for a slide ---------- */
+async function savePicture(){
+  const vs=views.filter(V=>V.viewer&&(V.key==='A'||S.dual)); if(!vs.length)return; const k=2;
+  const grab=V=>new Promise(res=>{const c=$('fv'+V.key),w=c.clientWidth*k,h=c.clientHeight*k; try{V.viewer.getScreenShot(w,h,url=>{const im=new Image(); im.onload=()=>res({im,w,h,V}); im.onerror=()=>res(null); im.src=url})}catch(e){res(null)}});
+  const ims=[]; for(const V of vs){const g=await grab(V); if(g)ims.push(g)} if(!ims.length)return;
+  const gap=6*k,head=96*k,W=ims.reduce((a,g)=>a+g.w,0)+gap*(ims.length-1),H=head+Math.max(...ims.map(g=>g.h)), cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
+  x.fillStyle='#fff'; x.fillRect(0,0,W,H); const sc=scenOf(S.scen), o=S.mode==='ms'?MS[S.msI]:null, F='-apple-system,"Segoe UI",system-ui,sans-serif';
+  x.fillStyle='#1c1c1e'; x.textBaseline='top'; x.font='700 '+22*k+'px '+F; x.fillText('MPB · '+(sc?sc.name:'Build sequence'),16*k,12*k);
+  x.font='400 '+15*k+'px '+F; x.fillStyle='#3a3a3c'; x.fillText(o?(S.msI+1)+' / '+MS.length+'   '+o.title+', '+o.sub+(o.kind==='start'?'':'   '+n2s(o.date)):n2s(Math.floor(T)),16*k,42*k);
+  let lx=16*k; x.font='400 '+12*k+'px '+F; document.querySelectorAll('#legend span').forEach(sp=>{const i=sp.querySelector('i'); if(!i)return; const c=getComputedStyle(i).backgroundColor; x.fillStyle=/rgba\(0, 0, 0, 0\)|transparent/.test(c)?'#d1d1d6':c; x.fillRect(lx,70*k,12*k,12*k); x.strokeStyle='#8e8e93'; x.strokeRect(lx,70*k,12*k,12*k); x.fillStyle='#3a3a3c'; x.fillText(sp.textContent,lx+17*k,69*k); lx+=17*k+x.measureText(sp.textContent).width+18*k});
+  let px=0; ims.forEach(g=>{x.drawImage(g.im,px,head,g.w,g.h); const l=$('lab'+g.V.key); if(l&&!l.hidden){x.font='600 '+13*k+'px '+F; const tw=x.measureText(l.textContent).width; x.fillStyle='rgba(28,28,30,.78)'; x.fillRect(px+10*k,head+10*k,tw+16*k,24*k); x.fillStyle='#fff'; x.fillText(l.textContent,px+18*k,head+15*k)} px+=g.w+gap});
+  const name='MPB_'+S.scen+(o?'_'+String(S.msI+1).padStart(2,'0')+'_'+o.title.replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,''):'_'+n2s(Math.floor(T)))+'.png';
+  await new Promise(res=>cv.toBlob(b=>{const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); res()},'image/png'));
+}
+
 /* ---------- saved views ---------- */
-function snap(){return {sel:[...S.sel].map(i=>tags[i].tag),off:[...S.off].map(i=>tags[i].tag),vis:S.vis,colorBy:S.colorBy,time:S.time,ns:S.ns,bu:S.bu,df:S.df,recent:S.recent,grow:S.grow,clip:S.clip,zone:S.zone,g1:S.g1,g2:S.g2,disc:[...S.disc],q:S.q,open:[...S.open],scen:S.scen,dual:S.dual,bmode:S.bmode,T,cam:VA&&VA.viewer?VA.viewer.getState({viewport:true}):null}}
+function snap(){return {sel:[...S.sel].map(i=>tags[i].tag),off:[...S.off].map(i=>tags[i].tag),vis:S.vis,colorBy:S.colorBy,time:S.time,ns:S.ns,bu:S.bu,df:S.df,recent:S.recent,grow:S.grow,clip:S.clip,zone:S.zone,g1:S.g1,g2:S.g2,disc:[...S.disc],q:S.q,open:[...S.open],scen:S.scen,dual:S.dual,bmode:S.bmode,mode:S.mode,mslev:S.mslev,msI:S.msI,T,cam:VA&&VA.viewer?VA.viewer.getState({viewport:true}):null}}
 function restore(v){const byTag=Object.fromEntries(tags.map(t=>[t.tag,t.i])), ids=a=>new Set((a||[]).map(x=>byTag[x]).filter(x=>x!=null)); S.sel=ids(v.sel); S.off=ids(v.off);
-  Object.assign(S,{vis:v.vis||'normal',colorBy:v.colorBy||'real',time:v.time!==false,ns:v.ns||'off',bu:v.bu||'ghost',df:v.df||'mark',recent:v.recent==null?28:v.recent,grow:v.grow!==false,clip:v.clip!==false,zone:v.zone||null,g1:v.g1||'zone',g2:v.g2||'',q:v.q||'',scen:scenOf(v.scen)?v.scen:'BASE',bmode:v.bmode||'follow'}); S.disc=new Set(v.disc||[]); S.open=new Set(v.open||[]);
-  resetApplied(); if(!!v.dual!==S.dual)setDual(!!v.dual); refresh(); setT(Math.max(t0,Math.min(v.T||t0,t1))); syncZones(true); applyRender('bg'); if(VA&&VA.viewer&&v.cam)setTimeout(()=>VA.viewer.restoreState(v.cam,{viewport:true},true),1200)}
+  Object.assign(S,{vis:v.vis||'normal',colorBy:v.colorBy||'real',time:v.time!==false,ns:v.ns||'off',bu:v.bu||'ghost',df:v.df||'mark',recent:v.recent==null?28:v.recent,grow:v.grow!==false,clip:v.clip!==false,zone:v.zone||null,g1:v.g1||'zone',g2:v.g2||'',q:v.q||'',scen:scenOf(v.scen)?v.scen:'BASE',bmode:v.bmode||'follow',mode:v.mode||'tl',mslev:v.mslev||'pkg',msI:v.msI||0}); S.disc=new Set(v.disc||[]); S.open=new Set(v.open||[]);
+  resetApplied(); if(!!v.dual!==S.dual)setDual(!!v.dual); refresh(); if(S.mode!=='ms')setT(Math.max(t0,Math.min(v.T||t0,t1))); syncZones(true); applyRender('bg'); if(VA&&VA.viewer&&v.cam)setTimeout(()=>VA.viewer.restoreState(v.cam,{viewport:true},true),1200)}
 function loadViews(){const vs=store.get('views')||{}; $('views').innerHTML='<option value="">Saved views</option>'+Object.keys(vs).map(k=>'<option>'+esc(k)+'</option>').join('')}
 
 /* ---------- planner Excel in, Excel out ---------- */
@@ -648,10 +716,15 @@ function bind(){
   // menus: one open at a time, closed by a click elsewhere
   document.addEventListener('click',e=>{const b=e.target.closest('[data-m]'); document.querySelectorAll('.menu').forEach(m=>{if(b&&m.id===b.dataset.m)m.hidden=!m.hidden; else if(!e.target.closest('.menu')||e.target.closest('[data-close] button'))m.hidden=true}); document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('open',!$(x.dataset.m).hidden))});
   const seg=(id,fn)=>{$(id).onclick=e=>{const b=e.target.closest('button'); if(b)fn(b.dataset.v)}};
-  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; refresh(); applyRender('bg')};
+  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; S.mslev=S.scen==='BASE'?'pkg':'zone'; S.msI=9999; refresh(); applyRender('bg')};
   $('mZoneList').onclick=e=>{const b=e.target.closest('[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); syncZones(); const sp=span(tags.filter(t=>pass(t))); $('gantt').scrollLeft=sp?Math.max(0,(sp[0]-t0)*PX-40):0};
   $('fig').onclick=()=>{S.fig=!S.fig; syncBars(); scard()}; $('bt').onclick=()=>{S.bt=!S.bt; if(S.bt)S.fig=true; syncBars(); scard()};
-  $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); setT(t0); toggle(true)}};
+  $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); if(S.mode==='ms')goMS(MS.length-1); else{setT(t0); toggle(true)}}};
+  $('msprev').onclick=()=>goMS(S.msI-1); $('msnext').onclick=()=>goMS(S.msI+1); $('mslist').onclick=e=>{const b=e.target.closest('.mrow'); if(b)goMS(+b.dataset.i)};
+  addEventListener('keydown',e=>{if(S.mode!=='ms'||/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
+  seg('mode',v=>{S.mode=v; if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} resetApplied(); refresh(); syncZones(true); applyRender('bg')});
+  seg('mslev',v=>{S.mslev=v; S.msI=9999; refresh()}); seg('btab',v=>{S.btab=v; syncBars(); msUI(); if(v!=='ms')buildGrid()});
+  $('mszoom').onclick=()=>{S.mszoom=!S.mszoom; syncBars(); syncZones()}; $('shot').onclick=()=>savePicture().catch(e=>console.warn('picture',e));
   seg('dual',v=>setDual(v==='2')); seg('bmode',v=>{S.bmode=v; syncBars(); resetApplied(); applyAll(); syncZones(true)});
   seg('vis',v=>{S.vis=v; syncBars(); applyAll()}); seg('pick',v=>{S.pick=v; syncBars()});
   seg('ns',v=>{S.ns=v; syncBars(); legend(); applyAll(); applyRender('bg')}); seg('bu',v=>{S.bu=v; syncBars(); legend(); applyAll(); applyRender('bg')}); seg('df',v=>{S.df=v; syncBars(); legend(); applyAll()});
