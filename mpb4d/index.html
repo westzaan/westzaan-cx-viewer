@@ -158,6 +158,8 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 #strip .btn{padding:8px 12px;font-size:15px;line-height:20px}
 #months{position:relative;flex:1;display:flex;margin-left:6px}
 .mo{flex:1 1 0;text-align:center;padding:2px 0 6px;font-weight:600;font-size:13px;color:#fff;background:#2f6fc0;border-left:1px solid rgba(255,255,255,.22);cursor:pointer;user-select:none}
+.mo{position:relative} .wk{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;padding:6px;gap:4px;white-space:nowrap;background:rgba(28,28,30,.97);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45)} .mo:hover .wk{display:flex}
+.wkb{border:0;border-radius:6px;background:#1c1c1e;color:#fff;font-size:11px;font-weight:600;padding:3px 8px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.45)} .wkb:hover{background:var(--accent)} .wkb.on{background:#ff453a}
 .mo:first-child{border-radius:8px 0 0 8px;border-left:0} .mo:nth-last-of-type(1){border-radius:0 8px 8px 0}
 .mo small{display:block;font-size:10px;font-weight:500;opacity:.8;height:12px;line-height:12px} .mo.past{background:#6e7480} .mo.cur{background:#0a84ff} .mo:hover{filter:brightness(1.15)}
 #mk{position:absolute;top:-4px;height:44px;width:5px;margin-left:-3px;background:#ff453a;border-radius:3px;box-shadow:0 0 0 2px rgba(255,69,58,.35);pointer-events:none;transition:left .5s}
@@ -175,8 +177,9 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 .zr:hover{background:rgba(255,255,255,.06)} .zr.on{background:var(--selrow);box-shadow:inset 3px 0 0 var(--accent)}
 .zr .zn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .zr .pc{text-align:right;font-family:var(--f-num);font-size:11px;color:var(--mute)}
 .zb{display:flex;height:10px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.12)} .zb i{display:block;height:100%;transition:width .5s}
+.fo{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px 0;font-size:12px} .fo:first-of-type{margin-top:6px;border-top:1px solid var(--line);padding-top:8px}
 #capt{position:absolute;left:152px;right:286px;bottom:12px;z-index:5;padding:10px 16px;font-size:14px;line-height:1.35}
-#capt b{font-size:16px} #capt .tx{margin-top:2px} #capt .lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11.5px;color:var(--mute);margin-top:6px} #capt .lg span{display:inline-flex;align-items:center;gap:6px} #capt .lg i{width:10px;height:10px;border-radius:3px}
+#capt b{font-size:16px} #capt .tx{margin-top:2px} #capt .cx{margin-top:2px;font-size:12.5px;color:#ffd8a0} #capt .lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11.5px;color:var(--mute);margin-top:6px} #capt .lg span{display:inline-flex;align-items:center;gap:6px} #capt .lg i{width:10px;height:10px;border-radius:3px}
 #msbar{flex-wrap:nowrap} #msn{font-family:var(--f-num);font-size:12.5px;color:var(--mute);white-space:nowrap}
 #msprev,#msnext{font-size:18px;line-height:18px;padding:6px 14px;font-weight:600}
 #mst{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px} #mst span{color:var(--mute);font-size:12.5px;margin-left:6px}
@@ -288,8 +291,8 @@ body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.s
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v10"></script>
-<script src="auth.js?v=2026-10-06v10"></script>
+<script src="config.js?v=2026-10-06v12"></script>
+<script src="auth.js?v=2026-10-06v12"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -306,7 +309,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catc
 let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430,views=[],VA=null,VB=null,autoZ=null,MAP={},pkgs=[],colorMap={},rows=[];
 // everything the user can switch. Shared by both 3D views; each view only differs in zone and scenario.
 const S={sel:new Set(),off:new Set(),ns:'off',bu:'ghost',df:'mark',recent:28,grow:true,vis:'normal',colorBy:'real',pick:'tag',time:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set(),
-  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
+  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
 let MS=[],HI=new Set(),msZone=null,msFinal=false; const HIC='#34c759';
 
 const floorOf=z=>{const m=/^(?:STR-)?(GF|1F|2F|3F)/.exec(z);return m?m[1]:(z==='ROOF'?'Roof':z==='SUB'?'Substructure':'Building')};
@@ -375,8 +378,17 @@ function syncBars(){
 }
 function refresh(){
   buildMS(); if(S.mode==='ms'){const o=MS[S.msI]; HI=new Set(o.tags.map(t=>t.i)); msZone=o.zone; msFinal=o.kind==='end'; autoZ=o.zone; T=o.kind==='start'?o.date:o.date+0.999; $('slider').value=T; $('date').textContent=n2s(Math.floor(T))}
-  else if(S.mode==='story'){HI=new Set(); msZone=null; autoZ=null; const lv=liveOf(S.scen); msFinal=!lv.length||Math.floor(T)>=Math.max(...lv.map(t=>t.f)); $('slider').value=T}
-  syncBars(); if(S.mode!=='story')buildGrid(); panel(); scard(); legend(); msUI(); storyUI(); applyAll(); activeList(); syncZones()}
+  else if(S.mode==='story'){msZone=null; autoZ=null; if(!ML.length)months(); const lv=liveOf(S.scen), d=Math.floor(T), mo=ML[Math.max(0,ML.findIndex(o=>d<=o.e))]; msFinal=!lv.length||d>=Math.max(...lv.map(t=>t.f)); $('slider').value=T;
+    // the work of this date: under way now, or finished earlier in this month. At the end of Phase 1 the focus is on what is left out.
+    const ws=d>=mo.e?mo.s:d-6; HI=new Set(lv.filter(t=>T>t.f&&t.f>=ws&&pass(t)).map(t=>t.i));   // a month end looks back over the month, a chosen week over that week
+    FOC=new Set(HI); lv.forEach(t=>{if(T>=t.s&&T<=t.f&&pass(t))FOC.add(t.i)});
+    if(msFinal){FOC=new Set(); if(S.scen!=='BASE')tags.forEach(t=>{if(deferred(t,S.scen)&&pass(t))FOC.add(t.i)})}
+    focOn=S.focus&&FOC.size>0;
+    // the floor with most work on this date: the building is cut open just above it
+    cutF=null; cutUp=[]; if(focOn&&S.cut&&!msFinal&&!S.zone){const FO=['Substructure','GF','1F','2F','3F','Roof'], w={}; FOC.forEach(i=>{const t=tags[i]; if(FO.includes(t.floor))w[t.floor]=(w[t.floor]||0)+t.n}); let b=null; for(const f in w)if(!b||w[f]>w[b])b=f;
+      if(b&&b!=='Roof'){cutF=b; cutUp=[...new Set([...FOC].map(i=>tags[i]).filter(t=>FO.indexOf(t.floor)>FO.indexOf(b)).map(t=>t.zoneName.replace(/^.. - /,'')))]}}}
+  if(S.mode!=='story')focOn=false;
+  syncBars(); if(S.mode!=='story')buildGrid(); panel(); scard(); legend(); msUI(); storyUI(); applyAll(); activeList(); syncZones(); views.forEach(V=>V.focusFit())}
 function applyAll(){views.forEach(V=>V.apply())}
 function resetApplied(){views.forEach(V=>{V.applied={}})}
 function resizeAll(){views.forEach(V=>{try{V.viewer&&V.viewer.resize()}catch(e){}})}
@@ -405,12 +417,15 @@ function goMS(i){if(!MS.length)return; S.msI=i; S.mode='ms'; toggle(false); refr
 
 /* ---------- overview: a month strip, five stages, eleven zone bars and one sentence ---------- */
 const STG=[['Structure',['CI','ST'],'<path d="M4 20V8l8-4 8 4v12M4 14h16M9 20V9M15 20V9"/>'],['Envelope',['FA'],'<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M12 3v18M6 12h12"/>'],['Services',['HV','FF','PH','PI','EL'],'<path d="M3 8h7a3 3 0 0 1 3 3v2a3 3 0 0 0 3 3h5M3 5v6M21 13v6"/>'],['Interior',['AR'],'<rect x="4" y="4" width="13" height="5" rx="1"/><path d="M17 6.5h3v5h-8v3M12 14.5v6"/>'],['Furniture and lab equipment',['FU'],'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3M7.5 15h9"/>']];
-let ML=[],playI=0;
+let ML=[],playI=0,FOC=new Set(),focOn=false,cutF=null,cutUp=[];
 const today=()=>Math.max(t0,Math.min(t1,Math.floor(Date.now()/DAY)));
 const liveOf=sid=>tags.filter(t=>!t.built&&!deferred(t,sid));
 const frac=t=>t.built||T>t.f?1:T<t.s?0:(T-t.s)/(t.f-t.s+1);
 function months(){ML=[]; const a=new Date(today()*DAY), e=tags.filter(t=>!t.built).reduce((m,t)=>Math.max(m,t.f),0); let y=a.getUTCFullYear(),m=a.getUTCMonth();
   for(let k=0;k<60;k++){const s=Date.UTC(y,m,1)/DAY, en=Date.UTC(y,m+1,1)/DAY-1; ML.push({s,e:en,y,first:m===0||!ML.length,lab:new Date(s*DAY).toLocaleString('en-GB',{month:'short',timeZone:'UTC'})}); if(en>=e)break; if(++m>11){m=0;y++}}}
+const isoWk=d=>{const x=new Date(d*DAY); x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7)); return Math.ceil(((x-Date.UTC(x.getUTCFullYear(),0,1))/DAY+1)/7)};
+// the weeks of a month (Monday to Sunday, named by the Sunday that closes them); shown only while the pointer is on the month
+function weeksOf(o){const out=[], td=today(); for(let e=o.s;e<=o.e;e++){if(new Date(e*DAY).getUTCDay()===0&&e>=td&&e<o.e)out.push(e)} return out}
 const xOf=d=>{const i=ML.findIndex(o=>d<=o.e); if(i<0)return 100; const o=ML[i]; return (i+Math.max(0,Math.min(1,(d-o.s+1)/(o.e-o.s+1))))/ML.length*100};
 // the few dates worth a flag on the strip; they follow the planner's dates and the chosen scenario
 function flags(){
@@ -422,17 +437,18 @@ function flags(){
 function storyUI(){
   const on=S.mode==='story'; document.body.classList.toggle('story',on); $('story').hidden=!on; if(!on||!tags)return; if(!ML.length)months();
   const sid=S.scen, fl=flags(), d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e));
-  $('months').innerHTML=ML.map((o,i)=>'<div class="mo'+(i===ci?' cur':o.e<d?' past':'')+'" data-i="'+i+'"><small>'+(o.first?o.y:'')+'</small>'+o.lab+'</div>').join('')+'<div id="mk" style="left:'+xOf(d)+'%"></div>'
+  $('months').innerHTML=ML.map((o,i)=>'<div class="mo'+(i===ci?' cur':o.e<d?' past':'')+'" data-i="'+i+'"><small>'+(o.first?o.y:'')+'</small>'+o.lab+'<span class="wk">'+weeksOf(o).map(e=>'<button type="button" class="wkb'+(e===d?' on':'')+'" data-d="'+e+'" title="Week '+isoWk(e)+': '+n2s(e-6).slice(0,5)+' to '+n2s(e).slice(0,5)+'">wk '+isoWk(e)+'</button>').join('')+'<button type="button" class="wkb'+(o.e===d?' on':'')+'" data-d="'+o.e+'" title="End of the month">end</button></span></div>').join('')+'<div id="mk" style="left:'+xOf(d)+'%"></div>'
     +fl.map((f,i)=>'<button type="button" class="flag'+(i%2?' r2':'')+(f[1]===d?' on':'')+'" data-d="'+f[1]+'" style="left:'+xOf(f[1])+'%">'+esc(f[0])+' · '+n2s(f[1]).slice(0,5)+'</button>').join('');
   const C=2*Math.PI*29;
   $('stages').innerHTML=STG.map((g,i)=>{const ts=tags.filter(t=>g[1].includes(t.disc)), lv=ts.filter(t=>!deferred(t,sid)), tot=lv.reduce((a,t)=>a+t.n,0), p=tot?lv.reduce((a,t)=>a+t.n*frac(t),0)/tot:0, nd=ts.length-lv.length, wip=lv.some(t=>!t.built&&T>=t.s&&T<=t.f);
     return '<button type="button" class="stg'+(p<=0?' idle':'')+(S.stg===i?' sel':'')+'" data-g="'+i+'" title="Show only this stage"><span class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="bgc"/><circle cx="32" cy="32" r="29" class="arc" stroke="'+(wip?'#ff9f0a':'#0a84ff')+'" stroke-dasharray="'+(C*p)+' '+C+'" transform="rotate(-90 32 32)"/><g transform="translate(18 18) scale(1.17)" class="ic">'+g[2]+'</g></svg></span><b>'+g[0]+'</b><em>'+(tot?Math.round(p*100)+'%':'')+(nd?(tot?' · part ':'')+'Phase 2':'')+'</em></button>'}).join('');
   $('zbars').innerHTML='<div class="lab">Zones'+(S.stg!=null?' · '+esc(STG[S.stg][0]):'')+'</div>'+D.zones.filter(z=>z[2]==='B'&&tags.some(t=>t.zone===z[0])).map(z=>{const ts=tags.filter(t=>t.zone===z[0]&&(!S.disc.size||S.disc.has(t.disc))), tot=ts.reduce((a,t)=>a+t.n,0)||1; let dn=0,wp=0,df=0;
     ts.forEach(t=>{if(deferred(t,sid)){df+=t.n;return} const f=frac(t); dn+=t.n*f; if(f>0&&f<1)wp+=t.n*(1-f)}); const sc1=tot-df;
-    return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('');
+    return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
+    +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Cut open at the busiest floor</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
   const wipT=liveOf(sid).filter(t=>T>=t.s&&T<=t.f&&(!S.disc.size||S.disc.has(t.disc))), parts=STG.map(g=>{const zs=[...new Set(wipT.filter(t=>g[1].includes(t.disc)).map(t=>t.zoneName.replace(/^.. - /,'')))]; return zs.length?g[0]+' in '+zs.slice(0,3).join(', ')+(zs.length>3?' and '+(zs.length-3)+' more zones':''):null}).filter(Boolean);
   const sc=scenOf(sid), f=fl.find(x=>x[1]===d), nd=tags.filter(t=>deferred(t,sid)).length, txt=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):parts.length?'Under way: '+parts.join('; ')+'.':'No work under way on this date.';
-  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div><div class="lg"><span><i style="background:#e5e5ea"></i>Built (own colours in the model)</span><span><i style="background:#ff9f0a"></i>Under way</span>'+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
+  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>':'')+'<div class="lg"><span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier'+(focOn?' (faint)':'')+'</span>'+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
   $('splayb').textContent=playI?'❚❚':'▶';
 }
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
@@ -590,13 +606,13 @@ function makeView(key){
     }
     say(''); const tot=V.rep.reduce((a,r)=>a+r[1],0),hit=V.rep.reduce((a,r)=>a+r[2],0);
     if(key==='A'){$('msg').textContent='Models: '+V.rep.length+' loaded. Elements linked to tags: '+num(hit)+' of '+num(tot)+'.'+(V.miss.length?' Not loaded: '+V.miss.join(', ')+'.':'')+' '+V.rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
-      window.MPB4D={rep:V.rep,miss:V.miss,models:V.models,S,views}}
-    V.syncZone(true); applyRenderV(V,'bg');
+      window.MPB4D={rep:V.rep,miss:V.miss,models:V.models,S,views,dbg:()=>({cutF,cutUp,focOn,foc:FOC.size,msFinal})}}
+    V.syncZone(true); applyRenderV(V,'bg'); V.fkey=null; setTimeout(()=>V.focusFit(),1500);
   };
   // ---- three ways an element can be drawn: solid (visible, coloured), ghost (x-ray) or off (not drawn at all)
   const CLR=new THREE.Vector4(1,1,1,0), draw=(ids,m,state,c,clr)=>{
     if(!ids.length)return; if(state==='off'){setOff(ids,m,true);return} setOff(ids,m,false);
-    if(state==='ghost'){if(clr){const rc=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{V.viewer.setThemingColor(id,CLR,m,rc)}catch(e){}}} V.viewer.hide(ids,m);return}   // an x-ray element must not keep the colour it had while solid
+    if(state==='ghost'){if(c){const rc=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{V.viewer.setThemingColor(id,c,m,rc)}catch(e){}}} else if(clr){const rc=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{V.viewer.setThemingColor(id,CLR,m,rc)}catch(e){}}} V.viewer.hide(ids,m);return}   // an x-ray element must not keep the colour it had while solid
     V.viewer.show(ids,m); const rec=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{V.viewer.setThemingColor(id,c,m,rec)}catch(e){try{V.viewer.setThemingColor(id,c,m,false)}catch(e2){}}}
   };
   // ids of one tag in one model, sorted from the lowest element to the highest: lets work "grow" during an activity
@@ -608,13 +624,14 @@ function makeView(key){
   };
   // what a tag looks like right now in this view: [state, colour key, grown step]
   const lookOf=(t,hasSel,sid)=>{
+    if(S.mode==='story'&&S.stg!=null&&!S.disc.has(t.disc)&&inZone(t,V.zone)&&!S.off.has(t.i))return (t.built||T>t.f)&&!deferred(t,sid)?['ghost','k',0]:['off','',0];   // one stage chosen: the rest of the building stays as grey glass
     if(!pass(t,V.zone)||S.off.has(t.i))return ['off','',0];
     const isSel=S.sel.has(t.i); if(hasSel){if(S.vis==='isolate'&&!isSel)return ['off','',0]; if(S.vis==='hide'&&isSel)return ['off','',0]; if(S.vis==='ghost'&&!isSel)return ['ghost','',0]}
     if(S.mode!=='tl'){   // a still moment: everything solid, no x-ray. Green = finished at this step, white = built before, purple = waits for Phase 2
-      if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
+      if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; if(focOn&&!msFinal)return ['ghost','d',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
       const r=t.built?2:T<t.s?0:T<=t.f?1:2; if(r===0)return ['off','',0];
       if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',0];
-      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0];
+      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return ['ghost','k',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
       return ['solid',R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint,0];
     }
     const s=st(t,sid); if(s===0)return [S.ns,'',0];
@@ -627,8 +644,8 @@ function makeView(key){
   };
   V.apply=()=>{
     const viewer=V.viewer; if(!viewer||!tags)return; const hasSel=S.sel.size>0, sid=V.scen(); let changed=false;
-    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), key=L.join('|'), prev=V.applied[t.i]; if(prev===key)return; V.applied[t.i]=key; changed=true; const clr=L[0]==='ghost'&&!!V.tint[t.i]; if(L[0]==='solid')V.tint[t.i]=L[1]!=='o'; else if(clr)V.tint[t.i]=false;
-      const c=L[0]==='solid'?colOf(L[1]==='d'?DEFC:L[1]):null;
+    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), key=L.join('|'), prev=V.applied[t.i]; if(prev===key)return; V.applied[t.i]=key; changed=true; const gd=L[0]==='ghost'&&(L[1]==='d'||L[1]==='k'), clr=L[0]==='ghost'&&!gd&&!!V.tint[t.i]; if(L[0]==='solid')V.tint[t.i]=L[1]!=='o'; else if(gd)V.tint[t.i]=true; else if(clr)V.tint[t.i]=false;
+      const c=L[0]==='solid'||gd?colOf(L[1]==='d'?DEFC:L[1]==='k'?'#9aa5b1':L[1]):null;   // 'k': context, a grey glass that still reads on a light background
       for(const code in V.models){const all=MAP[code]&&MAP[code].tagIds[t.i]; if(!all||!all.length)continue; const m=V.models[code];
         if(L[2]>0&&L[2]<16){const ids=ordered(code,t.i),k=Math.max(1,Math.round(ids.length*L[2]/16)); draw(ids.slice(0,k),m,'solid',c); draw(ids.slice(k),m,S.ns,null)}
         else draw(all,m,L[0],c,clr)}});
@@ -655,6 +672,17 @@ function makeView(key){
       P.push(new THREE.Vector4(0,0,1,-e.max.z),new THREE.Vector4(0,0,-1,e.min.z),new THREE.Vector4(1,0,0,-e.max.x),new THREE.Vector4(-1,0,0,e.min.x),new THREE.Vector4(0,1,0,-e.max.y),new THREE.Vector4(0,-1,0,e.min.y));
       viewer.setCutPlanes(P)} else viewer.setCutPlanes([]);
     look(bx);
+  };
+  // turn the camera to the work of this date. Only moves when the set of focus items has changed.
+  V.focusFit=()=>{
+    if(!V.viewer||S.mode!=='story'||!Object.keys(V.models).length)return; if(V.zone){V.fkey=null;return}
+    const key=(focOn?[...FOC].sort((a,b)=>a-b).join(','):'')+'|'+S.cut+S.follow+msFinal+cutF; if(V.fkey===key)return; V.fkey=key;
+    if(!focOn){V.viewer.setCutPlanes([]); if(S.follow)V.fit(); return}
+    const bx=V.boundsOf(t=>FOC.has(t.i),'fo:'+key); if(!bx)return;
+    // section plane that follows the work: the building is cut open just above the highest item of this date
+    let P=[],fb=null; if(cutF){const all=V.boundsOf(()=>true,'all'); fb=V.boundsOf(t=>FOC.has(t.i)&&t.floor===cutF,'fc:'+key); if(all&&fb){const H=all.max.z-all.min.z, zc=fb.max.z+H*0.012; if(zc<all.max.z-H*0.03)P=[new THREE.Vector4(0,0,1,-zc)]; else fb=null}}
+    V.viewer.setCutPlanes(P);
+    if(S.follow){const b2=(fb||bx).clone(), sz=Math.max(b2.max.x-b2.min.x,b2.max.y-b2.min.y,b2.max.z-b2.min.z); b2.expandByScalar(sz*0.12+1); look(b2)}
   };
   V.fit=()=>{if(!V.viewer)return; const bx=V.boundsOf(t=>pass(t,V.zone),'f:'+V.zone+[...S.disc].join('')+S.q); if(bx)look(bx)};
   V.fitSel=()=>{if(!V.viewer||V.zone)return; const bx=V.boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)look(bx)};
@@ -792,12 +820,12 @@ function bind(){
   $('fig').onclick=()=>{S.fig=!S.fig; syncBars(); scard()}; $('bt').onclick=()=>{S.bt=!S.bt; if(S.bt)S.fig=true; syncBars(); scard()};
   $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); if(S.mode==='ms')goMS(MS.length-1); else{setT(t0); toggle(true)}}};
   $('msprev').onclick=()=>goMS(S.msI-1); $('msnext').onclick=()=>goMS(S.msI+1); $('mslist').onclick=e=>{const b=e.target.closest('.mrow'); if(b)goMS(+b.dataset.i)};
-  addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){if(e.key==='ArrowRight'){e.preventDefault();stepMonth(1)} if(e.key==='ArrowLeft'){e.preventDefault();stepMonth(-1)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
-  seg('mode',v=>{S.mode=v; playMonths(false); if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} if(v!=='story'&&S.stg!=null){S.stg=null;S.disc=new Set()} resetApplied(); refresh(); setTimeout(()=>{resizeAll(); if(v!=='story')buildGrid()},60); syncZones(true); applyRender('bg')});
-  $('months').onclick=e=>{const f=e.target.closest('.flag'), m=e.target.closest('.mo'); playMonths(false); if(f)goDay(+f.dataset.d); else if(m)goDay(Math.max(today(),ML[+m.dataset.i].e))};
+  addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){const k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(k){e.preventDefault(); playMonths(false); if(e.shiftKey)goDay(Math.max(today(),Math.min(ML[ML.length-1].e,Math.floor(T)+7*k))); else stepMonth(k)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
+  seg('mode',v=>{S.mode=v; playMonths(false); views.forEach(V=>{V.fkey=null}); if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} if(v!=='story'&&S.stg!=null){S.stg=null;S.disc=new Set()} resetApplied(); refresh(); setTimeout(()=>{resizeAll(); if(v!=='story')buildGrid()},60); syncZones(true); applyRender('bg')});
+  $('months').onclick=e=>{const w=e.target.closest('.wkb'), f=e.target.closest('.flag'), m=e.target.closest('.mo'); playMonths(false); if(w)goDay(+w.dataset.d); else if(f)goDay(+f.dataset.d); else if(m)goDay(Math.max(today(),ML[+m.dataset.i].e))};
   $('splayb').onclick=()=>playMonths(!playI); $('sprev').onclick=()=>{playMonths(false);stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false);stepMonth(1)};
   $('stages').onclick=e=>{const b=e.target.closest('.stg'); if(!b)return; const i=+b.dataset.g; S.stg=S.stg===i?null:i; S.disc=new Set(S.stg==null?[]:STG[S.stg][1]); refresh()};
-  $('zbars').onclick=e=>{const b=e.target.closest('.zr'); if(!b)return; S.zone=S.zone===b.dataset.z?null:b.dataset.z; refresh()};
+  $('zbars').onclick=e=>{const o=e.target.closest('[data-o]'); if(o){S[o.dataset.o]=!S[o.dataset.o]; views.forEach(V=>{V.fkey=null}); refresh(); return} const b=e.target.closest('.zr'); if(!b)return; S.zone=S.zone===b.dataset.z?null:b.dataset.z; refresh()};
   seg('mslev',v=>{S.mslev=v; S.msI=9999; refresh()}); seg('btab',v=>{S.btab=v; syncBars(); msUI(); if(v!=='ms')buildGrid()});
   $('mszoom').onclick=()=>{S.mszoom=!S.mszoom; syncBars(); syncZones()}; $('shot').onclick=()=>savePicture().catch(e=>console.warn('picture',e));
   seg('dual',v=>setDual(v==='2')); seg('bmode',v=>{S.bmode=v; syncBars(); resetApplied(); applyAll(); syncZones(true)});
