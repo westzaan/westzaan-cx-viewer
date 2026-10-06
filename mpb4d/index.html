@@ -41,6 +41,7 @@ select,input[type=search],input[type=text]{border:1px solid var(--line);backgrou
 #load{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 16px;max-width:80%;text-align:center}
 #signin{position:absolute;left:50%;top:56%;transform:translateX(-50%);z-index:5}
 .legend{position:absolute;left:10px;top:8px;z-index:4;display:flex;flex-direction:column;gap:2px;font-size:11.5px;pointer-events:none;max-height:70%;overflow:hidden}
+#view[data-look=studio]{background:#0b1016}
 .legend span{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--panel) 82%,transparent);padding:1px 6px;border-radius:3px;width:max-content;max-width:240px}
 .legend i{flex:0 0 9px;width:9px;height:9px;border-radius:2px;display:inline-block}
 #side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -77,7 +78,12 @@ th{font-family:var(--f-lab);font-weight:500;letter-spacing:.05em;text-transform:
 .row.gp .b{top:7px;height:8px;background:var(--ghost)}.row.gp .b i{display:block;height:100%;background:var(--built);border-radius:2px}
 .b.s0{opacity:.38}.b.s2{filter:saturate(.45)}
 .site{position:sticky;left:calc(var(--lw) + 8px);display:inline-block;margin-top:3px;font-family:var(--f-lab);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);border:1px solid var(--line);border-radius:3px;padding:0 6px;line-height:15px;background:var(--panel)}
-#cur{position:absolute;top:0;bottom:0;width:2px;background:var(--cursor);z-index:1;pointer-events:none}
+#cur{position:absolute;top:0;bottom:0;width:13px;margin-left:-6px;z-index:4;cursor:ew-resize;touch-action:none}
+#cur::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:3px;background:var(--cursor);border-radius:2px}
+#cur b{position:sticky;top:3px;display:block;width:max-content;transform:translateX(-50%);margin-left:6px;background:var(--cursor);color:#fff;font-family:var(--f-num);font-size:11px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap}
+#today{position:absolute;top:24px;bottom:0;width:0;border-left:1px dashed var(--mute);z-index:1;pointer-events:none}
+.ghead .gt{cursor:ew-resize;touch-action:none}
+body.scrub{user-select:none;cursor:ew-resize}
 #msg{color:var(--mute)}
 @media (max-width:820px){
   html,body{height:auto} body{display:block} .main{display:block}
@@ -99,10 +105,11 @@ th{font-family:var(--f-lab);font-weight:500;letter-spacing:.05em;text-transform:
 </div>
 <div class="bar" id="zbar"><span class="lab">Zone views</span></div>
 <div class="bar" id="vbar">
-  <div class="grp"><span class="lab">Colour by</span><select id="colorBy"><option value="status">Status (4D)</option><option value="disc">Discipline</option><option value="pkg">Package</option><option value="zone">Zone</option><option value="floor">Floor</option><option value="group">Model item group</option></select></div>
+  <div class="grp"><span class="lab">Colour by</span><select id="colorBy"><option value="real">Build status</option><option value="status">Status by discipline</option><option value="disc">Discipline</option><option value="pkg">Package</option><option value="zone">Zone</option><option value="floor">Floor</option><option value="group">Model item group</option></select></div>
   <div class="grp"><span class="lab">Selection</span><span class="seg" id="vis"><button type="button" data-v="normal" class="on">Highlight</button><button type="button" data-v="isolate">Isolate</button><button type="button" data-v="ghost">Ghost others</button><button type="button" data-v="hide">Hide</button></span><button class="btn" id="clear" type="button">Clear</button></div>
   <div class="grp"><span class="lab">Click selects</span><span class="seg" id="pick"><button type="button" data-v="tag" class="on">Group</button><button type="button" data-v="el">Element</button></span></div>
   <div class="grp"><button class="btn on" id="clip" type="button" title="Cut the model to the chosen zone">Section box: on</button><button class="btn on" id="ghost" type="button">Not started: ghosted</button><button class="btn" id="fit" type="button">Fit</button></div>
+  <div class="grp"><span class="lab">Look</span><select id="look"><option value="studio">Studio</option><option value="day">Daylight</option><option value="fast">Fast (simple)</option></select><button class="btn" id="edges" type="button" title="Draw the outlines of every element">Edges: off</button><button class="btn" id="orbit" type="button" title="Slowly turn the camera around the building while playing">Orbit: off</button></div>
   <div class="grp"><span class="lab">Saved views</span><select id="views"><option value="">—</option></select><button class="btn" id="vsave" type="button">Save</button><button class="btn" id="vdel" type="button">Delete</button></div>
 </div>
 <div class="note" id="note"><b id="dnote">Example dates.</b> <span id="msg"></span></div>
@@ -147,7 +154,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catc
 
 let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430;
 // view state
-const S={sel:new Set(),vis:'normal',colorBy:'status',pick:'tag',time:true,ghost:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set()};
+const S={sel:new Set(),vis:'normal',colorBy:'real',pick:'tag',time:true,ghost:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set()};
 let viewer=null,models={},tagIds={},id2tag={},applied={},muting=false,boundsCache={};
 const say=t=>{$('load').hidden=!t;$('load').textContent=t};
 
@@ -223,10 +230,10 @@ function buildGrid(){
   rows.forEach((r,i)=>{const ts=r.tags,sp=span(ts),s=sp?sp[0]:0,f=sp?sp[1]:0,n=ts.reduce((a,t)=>a+t.n,0),pad=6+r.depth*16,nb=ts.filter(t=>t.built).length, site='<span class="site">on site</span>';
     if(r.leaf){const t=r.t; h+='<div class="row" tabindex="0" data-i="'+i+'" title="'+esc(t.tag+' · '+t.pkg+' · '+(t.built?'on site':n2s(t.s)+' → '+n2s(t.f)))+'"><div class="gl"><span class="tw" style="margin-left:'+pad+'px"></span><span class="nm">'+esc(t.name)+' <em>'+esc(S.g1==='zone'||S.g2==='zone'?t.pkg:t.zoneName)+'</em></span><span class="c">'+num(t.n)+'</span><span class="c q">'+fmt(t.qty,t.unit)+'</span></div><div class="gt" style="width:'+W+'px">'+(t.built?site:'<div class="b" style="background:'+DC[t.disc]+';left:'+(t.s-t0)*PX+'px;width:'+(t.f-t.s+1)*PX+'px"></div>')+'</div></div>'}
     else h+='<div class="row gp" tabindex="0" data-i="'+i+'"><div class="gl"><span class="tw" data-tw="1" style="margin-left:'+pad+'px">'+(r.open?'▾':'▸')+'</span><span class="nm">'+esc(r.label)+' <em>'+ts.length+' tags'+(nb?', '+nb+' on site':'')+'</em></span><span class="c">'+num(n)+'</span><span class="c q">'+qsum(ts)+'</span></div><div class="gt" style="width:'+W+'px">'+(sp?'<div class="b" data-s="'+s+'" data-f="'+f+'" style="left:'+(s-t0)*PX+'px;width:'+(f-s+1)*PX+'px"><i></i></div>':site)+'</div></div>'});
-  h+='<div id="cur"></div>'; g.innerHTML=h; $('count').textContent=list.length+' of '+tags.length+' tags'; gridState();
+  const td=Math.floor(Date.now()/DAY); h+=(td>t0&&td<t1?'<div id="today" title="Today" style="left:'+(LW+(td-t0)*PX)+'px"></div>':'')+'<div id="cur" title="Drag to change the date"><b></b></div>'; g.innerHTML=h; $('count').textContent=list.length+' of '+tags.length+' tags'; gridState();
 }
 function gridState(){
-  const c=$('cur'); if(!c)return; c.style.left=(LW+(T-t0)*PX)+'px';
+  const c=$('cur'); if(!c)return; c.style.left=(LW+(T-t0)*PX)+'px'; c.firstChild.textContent=n2s(Math.floor(T));
   document.querySelectorAll('#g .row').forEach(el=>{const r=rows[+el.dataset.i],b=el.querySelector('.b'); if(!r)return;
     if(!b){} else if(r.leaf)b.className='b s'+real(r.t); else{const s=+b.dataset.s,f=+b.dataset.f; b.firstChild.style.width=Math.max(0,Math.min(1,(T-s)/(f-s+1)))*100+'%'}
     el.classList.toggle('sel',r.tags.length>0&&r.tags.every(t=>S.sel.has(t.i)))});
@@ -260,7 +267,8 @@ function panel(){
 let colorMap={};
 function legend(){
   if(!tags)return; let h='';
-  if(S.colorBy==='status'){h=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+'<span>bright = in progress · muted = built</span>'; colorMap={}}
+  if(S.colorBy==='real'){h='<span><i style="background:'+WIP+'"></i>Work in progress</span><span><i style="background:'+CLAY+'"></i>Built</span><span><i style="background:transparent;border:1px solid var(--mute)"></i>Not started (faint)</span>'; colorMap={}}
+  else if(S.colorBy==='status'){h=Object.keys(DC).filter(k=>tags.some(t=>t.disc===k)).map(k=>'<span><i style="background:'+DC[k]+'"></i>'+DN[k]+'</span>').join('')+'<span>bright = in progress · muted = built</span>'; colorMap={}}
   else{const ks=[...new Set(tags.filter(pass).map(KEY[S.colorBy]))]; if(S.colorBy!=='zone'&&S.colorBy!=='floor')ks.sort(); colorMap={}; ks.forEach((k,i)=>colorMap[k]=S.colorBy==='disc'?DC[Object.keys(DN).find(x=>DN[x]===k)]:PAL[i%PAL.length]);
     h=ks.slice(0,18).map(k=>'<span><i style="background:'+colorMap[k]+'"></i>'+esc(k)+'</span>').join('')+(ks.length>18?'<span>… '+(ks.length-18)+' more</span>':'')}
   $('legend').innerHTML=h;
@@ -268,7 +276,8 @@ function legend(){
 
 /* ---------- time ---------- */
 let last=0;
-(function loop(){requestAnimationFrame(loop); const now=performance.now(); if(playing&&tags){let nt=T+(now-last)/1000*+$('speed').value; if(nt>=t1){nt=t1;toggle(false)} setT(nt)} last=now})();
+(function loop(){requestAnimationFrame(loop); const now=performance.now(); if(playing&&tags){const dt=(now-last)/1000; let nt=T+dt*+$('speed').value; if(nt>=t1){nt=t1;toggle(false)} setT(nt); if(S.orbit&&viewer)orbit(dt)} last=now})();
+function orbit(dt){try{const nav=viewer.navigation,p=nav.getPosition(),c=nav.getPivotPoint?nav.getPivotPoint():nav.getTarget(),a=dt*0.12,dx=p.x-c.x,dy=p.y-c.y,cs=Math.cos(a),sn=Math.sin(a); nav.setView(new THREE.Vector3(c.x+dx*cs-dy*sn,c.y+dx*sn+dy*cs,p.z),nav.getTarget().clone().sub(p).applyAxisAngle(new THREE.Vector3(0,0,1),a).add(new THREE.Vector3(c.x+dx*cs-dy*sn,c.y+dx*sn+dy*cs,p.z)))}catch(e){}}
 function toggle(v){playing=v==null?!playing:v; if(playing&&T>=t1-1)setT(t0); if(playing&&!S.time){S.time=true;syncBars()} $('play').textContent=playing?'Pause':'Play'; $('play').classList.toggle('on',playing)}
 function setT(v){T=v; $('slider').value=v; $('date').textContent=n2s(Math.floor(v)); gridState(); panel(); apply3D()}
 
@@ -277,8 +286,7 @@ async function initViewer(){
   const getToken=async cb=>{const t=await A.token(); if(!t)return A.login(); cb(t.access,Math.floor((t.exp-Date.now())/1000))};
   await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
   viewer=new Autodesk.Viewing.GuiViewer3D($('fv'));
-  viewer.start(); viewer.setGhosting(true); viewer.setGroundShadow(false); viewer.setLightPreset(1); viewer.setQualityLevel(false,true); viewer.setOptimizeNavigation(true);
-  try{viewer.setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark-theme':'light-theme')}catch(e){}
+  viewer.start(); viewer.setGhosting(true); viewer.setOptimizeNavigation(true); setLook(store.get('look')||'studio');
   viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
   // geometry keeps streaming in after a model is linked: re-apply visibility and colours when it has all arrived
   viewer.addEventListener(Autodesk.Viewing.GEOMETRY_LOADED_EVENT,ev=>{const m=ev.model; if(!m||!m._code||!models[m._code])return; try{viewer.hide(m.getRootId(),m)}catch(e){} applied={}; boundsCache={}; apply3D(); clearTimeout(refit); refit=setTimeout(()=>{if(S.zone||!moved)applyZone()},400)});
@@ -319,15 +327,31 @@ async function mapModel(code,m){
   viewer.hide(m.getRootId(),m);           // everything starts hidden; tags switch elements on
   return [code,tot,hit];
 }
+// rendering style: lighting, background, edges and shadows. 'fast' is for laptops without a good graphics card.
+const WIP='#ff6a1a', CLAY='#cfc9bf', SELC='#35c9ff';
+function setLook(k){
+  S.look=k; store.set('look',k); if($('look'))$('look').value=k; if(!viewer)return;
+  const studio=k==='studio', fast=k==='fast';
+  try{viewer.setTheme(studio?'dark-theme':'light-theme')}catch(e){}
+  try{viewer.setLightPreset(studio?2:0)}catch(e){}
+  try{viewer.setEnvMapBackground(false)}catch(e){}
+  if(studio)viewer.setBackgroundColor(38,50,62, 9,13,18); else if(k==='day')viewer.setBackgroundColor(214,228,240, 250,251,252); else viewer.setBackgroundColor(226,231,235, 226,231,235);
+  viewer.setQualityLevel(!fast,true);            // ambient shadows + anti-aliasing
+  try{viewer.setDisplayEdges(!!S.edges)}catch(e){}
+  viewer.setGroundShadow(false); viewer.setGroundReflection(false);
+  try{viewer.setProgressiveRendering(true)}catch(e){}
+  try{viewer.setSelectionColor(new THREE.Color(SELC),Autodesk.Viewing.SelectionType.MIXED)}catch(e){}
+  $('view').dataset.look=k; viewer.impl.invalidate(true,true,true);
+}
 const v4=(hex,mix,to)=>{const c=new THREE.Color(hex); if(to)c.lerp(new THREE.Color(to),mix); return new THREE.Vector4(c.r,c.g,c.b,1)};
 function apply3D(){
   if(!viewer||!tags)return; const builtC=css('--built'), hasSel=S.sel.size>0; let changed=false;
   const ghosting=S.vis==='ghost'&&hasSel || (S.ghost&&!(S.vis==='isolate'&&hasSel)); if(applied._g!==ghosting){viewer.setGhosting(ghosting);applied._g=ghosting;changed=true}
   tags.forEach(t=>{const s=st(t),isSel=S.sel.has(t.i);
     let show=pass(t)&&s>0; if(hasSel){if((S.vis==='isolate'||S.vis==='ghost')&&!isSel)show=false; if(S.vis==='hide'&&isSel)show=false}
-    let col=''; if(show)col=S.colorBy==='status'?(s===1?DC[t.disc]:'m'+DC[t.disc]):(colorMap[KEY[S.colorBy](t)]||'#999999');
+    let col=''; if(show)col=S.colorBy==='real'?(s===1?WIP:'t'+CLAY):S.colorBy==='status'?(s===1?DC[t.disc]:'m'+DC[t.disc]):(colorMap[KEY[S.colorBy](t)]||'#999999');
     const key=show?col:'-'; if(applied[t.i]===key)return; applied[t.i]=key; changed=true;
-    const c=show?(col[0]==='m'?v4(col.slice(1),.6,builtC):v4(col)):null;
+    let c=null; if(show){if(col[0]==='m')c=v4(col.slice(1),.6,builtC); else if(col[0]==='t'){c=v4(col.slice(1))} else c=v4(col)}
     for(const code in models){const ids=tagIds[code]&&tagIds[code][t.i]; if(!ids||!ids.length)continue; const m=models[code];
       if(!show)viewer.hide(ids,m); else{viewer.show(ids,m); const rec=!!(m.getInstanceTree&&m.getInstanceTree()); for(const id of ids){try{viewer.setThemingColor(id,c,m,rec)}catch(e){try{viewer.setThemingColor(id,c,m,false)}catch(e2){}}}}}});
   // blue highlight only in Highlight mode
@@ -405,8 +429,15 @@ function bind(){
   $('expand').onclick=()=>{const all=rows.some(r=>!r.leaf&&!r.open); if(all){let more=true; while(more){more=false; tree(); rows.forEach(r=>{if(!r.leaf&&!S.open.has(r.path)){S.open.add(r.path);more=true}})}}else S.open.clear(); $('expand').textContent=all?'Collapse all':'Expand all'; buildGrid()};
   $('file').onchange=e=>{const f=e.target.files[0]; if(f){const r=new FileReader(); r.onload=()=>readBook(r.result,f.name); r.readAsArrayBuffer(f)} e.target.value=''};
   $('export').onclick=exportXlsx;
+  $('look').value=store.get('look')||'studio'; $('look').onchange=e=>setLook(e.target.value);
+  $('edges').onclick=()=>{S.edges=!S.edges; $('edges').classList.toggle('on',S.edges); $('edges').textContent='Edges: '+(S.edges?'on':'off'); setLook(S.look)};
+  $('orbit').onclick=()=>{S.orbit=!S.orbit; $('orbit').classList.toggle('on',S.orbit); $('orbit').textContent='Orbit: '+(S.orbit?'on':'off')};
   $('g').addEventListener('click',rowClick); $('g').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();rowClick(e)}});
-  $('gantt').addEventListener('dblclick',e=>{const gt=e.target.closest('.gt'); if(!gt)return; toggle(false); setT(t0+(e.clientX-gt.getBoundingClientRect().left)/PX)});
+  // the date can be dragged in the Gantt: on the month strip or on the red line
+  let scrub=false; const toT=e=>{const r=$('g').getBoundingClientRect(); return Math.max(t0,Math.min(t1,t0+(e.clientX-r.left-LW)/PX))};
+  $('gantt').addEventListener('pointerdown',e=>{if(!(e.target.closest('#cur')||e.target.closest('.ghead .gt')))return; scrub=true; document.body.classList.add('scrub'); toggle(false); setT(toT(e)); e.preventDefault()});
+  addEventListener('pointermove',e=>{if(scrub)setT(toT(e))}); addEventListener('pointerup',()=>{if(scrub){scrub=false;document.body.classList.remove('scrub')}});
+  $('gantt').addEventListener('dblclick',e=>{const gt=e.target.closest('.gt'); if(!gt)return; toggle(false); setT(toT(e))});
   $('vsave').onclick=()=>{const cur=$('views').value, name=(cur||('View '+n2s(Math.floor(T))+' '+(S.zone||'all')+' '+new Date().toTimeString().slice(0,5))); const vs=store.get('views')||{}; vs[name]=snap(); store.set('views',vs); loadViews(); $('views').value=name};
   $('vdel').onclick=()=>{const vs=store.get('views')||{}; delete vs[$('views').value]; store.set('views',vs); loadViews()};
   $('views').onchange=e=>{const v=(store.get('views')||{})[e.target.value]; if(v)restore(v)};
