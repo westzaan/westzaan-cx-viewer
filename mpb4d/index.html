@@ -162,6 +162,9 @@ body.story .view{background:#e6eaee} body.story .adsk-viewing-viewer .progressbg
 #strip{position:absolute;left:12px;right:12px;top:10px;z-index:5;display:flex;align-items:flex-start;gap:6px;padding:7px 10px 44px}
 #strip .btn{padding:8px 12px;font-size:15px;line-height:20px} #strip #sspd{font-size:12px;font-family:var(--f-num);color:var(--mute);min-width:44px;padding:8px 6px}
 #months{position:relative;flex:1;display:flex;margin-left:6px}
+#ccard{position:absolute;left:152px;top:158px;width:262px;z-index:6;border-radius:14px;padding:12px 14px;font-size:12.5px;color:var(--ink)} #ccard .cc-h{display:flex;justify-content:space-between;align-items:center;font-size:14px} #ccard .cc-s{color:var(--mute);font-size:11px} #ccard .cc-big{font-size:26px;font-weight:700;margin-top:8px} #ccard .cc-big em{display:block;font-size:12px;font-weight:600;font-style:normal;color:#ffb340}
+#ccard table{width:100%;margin-top:8px;border-collapse:collapse} #ccard td{padding:2px 0} #ccard td.n{text-align:right;font-variant-numeric:tabular-nums} #ccard .cc-b{display:flex;align-items:center;gap:8px;margin-top:3px;color:var(--mute)} #ccard .cc-b span{flex:0 0 34px} #ccard .cc-b i{flex:1;height:8px;background:rgba(118,118,128,.3);border-radius:4px;overflow:hidden} #ccard .cc-b u{display:block;height:100%;background:#8e8e93} #ccard .cc-b b{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums} #ccard .cc-b.on{color:var(--ink)} #ccard .cc-b.on u{background:#bf5af2} #ccard .fine{font-size:10.5px;color:var(--mute);margin:8px 0 0}
+body.diff .stg em,body.diff .zr .pc{visibility:hidden} body.diff #months{visibility:hidden} body.diff #sspd{visibility:hidden}
 .mo{flex:1 1 0;text-align:center;padding:2px 0 6px;font-weight:600;font-size:13px;color:#fff;background:#2f6fc0;border-left:1px solid rgba(255,255,255,.22);cursor:pointer;user-select:none}
 .mo{position:relative} .wk{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;padding:6px;gap:4px;white-space:nowrap;background:rgba(28,28,30,.97);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45)} .mo:hover .wk{display:flex} .mo:hover{z-index:9}
 .wkb{border:0;border-radius:6px;background:#1c1c1e;color:#fff;font-size:11px;font-weight:600;padding:3px 8px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.45)} .wkb:hover{background:var(--accent)} .wkb.on{background:#ff453a}
@@ -266,10 +269,10 @@ body.story .view{background:#e6eaee} body.story .adsk-viewing-viewer .progressbg
 <div id="main">
   <div id="stage">
     <div id="vws">
-      <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><div id="ms3" hidden style="position:absolute;right:10px;bottom:10px;z-index:5;background:rgba(30,30,32,.82);color:#f2f2f7;border-radius:9px;padding:5px 9px;font:12px system-ui"></div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div></div>
+      <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><div id="ccard" class="glass" hidden></div><div id="ms3" hidden style="position:absolute;right:10px;bottom:10px;z-index:5;background:rgba(30,30,32,.82);color:#f2f2f7;border-radius:9px;padding:5px 9px;font:12px system-ui"></div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div></div>
       <div class="view" id="vwB" hidden><div class="fv" id="fvB"></div><div class="vlab glass" id="labB" hidden></div><div class="load glass" id="loadB" hidden></div></div>
         <div id="story" hidden>
-          <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Play week by week" title="Play week by week">&#9654;</button><button class="btn" id="sspd" type="button" aria-label="Play speed: seconds per week" title="Seconds per week while playing. Click to change, or use the + and - keys">8 s</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
+          <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Play week by week" title="Play week by week">&#9654;</button><button class="btn" id="sspd" type="button" aria-label="Play speed: seconds per week" title="Seconds per week while playing. Click to change, or use the + and - keys">8 s</button><button class="btn" id="sdiff" type="button" hidden title="Show this scenario only by what it leaves out, step by step, without dates" style="background:#bf5af2;color:#fff;white-space:nowrap">What is left out</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
           <div id="stages" class="glass"></div>
           <div id="zbars" class="glass"></div>
           <div id="capt" class="glass"></div>
@@ -305,9 +308,9 @@ body.story .view{background:#e6eaee} body.story .adsk-viewing-viewer .progressbg
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-07v23"></script>
-<script src="auth.js?v=2026-10-07v23"></script>
-<script type="module" src="v3d.js?v=2026-10-07v23"></script>
+<script src="config.js?v=2026-10-07v27"></script>
+<script src="auth.js?v=2026-10-07v27"></script>
+<script type="module" src="v3d.js?v=2026-10-07v27"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -444,7 +447,55 @@ const FLO=['Substructure','GF','1F','2F','3F','Roof'];
 // built work that would hide the floor we are looking at: envelope and roof, everything above that floor, and the ceiling and slab over it
 function blocksView(t){if(!cutF)return false; if(t.zone==='ENV'||t.zone==='ROOF')return true; const a=FLO.indexOf(t.floor), b=FLO.indexOf(cutF); if(a<0)return false; if(a>b)return true;
   return a===b&&(t.group==='AR-CEIL'||(t.zone.startsWith('STR-')&&(t.group==='ST-HCS'||t.group==='ST-TOP'||t.group==='ST-BEAM'||t.group==='ST-BRAC')))}
-const today=()=>Math.max(t0,Math.min(t1,Math.floor(Date.now()/DAY)));
+// ---------- "what is left out": a scenario shown only by its difference from Base. Sequence only, no dates.
+// One step = the left-out work of one stage on one floor, in the order Base would have built it.
+const dCache={};
+function dsteps(sid){
+  if(dCache[sid])return dCache[sid]; const m=new Map();
+  tags.forEach(t=>{if(!deferred(t,sid))return; const gi=Math.max(0,STG.findIndex(g=>g[1].includes(t.disc))), k=t.floor+'|'+gi; if(!m.has(k))m.set(k,{floor:t.floor,gi,ts:[],s:Infinity}); const o=m.get(k); o.ts.push(t); o.s=Math.min(o.s,t.s)});
+  const a=[...m.values()].sort((x,y)=>x.s-y.s||FLO.indexOf(x.floor)-FLO.indexOf(y.floor)); a.idx=new Map(); a.forEach((o,i)=>o.ts.forEach(t=>a.idx.set(t.i,i))); return dCache[sid]=a;
+}
+const diffOn=()=>!!S.diff&&S.mode==='story'&&S.scen!=='BASE';
+const blkD=(t,fl)=>{const c=cutF; cutF=fl; const r=blocksView(t); cutF=c; return r};
+function diffLook(t,sid){
+  const st=dsteps(sid), n=st.length, k=Math.min(S.dstep||0,n), fin=k>=n, fl=fin?null:st[k].floor;
+  if(deferred(t,sid)){if(fin)return ['solid','d',0]; const i=st.idx.get(t.i); if(i>k)return ['off','',0]; return blkD(t,fl)?['ghost','d',0]:['solid',i===k?'d':'#a48ccf',0]}
+  if(t.zone==='ENV'||t.zone==='ROOF')return ['ghost','',0];
+  if(fin)return t.floor==='Substructure'?['solid','o',0]:['ghost','',0];   // end picture: the building as a glass shell, everything left out in purple inside it
+  return blkD(t,fl)?['ghost','',0]:['solid','o',0];
+}
+// ---------- cost card: a small pop-up beside the picture, with the figures of the decision sheet
+function costHTML(){
+  const sc=scenOf(S.scen), base=scenOf('BASE'); if(!sc||!sc.money)return '<div class="cc-h"><b>Cost</b><button type="button" class="sbb" data-cost="x">&#215;</button></div><p>No cost figures in the data file.</p>';
+  const m=sc.money, bf=base&&base.money?base.money.final:null, dl=bf!=null?m.final-bf:null, all=(D.scen||[]).filter(x=>x.money), mx=Math.max(...all.map(x=>x.money.final)), mn=Math.min(...all.map(x=>x.money.final))-1.5;
+  const row=(l,v,c)=>'<tr'+(c?' class="'+c+'"':'')+'><td>'+l+'</td><td class="n">'+v+'</td></tr>';
+  return '<div class="cc-h"><b>'+esc(sc.name)+'</b><button type="button" class="sbb" data-cost="x" title="Close" aria-label="Close">&#215;</button></div><div class="cc-s">Cost, € million · decision sheet figures</div>'
+    +'<div class="cc-big">'+eur(m.final)+(dl!=null&&S.scen!=='BASE'?'<em>'+(dl>=0?'+':'−')+'€'+Math.abs(dl).toFixed(2)+'m against Base</em>':'')+'</div><div class="cc-s">Final cost, including what is already spent</div>'
+    +'<table>'+row('Committed, signed',eur(m.committed))+row('Deferred to Phase 2',eur(m.deferred))+row('Extra cost, certain',eur(m.extra))+row('Deferral risk',eur(m.risk))+'</table>'
+    +'<div class="cc-s" style="margin-top:8px">Final cost of every scenario</div>'+all.map(x=>'<div class="cc-b'+(x.id===S.scen?' on':'')+'"><span>'+esc(x.id==='BASE'?'Base':x.id)+'</span><i><u style="width:'+Math.max(4,(x.money.final-mn)/(mx-mn)*100)+'%"></u></i><b>'+x.money.final.toFixed(2)+'</b></div>').join('')
+    +'<p class="fine">'+esc(D.scenNote||'')+'</p>';
+}
+function costUI(){const el=$('ccard'); if(!el)return; const on=!!S.cost&&S.mode==='story'; el.hidden=!on; if(on)el.innerHTML=costHTML()}
+function diffStep(d){const n=dsteps(S.scen).length; S.dstep=Math.max(0,Math.min(n,(S.dstep||0)+d)); refresh()}
+function diffHTML(sid){
+  const st=dsteps(sid), n=st.length, k=Math.min(S.dstep||0,n), fin=k>=n, sc=scenOf(sid), done=st.slice(0,fin?n:k+1).reduce((a,o)=>a+o.ts.length,0), tot=st.reduce((a,o)=>a+o.ts.length,0);
+  const names=ts=>{const m=new Map(); ts.forEach(t=>{const nm=t.name.replace(/ \(.*\)$/,''); if(!m.has(nm))m.set(nm,new Set()); m.get(nm).add(t.zoneName.replace(/^.. - /,''))}); return [...m.entries()]};
+  const btn=(k2,l,t)=>'<button type="button" class="sbb" data-df="'+k2+'" title="'+t+'" style="width:auto;padding:0 10px">'+l+'</button>';
+  let h='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:sid)+'</b> · what is left out compared with Base</div><div class="sbx">'+(fin?'All of it: '+tot+' work packages wait for Phase 2.':'Step '+(k+1)+' of '+n+' · '+esc(st[k].floor)+' · '+esc(STG[st[k].gi][0])+' · '+done+' of '+tot+' packages so far')+'</div>'+btn('prev','&#8249;','Previous step')+btn('next','&#8250;','Next step')+btn('end','All','Everything that is left out, in one picture')+btn('off','Back to the timeline','Back to the timeline')+'<button type="button" class="sbb" data-cost="t" title="Show or hide the cost figures of this scenario" style="width:auto;padding:0 10px">€ Cost</button>'+'</div>';
+  if(!S.sbMin){const it=fin?names(st.flatMap(o=>o.ts)):names(st[k].ts);
+    h+='<div class="sbg" style="grid-template-columns:1fr"><div class="sbc p2"><h5>'+(fin?'Left for Phase 2':'Left out in this step')+' <span>'+it.length+'</span></h5><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 14px">'+it.slice(0,12).map(([nm,z])=>'<div class="sbi"><i style="background:'+DEFC+'"></i><span>'+esc(nm)+' <em>'+esc([...z].slice(0,3).join(', ')+(z.size>3?' +'+(z.size-3):''))+'</em></span></div>').join('')+(it.length>12?'<div class="sbi more">and '+(it.length-12)+' more</div>':'')+'</div></div></div>'
+      +'<div class="lg"><span><i style="background:'+DEFC+'"></i>Left out in this step</span><span><i style="background:#a48ccf"></i>Left out in earlier steps</span><span><i style="background:#d9dde2"></i>Built in this scenario</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>See-through: facade, roof and what is above</span></div>'}
+  return h;
+}
+const realToday=()=>Math.max(t0,Math.min(t1,Math.floor(Date.now()/DAY)));
+// the Overview skips a quiet opening: if the planning has three or more weeks without any work in the first months, the timeline starts where the work picks up again
+let sStart=null;
+function storyStart(){
+  if(sStart!=null)return sStart; const td=realToday(), lv=tags.filter(t=>!t.built); let gapEnd=null, run=0;
+  for(let w=td;w<td+150;w+=7){const busy=lv.some(t=>t.s<=w+6&&t.f>=w); if(!busy)run++; else{if(run>=3)gapEnd=w; run=0}}
+  if(gapEnd==null)return sStart=td; const nx=Math.min(...lv.filter(t=>t.s>=gapEnd-7).map(t=>t.s)); return sStart=Math.max(td,nx-1);
+}
+const today=()=>S.mode==='story'&&tags?storyStart():realToday();
 const liveOf=sid=>tags.filter(t=>!t.built&&!deferred(t,sid));
 const frac=t=>t.built||T>t.f?1:T<t.s?0:(T-t.s)/(t.f-t.s+1);
 function months(){ML=[]; const a=new Date(today()*DAY), e=tags.filter(t=>!t.built).reduce((m,t)=>Math.max(m,t.f),0); let y=a.getUTCFullYear(),m=a.getUTCMonth();
@@ -455,12 +506,14 @@ function weeksOf(o){const out=[], td=today(); for(let e=o.s;e<=o.e;e++){if(new D
 const xOf=d=>{const i=ML.findIndex(o=>d<=o.e); if(i<0)return 100; const o=ML[i]; return (i+Math.max(0,Math.min(1,(d-o.s+1)/(o.e-o.s+1))))/ML.length*100};
 // the few dates worth a flag on the strip; they follow the planner's dates and the chosen scenario
 function flags(){
-  const sid=S.scen, lv=liveOf(sid), mx=f=>{const a=lv.filter(f); return a.length?Math.max(...a.map(t=>t.f)):null}, labs=['GF-LAB','1F-QC','1F-PD','1F-CTR'], out=[['Today',today()]];
+  const sid=S.scen, lv=liveOf(sid), mx=f=>{const a=lv.filter(f); return a.length?Math.max(...a.map(t=>t.f)):null}, labs=['GF-LAB','1F-QC','1F-PD','1F-CTR'], out=[[today()>realToday()?'Start':'Today',today()]];
   const r=mx(t=>t.zone==='ROOF'&&(t.disc==='FA'||t.disc==='ST')), en=mx(t=>t.zone==='ENV'); if(r)out.push(['Roof closed',r]); if(en)out.push(['Envelope closed',en]);
   if(!tags.some(t=>labs.includes(t.zone)&&deferred(t,sid))){const l=mx(t=>labs.includes(t.zone)); if(l)out.push(['Labs complete',l])}
   const e=mx(()=>true); if(e)out.push([sid==='BASE'?'Building complete':'End of Phase 1',e]); return out;
 }
 function storyUI(){
+  costUI();
+  {const sd=$('sdiff'); if(sd){sd.hidden=S.scen==='BASE'; sd.textContent=diffOn()?'Back to the timeline':'What is left out'}}
   const on=S.mode==='story'; document.body.classList.toggle('story',on); $('story').hidden=!on; if(!on||!tags)return; if(!ML.length)months();
   const sid=S.scen, fl=flags(), d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e));
   $('months').innerHTML=ML.map((o,i)=>'<div class="mo'+(i===ci?' cur':o.e<d?' past':'')+'" data-i="'+i+'"><small>'+(o.first?o.y:'')+'</small>'+o.lab+'<span class="wk">'+weeksOf(o).map(e=>'<button type="button" class="wkb'+(e===d?' on':'')+'" data-d="'+e+'" title="Week '+isoWk(e)+': '+n2s(e-6).slice(0,5)+' to '+n2s(e).slice(0,5)+'">wk '+isoWk(e)+'</button>').join('')+'<button type="button" class="wkb'+(o.e===d?' on':'')+'" data-d="'+o.e+'" title="End of the month">end</button></span></div>').join('')+'<div id="mk" style="left:'+xOf(d)+'%"></div>'
@@ -473,6 +526,7 @@ function storyUI(){
     return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
     +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Two views when two floors are busy</span><button type="button" class="sw'+(S.auto2?' on':'')+'" data-o="auto2" aria-label="Two views when two floors are busy"></button></div><div class="fo"><span>See through what hides the work</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
   // ---- storyboard: what starts, continues and finishes in the selected week (or month), in plain words
+  document.body.classList.toggle('diff',diffOn()); if(diffOn()){const CP=$('capt'); CP.classList.toggle('top',S.sbTop); CP.classList.toggle('min',S.sbMin); $('vws').classList.toggle('sbtop',S.sbTop); CP.innerHTML=diffHTML(sid); $('splayb').textContent=playI?'❚❚':'▶'; $('sspd').textContent=S.spw+' s'; return}
   const sc=scenOf(sid), f=fl.find(x=>x[1]===d), mo=ML[ci], ws=d>=mo.e?mo.s:d-6, okd=t=>!S.disc.size||S.disc.has(t.disc), lv=liveOf(sid).filter(okd);
   const zs=a=>{const z=[...new Set(a.map(t=>t.zoneName.replace(/^.. - /,'')))]; return z.slice(0,3).join(', ')+(z.length>3?' +'+(z.length-3):'')};
   const col=(title,ts,cls)=>{const m=new Map(); ts.forEach(t=>{if(!m.has(t.name))m.set(t.name,[]); m.get(t.name).push(t)}); const it=[...m.entries()].sort((a,b)=>b[1].reduce((x,t)=>x+t.n,0)-a[1].reduce((x,t)=>x+t.n,0));
@@ -481,7 +535,7 @@ function storyUI(){
   const nx=fl.filter(x=>x[1]>d)[0], wk=nx?Math.max(1,Math.round((nx[1]-d)/7)):0, per=d>=mo.e?'this month':'this week', nG=a=>new Set(a.map(t=>t.name)).size;
   const head=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):(st.length+co.length+fi.length?[nG(st)?nG(st)+' start':'',nG(co)?nG(co)+' continue':'',nG(fi)?nG(fi)+' finish':''].filter(Boolean).join(', ')+' '+per+'.':'No work '+per+'.')+(nx?' Next: '+nx[0]+' in '+wk+(wk===1?' week':' weeks')+'.':'');
   const nd=tags.filter(t=>deferred(t,sid)).length, CP=$('capt'); CP.classList.toggle('top',S.sbTop); CP.classList.toggle('min',S.sbMin); $('vws').classList.toggle('sbtop',S.sbTop);
-  CP.innerHTML='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="sbx">'+esc(head)+'</div><button type="button" class="sbb" data-sb="pos" title="Move the storyboard to the '+(S.sbTop?'bottom':'top')+'" aria-label="Move the storyboard">'+(S.sbTop?'&#8595;':'&#8593;')+'</button><button type="button" class="sbb" data-sb="min" title="'+(S.sbMin?'Show':'Hide')+' the details" aria-label="Show or hide the details">'+(S.sbMin?'+':'&#8211;')+'</button></div>'
+  CP.innerHTML='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="sbx">'+esc(head)+'</div>'+(sid!=='BASE'?'<button type="button" class="sbb" data-df="on" title="Show this scenario only by what it leaves out, step by step, without dates" style="width:auto;padding:0 10px;background:'+DEFC+';color:#fff">Show what is left out</button>':'')+'<button type="button" class="sbb" data-cost="t" title="Show or hide the cost figures of this scenario" style="width:auto;padding:0 10px">€ Cost</button>'+'<button type="button" class="sbb" data-sb="pos" title="Move the storyboard to the '+(S.sbTop?'bottom':'top')+'" aria-label="Move the storyboard">'+(S.sbTop?'&#8595;':'&#8593;')+'</button><button type="button" class="sbb" data-sb="min" title="'+(S.sbMin?'Show':'Hide')+' the details" aria-label="Show or hide the details">'+(S.sbMin?'+':'&#8211;')+'</button></div>'
     +(S.sbMin||msFinal?'':'<div class="sbg'+(sk.length?' four':'')+'">'+col('Starting',st,'s')+col('Continuing',co,'c')+col('Finishing',fi,'f')+(sk.length?col('Skipped here, waits for Phase 2',sk,'p2'):'')+'</div>')
     +(S.sbMin?'':(cutF?(two?'<div class="cx">Two busy floors: left looks at '+esc(cutF)+', right at '+esc(cutF2)+'.</div>':'<div class="cx">Looking at '+esc(cutF)+': facade, roof and the floors above are see-through.</div>'):'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:#d9dde2"></i>Built: as built</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>See-through: what would hide the work</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>');
   $('splayb').textContent=playI?'❚❚':'▶'; $('sspd').textContent=S.spw+' s';
@@ -489,8 +543,8 @@ function storyUI(){
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
 function stepMonth(dir){const d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e)); let ni=ci+dir; if(dir>0&&d<ML[ci].e)ni=ci; if(ni>=ML.length)return false; goDay(ni<0?today():Math.max(today(),ML[ni].e)); return true}
 const SPD=[12,8,5,3];   // seconds one week stays on screen
-function playTick(){const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7)); playI=setTimeout(playTick,S.spw*1000)}
-function playMonths(on){clearTimeout(playI); playI=0; if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setTimeout(playTick,Math.min(1500,S.spw*1000))} storyUI()}
+function playTick(){if(diffOn()){const n=dsteps(S.scen).length; if((S.dstep||0)>=n){playMonths(false);return} S.dstep=(S.dstep||0)+1; refresh(); playI=setTimeout(playTick,Math.max(2500,S.spw*500)); return} const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7)); const d2=Math.floor(T), busy=liveOf(S.scen).some(t=>t.s<=d2&&t.f>=d2-6); playI=setTimeout(playTick,busy?S.spw*1000:700)}   /* weeks without any planned work pass quickly */
+function playMonths(on){clearTimeout(playI); playI=0; if(on&&diffOn()){if((S.dstep||0)>=dsteps(S.scen).length){S.dstep=0; refresh()} playI=setTimeout(playTick,Math.max(2500,S.spw*500)); storyUI(); return} if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setTimeout(playTick,Math.min(1500,S.spw*1000))} storyUI()}
 function setSpeed(dir){const i=SPD.indexOf(S.spw); S.spw=dir===0?SPD[(i+1)%SPD.length]:SPD[Math.max(0,Math.min(SPD.length-1,i+dir))]; store.set('spw',S.spw); if(playI){clearTimeout(playI); playI=setTimeout(playTick,S.spw*1000)} storyUI()}
 
 /* ---------- inventory grid with Gantt bars ---------- */
@@ -662,6 +716,7 @@ function makeView(key){
   };
   // what a tag looks like right now in this view: [state, colour key, grown step]
   const lookOf=(t,hasSel,sid)=>{
+    if(S.diff&&S.mode==='story'&&sid!=='BASE')return diffLook(t,sid);
     if(S.mode==='story'&&S.stg!=null&&!S.disc.has(t.disc)&&inZone(t,V.zone)&&!S.off.has(t.i))return (t.built||T>t.f)&&!deferred(t,sid)?['ghost','',0]:['off','',0];   // one stage chosen: the rest of the building stays as grey glass
     if(!pass(t,V.zone)||S.off.has(t.i))return ['off','',0];
     const isSel=S.sel.has(t.i); if(hasSel){if(S.vis==='isolate'&&!isSel)return ['off','',0]; if(S.vis==='hide'&&isSel)return ['off','',0]; if(S.vis==='ghost'&&!isSel)return ['ghost','',0]}
@@ -763,8 +818,18 @@ function view3(V,lookOf){
     const q=n>12?0.04:0, pc=(a,p)=>{a.sort((x,y)=>x-y); return a[Math.round(p*(a.length-1))]};
     return V.bounds[k2]=new THREE.Box3(new THREE.Vector3(pc(xs[0],q),pc(xs[1],q),pc(xs[2],q)),new THREE.Vector3(pc(xs[3],1-q),pc(xs[4],1-q),pc(xs[5],1-q)));
   };
-  // the camera frames the whole building once and then stays put: it does not jump from floor to floor, and never moves after you have turned the model yourself
-  V.focusFit=()=>{if(!R||S.mode!=='story')return; if(V.zone){V.fkey=null;return} if(V.fkey==='bld'||V.moved)return; V.fkey='bld'; const bx=V.boundsOf(t=>t.zone!=='EXT'&&t.zone!=='SUB','bld'); if(bx){const c=bx.getCenter(new THREE.Vector3()), h=bx.getSize(new THREE.Vector3()).multiplyScalar(0.40); V.look(new THREE.Box3(c.clone().sub(h),c.clone().add(h)))}};
+  // camera: frames the whole building, or (with "Camera goes to the work") the part of the building where this week's work is.
+  // It keeps the direction you last turned it to, and only moves when the work has clearly moved to another place.
+  V.focusFit=()=>{
+    if(!R||S.mode!=='story')return; if(V.zone){V.fkey=null;V.lastT=null;return}
+    const bb=V.boundsOf(t=>t.zone!=='EXT'&&t.zone!=='SUB','bld'); if(!bb)return; const bc=bb.getCenter(new THREE.Vector3()), bh=bb.getSize(new THREE.Vector3()).multiplyScalar(0.40); let c=bc, h=bh;
+    if(S.follow){let ids=null; if(diffOn()){const st=dsteps(S.scen), k=S.dstep||0; if(k<st.length)ids=new Set(st[k].ts.map(t=>t.i))} else if(focOn&&FOC.size)ids=FOC;
+      if(ids){V.bounds['wk']=null; const wb=V.boundsOf(t=>ids.has(t.i)&&t.zone!=='EXT'&&t.zone!=='SUB'&&t.zone!=='ENV'&&t.zone!=='ROOF','wk');
+        if(wb){c=wb.getCenter(new THREE.Vector3()); h=wb.getSize(new THREE.Vector3()).multiplyScalar(0.5*1.25); h.x=Math.min(bh.x,Math.max(h.x,bh.x*0.38)); h.y=Math.min(bh.y,Math.max(h.y,bh.y*0.38)); h.z=Math.max(h.z,2);   // never closer than about a third of the building
+          c.x=Math.max(bc.x-bh.x+h.x,Math.min(bc.x+bh.x-h.x,c.x)); c.y=Math.max(bc.y-bh.y+h.y,Math.min(bc.y+bh.y-h.y,c.y))}}}
+    const L=V.lastT; if(L){const dc=Math.hypot(c.x-L.c.x,c.y-L.c.y,c.z-L.c.z), sz=Math.max(h.x,h.y), r=sz/L.s; if(dc<0.22*L.s&&r>0.72&&r<1.4)return}
+    V.lastT={c:c.clone(),s:Math.max(h.x,h.y)}; V.look(new THREE.Box3(c.clone().sub(h),c.clone().add(h)));
+  };
   V.look=bx=>{if(R)R.fit([bx.min.x,bx.min.y,bx.min.z],[bx.max.x,bx.max.y,bx.max.z])};
   V.orbit=dt=>{if(R)R.orbit(dt)};
 }
@@ -897,7 +962,7 @@ function bind(){
   // menus: one open at a time, closed by a click elsewhere
   document.addEventListener('click',e=>{const b=e.target.closest('[data-m]'); document.querySelectorAll('.menu').forEach(m=>{if(b&&m.id===b.dataset.m)m.hidden=!m.hidden; else if(!e.target.closest('.menu')||e.target.closest('[data-close] button'))m.hidden=true}); document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('open',!$(x.dataset.m).hidden))});
   const seg=(id,fn)=>{$(id).onclick=e=>{const b=e.target.closest('button'); if(b)fn(b.dataset.v)}};
-  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; S.mslev=S.scen==='BASE'?'pkg':'zone'; S.msI=9999; refresh(); applyRender('bg')};
+  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; S.dstep=0; if(S.scen==='BASE')S.diff=false; S.mslev=S.scen==='BASE'?'pkg':'zone'; S.msI=9999; refresh(); applyRender('bg')};
   $('mZoneList').onclick=e=>{const b=e.target.closest('[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); syncZones(); const sp=span(tags.filter(t=>pass(t))); $('gantt').scrollLeft=sp?Math.max(0,(sp[0]-t0)*PX-40):0};
   $('fig').onclick=()=>{S.fig=!S.fig; syncBars(); scard()}; $('bt').onclick=()=>{S.bt=!S.bt; if(S.bt)S.fig=true; syncBars(); scard()};
   $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); if(S.mode==='ms')goMS(MS.length-1); else{setT(t0); toggle(true)}}};
@@ -905,8 +970,10 @@ function bind(){
   addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){if(e.key==='+'||e.key==='='){setSpeed(1);return} if(e.key==='-'){setSpeed(-1);return} if(e.key===' '){e.preventDefault();playMonths(!playI);return} const k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(k){e.preventDefault(); playMonths(false); if(e.shiftKey)goDay(Math.max(today(),Math.min(ML[ML.length-1].e,Math.floor(T)+7*k))); else stepMonth(k)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
   seg('mode',v=>{S.mode=v; playMonths(false); views.forEach(V=>{V.fkey=null}); if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} if(v!=='story'&&S.stg!=null){S.stg=null;S.disc=new Set()} resetApplied(); refresh(); setTimeout(()=>{resizeAll(); if(v!=='story')buildGrid()},60); syncZones(true); applyRender('bg')});
   $('months').onclick=e=>{const w=e.target.closest('.wkb'), f=e.target.closest('.flag'), m=e.target.closest('.mo'); playMonths(false); if(w)goDay(+w.dataset.d); else if(f)goDay(+f.dataset.d); else if(m)goDay(Math.max(today(),ML[+m.dataset.i].e))};
-  $('capt').onclick=e=>{const b=e.target.closest('[data-sb]'); if(!b)return; if(b.dataset.sb==='pos')S.sbTop=!S.sbTop; else S.sbMin=!S.sbMin; storyUI()};
-  $('splayb').onclick=()=>playMonths(!playI); $('sspd').onclick=()=>setSpeed(0); {const v=store.get('spw'); if(SPD.includes(v))S.spw=v} $('sprev').onclick=()=>{playMonths(false);stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false);stepMonth(1)};
+  $('sdiff').onclick=()=>{playMonths(false); S.diff=!diffOn(); S.dstep=0; refresh()};
+  $('ccard').onclick=e=>{if(e.target.closest('[data-cost]')){S.cost=false; costUI()}};
+  $('capt').onclick=e=>{if(e.target.closest('[data-cost]')){S.cost=!S.cost; costUI(); return} const df=e.target.closest('[data-df]'); if(df){const k=df.dataset.df; playMonths(false); if(k==='on'){S.diff=true; S.dstep=0; refresh()} else if(k==='off'){S.diff=false; refresh()} else if(k==='end')diffStep(999); else diffStep(k==='prev'?-1:1); return} const b=e.target.closest('[data-sb]'); if(!b)return; if(b.dataset.sb==='pos')S.sbTop=!S.sbTop; else S.sbMin=!S.sbMin; storyUI()};
+  $('splayb').onclick=()=>playMonths(!playI); $('sspd').onclick=()=>setSpeed(0); {const v=store.get('spw'); if(SPD.includes(v))S.spw=v} $('sprev').onclick=()=>{playMonths(false); if(diffOn())diffStep(-1); else stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false); if(diffOn())diffStep(1); else stepMonth(1)};
   $('stages').onclick=e=>{const b=e.target.closest('.stg'); if(!b)return; const i=+b.dataset.g; S.stg=S.stg===i?null:i; S.disc=new Set(S.stg==null?[]:STG[S.stg][1]); refresh()};
   $('zbars').onclick=e=>{const o=e.target.closest('[data-o]'); if(o){S[o.dataset.o]=!S[o.dataset.o]; views.forEach(V=>{V.fkey=null}); refresh(); return} const b=e.target.closest('.zr'); if(!b)return; S.zone=S.zone===b.dataset.z?null:b.dataset.z; refresh()};
   seg('mslev',v=>{S.mslev=v; S.msI=9999; refresh()}); seg('btab',v=>{S.btab=v; syncBars(); msUI(); if(v!=='ms')buildGrid()});

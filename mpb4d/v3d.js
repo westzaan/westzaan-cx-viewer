@@ -48,9 +48,9 @@ function create(box,man,buf){
   I.fit=(lo,hi,instant)=>{
     const c=new T3.Vector3((lo[0]+hi[0])/2,(lo[1]+hi[1])/2,(lo[2]+hi[2])/2);
     // exact fit: how far back must the camera be so that all eight corners of the box are inside the picture
-    const fw=DIR.clone().negate(), rt=new T3.Vector3().crossVectors(fw,new T3.Vector3(0,0,1)).normalize(), up=new T3.Vector3().crossVectors(rt,fw), tv=Math.tan(camera.fov*Math.PI/360), th=tv*camera.aspect; let d=2;
+    const dir=I.fitted?camera.position.clone().sub(controls.target).normalize():DIR.clone(); if(dir.z<0.15){dir.z=0.15; dir.normalize()} const fw=dir.clone().negate(), rt=new T3.Vector3().crossVectors(fw,new T3.Vector3(0,0,1)).normalize(), up=new T3.Vector3().crossVectors(rt,fw), tv=Math.tan(camera.fov*Math.PI/360), th=tv*camera.aspect; let d=2;
     for(const x of [lo[0],hi[0]])for(const y of [lo[1],hi[1]])for(const z of [lo[2],hi[2]]){const v=new T3.Vector3(x,y,z).sub(c); d=Math.max(d,-v.dot(fw)+Math.max(Math.abs(v.dot(rt))/th,Math.abs(v.dot(up))/tv))}
-    d*=1.04; const p=c.clone().addScaledVector(DIR,d);
+    d*=1.04; const p=c.clone().addScaledVector(dir,d);
     camera.near=Math.max(0.3,d/400); camera.far=d*8+400; camera.updateProjectionMatrix();
     if(instant||!I.fitted){I.fitted=true; camera.position.copy(p); controls.target.copy(c); controls.update(); dirty=2; return}
     tween={t0:performance.now(),p0:camera.position.clone(),c0:controls.target.clone(),p1:p,c1:c};
