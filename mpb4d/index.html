@@ -305,9 +305,9 @@ body.story .view{background:#e6eaee} body.story .adsk-viewing-viewer .progressbg
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-07v22"></script>
-<script src="auth.js?v=2026-10-07v22"></script>
-<script type="module" src="v3d.js?v=2026-10-07v22"></script>
+<script src="config.js?v=2026-10-07v23"></script>
+<script src="auth.js?v=2026-10-07v23"></script>
+<script type="module" src="v3d.js?v=2026-10-07v23"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -757,10 +757,14 @@ function view3(V,lookOf){
     R.touch();
   };
   V.boundsOf=(pred,k2)=>{
-    if(V.bounds[k2])return V.bounds[k2]; const bx=new THREE.Box3(); let n=0;
-    tags.filter(pred).forEach(t=>{const b=BB[t.tag]; if(!b)return; n++; bx.expandByPoint(new THREE.Vector3(b[0],b[1],b[2])); bx.expandByPoint(new THREE.Vector3(b[3],b[4],b[5]))});
-    return n?(V.bounds[k2]=bx):null;
+    if(V.bounds[k2])return V.bounds[k2]; const xs=[[],[],[],[],[],[]];
+    tags.filter(pred).forEach(t=>{const b=BB[t.tag]; if(b)for(let i=0;i<6;i++)xs[i].push(b[i])}); const n=xs[0].length; if(!n)return null;
+    // a few work packages have stray parts far from the building: with many packages, leave the outer 4% out so the building fills the picture
+    const q=n>12?0.04:0, pc=(a,p)=>{a.sort((x,y)=>x-y); return a[Math.round(p*(a.length-1))]};
+    return V.bounds[k2]=new THREE.Box3(new THREE.Vector3(pc(xs[0],q),pc(xs[1],q),pc(xs[2],q)),new THREE.Vector3(pc(xs[3],1-q),pc(xs[4],1-q),pc(xs[5],1-q)));
   };
+  // the camera frames the whole building once and then stays put: it does not jump from floor to floor, and never moves after you have turned the model yourself
+  V.focusFit=()=>{if(!R||S.mode!=='story')return; if(V.zone){V.fkey=null;return} if(V.fkey==='bld'||V.moved)return; V.fkey='bld'; const bx=V.boundsOf(t=>t.zone!=='EXT'&&t.zone!=='SUB','bld'); if(bx){const c=bx.getCenter(new THREE.Vector3()), h=bx.getSize(new THREE.Vector3()).multiplyScalar(0.40); V.look(new THREE.Box3(c.clone().sub(h),c.clone().add(h)))}};
   V.look=bx=>{if(R)R.fit([bx.min.x,bx.min.y,bx.min.z],[bx.max.x,bx.max.y,bx.max.z])};
   V.orbit=dt=>{if(R)R.orbit(dt)};
 }

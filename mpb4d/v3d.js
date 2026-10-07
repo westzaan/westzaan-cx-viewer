@@ -6,12 +6,12 @@ import {OrbitControls} from './OrbitControls.js';
 T3.ShaderChunk.shadowmap_vertex=T3.ShaderChunk.shadowmap_vertex.replace('vec3 shadowWorldNormal = inverseTransformDirection( transformedNormal, viewMatrix );','vec3 shadowWorldNormal = vec3( 0.0 );');
 const DIR=new T3.Vector3(-0.62,-0.5,0.8).normalize();   // from the west side, from above
 function create(box,man,buf){
-  const low0=new URLSearchParams(location.search).get('q')==='low';
+  const QS=new URLSearchParams(location.search), low0=QS.get('q')==='low', SH=QS.get('shadows')==='1';   // shadows are off unless asked for
   const renderer=new T3.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); renderer.setClearColor('#e6eaee'); renderer.toneMapping=T3.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
   const cv=renderer.domElement; cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block;outline:none'; box.appendChild(cv);
   const scene=new T3.Scene(), camera=new T3.PerspectiveCamera(32,1,0.5,2000); camera.up.set(0,0,1);
   scene.add(new T3.HemisphereLight(0xffffff,0xb9c0c9,1.15)); const sun=new T3.DirectionalLight(0xffffff,1.9); sun.position.set(-60,-90,140); scene.add(sun); scene.add(sun.target);
-  renderer.shadowMap.enabled=true; renderer.shadowMap.type=T3.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false; sun.castShadow=true; sun.shadow.mapSize.set(4096,4096); sun.shadow.bias=-0.0012; sun.shadow.normalBias=0; const fill=new T3.DirectionalLight(0xffffff,0.5); fill.position.set(80,60,40); scene.add(fill);
+  renderer.shadowMap.enabled=SH; renderer.shadowMap.type=T3.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false; sun.castShadow=SH; sun.shadow.mapSize.set(4096,4096); sun.shadow.bias=-0.0012; sun.shadow.normalBias=0; const fill=new T3.DirectionalLight(0xffffff,0.5); fill.position.set(80,60,40); scene.add(fill);
   const controls=new OrbitControls(camera,cv); controls.enableDamping=false; controls.zoomSpeed=1.2; controls.rotateSpeed=0.8;
   const I={ms:0,tris:0,onPick:null,low:low0}, tags={}, list=[]; let dirty=3, tween=null;
   for(const m of man.tags){
@@ -25,10 +25,10 @@ function create(box,man,buf){
     const t={mesh,mat,edges,key:''}; tags[m.tag]=t; list.push(t);
   }
   { // the sun and its shadow cover the whole building; the shadow is drawn again only when the work on show changes, not when the camera moves
-    const lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9]; let gz=1e9; const pc=(k,q)=>{const a=man.tags.map(m=>m.bb[k]).sort((x,y)=>x-y); return a[Math.round(q*(a.length-1))]}; for(let i=0;i<3;i++){lo[i]=pc(i,0.03); hi[i]=pc(i+3,0.97)} gz=pc(2,0.25);   /* a few stray parts far away must not stretch the shadow area */
+    const lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9]; let gz=1e9; const pc=(k,q)=>{const a=man.tags.map(m=>m.bb[k]).sort((x,y)=>x-y); return a[Math.round(q*(a.length-1))]}; for(let i=0;i<3;i++){lo[i]=pc(i,0.03); hi[i]=pc(i+3,0.97)} gz=pc(2,0.03);   /* a few stray parts far away must not stretch the shadow area */
     const c=new T3.Vector3((lo[0]+hi[0])/2,(lo[1]+hi[1])/2,(lo[2]+hi[2])/2), r=Math.hypot(hi[0]-lo[0],hi[1]-lo[1],hi[2]-lo[2])/2;
     sun.target.position.copy(c); sun.position.copy(c).add(new T3.Vector3(-0.45,-0.8,1.25).normalize().multiplyScalar(r*2)); const sc=sun.shadow.camera; sc.left=-r; sc.right=r; sc.top=r; sc.bottom=-r; sc.near=r*0.2; sc.far=r*4; sc.updateProjectionMatrix();
-    const ground=new T3.Mesh(new T3.PlaneGeometry(r*5,r*5),new T3.ShadowMaterial({opacity:0.14})); ground.position.set(c.x,c.y,gz-0.05); ground.receiveShadow=true; scene.add(ground); I.ground=ground;
+    const ground=new T3.Mesh(new T3.PlaneGeometry(r*5,r*5),new T3.ShadowMaterial({opacity:0.14})); ground.position.set(c.x,c.y,gz-0.05); ground.receiveShadow=true; ground.material.depthWrite=false; ground.visible=SH; scene.add(ground); I.ground=ground;
   }
   // state: 'off' | 'built' | 'solid' | 'ghost'.  hex: colour for solid, or for coloured glass.  sel: picked in the list
   I.setLook=(tag,state,hex,sel)=>{
@@ -42,7 +42,7 @@ function create(box,man,buf){
     m.needsUpdate=true; dirty=2;
   };
   I.touch=()=>{dirty=2};
-  I.setLow=on=>{I.low=!!on; sun.castShadow=!on; I.ground.visible=!on; renderer.shadowMap.needsUpdate=true; for(const t of list)t.mat.needsUpdate=true; renderer.setPixelRatio(on?1:Math.min(devicePixelRatio,2)); for(const t of list)if(t.edges)t.edges.visible=!on&&!t.mat.transparent; I.resize()};
+  I.setLow=on=>{I.low=!!on; sun.castShadow=SH&&!on; I.ground.visible=SH&&!on; renderer.shadowMap.needsUpdate=true; for(const t of list)t.mat.needsUpdate=true; renderer.setPixelRatio(on?1:Math.min(devicePixelRatio,2)); for(const t of list)if(t.edges)t.edges.visible=!on&&!t.mat.transparent; I.resize()};
   I.resize=()=>{const w=box.clientWidth||2,h=box.clientHeight||2; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); dirty=2};
   // turn and move the camera so the box fills the picture; a short glide instead of a jump
   I.fit=(lo,hi,instant)=>{
