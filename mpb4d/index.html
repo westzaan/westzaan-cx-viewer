@@ -308,9 +308,9 @@ body.diff .stg em,body.diff .zr .pc{visibility:hidden} body.diff #months{visibil
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-07v27"></script>
-<script src="auth.js?v=2026-10-07v27"></script>
-<script type="module" src="v3d.js?v=2026-10-07v27"></script>
+<script src="config.js?v=2026-10-07v29"></script>
+<script src="auth.js?v=2026-10-07v29"></script>
+<script type="module" src="v3d.js?v=2026-10-07v29"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -459,9 +459,11 @@ const diffOn=()=>!!S.diff&&S.mode==='story'&&S.scen!=='BASE';
 const blkD=(t,fl)=>{const c=cutF; cutF=fl; const r=blocksView(t); cutF=c; return r};
 function diffLook(t,sid){
   const st=dsteps(sid), n=st.length, k=Math.min(S.dstep||0,n), fin=k>=n, fl=fin?null:st[k].floor;
-  if(deferred(t,sid)){if(fin)return ['solid','d',0]; const i=st.idx.get(t.i); if(i>k)return ['off','',0]; return blkD(t,fl)?['ghost','d',0]:['solid',i===k?'d':'#a48ccf',0]}
+  if(deferred(t,sid)){if(S.stg!=null&&!S.disc.has(t.disc))return ['off','',0];   /* one stage chosen on the left: only that stage's left-out work */
+    if(fin)return ['solid','d',0]; const i=st.idx.get(t.i); if(i>k)return ['off','',0]; return blkD(t,fl)?['ghost','d',0]:['solid',i===k?'d':'#a48ccf',0]}
   if(t.zone==='ENV'||t.zone==='ROOF')return ['ghost','',0];
-  if(fin)return t.floor==='Substructure'?['solid','o',0]:['ghost','',0];   // end picture: the building as a glass shell, everything left out in purple inside it
+  if(fin&&S.stg!=null&&S.disc.has(t.disc))return ['solid','o',0];   // with one stage chosen, what the scenario does build of that stage shows solid next to the purple
+  if(fin)return t.floor==='Substructure'?['solid','o',0]:(t.group==='ST-HCS'||t.group==='ST-TOP')?['ghost','k',0]:['ghost','',0];   // the floor slabs stay readable as grey glass plates, so the levels can be told apart   // end picture: the building as a glass shell, everything left out in purple inside it
   return blkD(t,fl)?['ghost','',0]:['solid','o',0];
 }
 // ---------- cost card: a small pop-up beside the picture, with the figures of the decision sheet
@@ -496,6 +498,8 @@ function storyStart(){
   if(gapEnd==null)return sStart=td; const nx=Math.min(...lv.filter(t=>t.s>=gapEnd-7).map(t=>t.s)); return sStart=Math.max(td,nx-1);
 }
 const today=()=>S.mode==='story'&&tags?storyStart():realToday();
+// a scenario is the same as Base until its first left-out work would have started: its play begins there, not at the start
+const scenStart=sid=>{if(!sid||sid==='BASE')return today(); const ds=tags.filter(t=>deferred(t,sid)); return ds.length?Math.max(today(),Math.min(...ds.map(t=>t.s))-1):today()};
 const liveOf=sid=>tags.filter(t=>!t.built&&!deferred(t,sid));
 const frac=t=>t.built||T>t.f?1:T<t.s?0:(T-t.s)/(t.f-t.s+1);
 function months(){ML=[]; const a=new Date(today()*DAY), e=tags.filter(t=>!t.built).reduce((m,t)=>Math.max(m,t.f),0); let y=a.getUTCFullYear(),m=a.getUTCMonth();
@@ -521,7 +525,7 @@ function storyUI(){
   const C=2*Math.PI*29;
   $('stages').innerHTML=STG.map((g,i)=>{const ts=tags.filter(t=>g[1].includes(t.disc)), lv=ts.filter(t=>!deferred(t,sid)), tot=lv.reduce((a,t)=>a+t.n,0), p=tot?lv.reduce((a,t)=>a+t.n*frac(t),0)/tot:0, nd=ts.length-lv.length, wip=lv.some(t=>!t.built&&T>=t.s&&T<=t.f);
     return '<button type="button" class="stg'+(p<=0?' idle':'')+(S.stg===i?' sel':'')+'" data-g="'+i+'" title="Show only this stage"><span class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="bgc"/><circle cx="32" cy="32" r="29" class="arc" stroke="'+STC[i]+'" stroke-dasharray="'+(C*p)+' '+C+'" transform="rotate(-90 32 32)"/><g transform="translate(18 18) scale(1.17)" class="ic">'+g[2]+'</g></svg></span><b>'+g[0]+'</b><em>'+(tot?Math.round(p*100)+'%':'')+(nd?(tot?' · part ':'')+'Phase 2':'')+'</em></button>'}).join('');
-  $('zbars').innerHTML='<div class="lab">Zones'+(S.stg!=null?' · '+esc(STG[S.stg][0]):'')+'</div>'+D.zones.filter(z=>z[2]==='B'&&tags.some(t=>t.zone===z[0])).map(z=>{const ts=tags.filter(t=>t.zone===z[0]&&(!S.disc.size||S.disc.has(t.disc))), tot=ts.reduce((a,t)=>a+t.n,0)||1; let dn=0,wp=0,df=0;
+  $('zbars').innerHTML='<div class="lab">Zones'+(S.stg!=null?' · '+esc(STG[S.stg][0]):'')+'</div>'+D.zones.filter(z=>z[2]==='B'&&tags.some(t=>t.zone===z[0])).map((z,i)=>[z,i]).sort((x,y)=>FLO.indexOf(floorOf(x[0][0]))-FLO.indexOf(floorOf(y[0][0]))||x[1]-y[1]).map(x=>x[0]).map(z=>{const ts=tags.filter(t=>t.zone===z[0]&&(!S.disc.size||S.disc.has(t.disc))), tot=ts.reduce((a,t)=>a+t.n,0)||1; let dn=0,wp=0,df=0;
     ts.forEach(t=>{if(deferred(t,sid)){df+=t.n;return} const f=frac(t); dn+=t.n*f; if(f>0&&f<1)wp+=t.n*(1-f)}); const sc1=tot-df;
     return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
     +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Two views when two floors are busy</span><button type="button" class="sw'+(S.auto2?' on':'')+'" data-o="auto2" aria-label="Two views when two floors are busy"></button></div><div class="fo"><span>See through what hides the work</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
@@ -544,7 +548,7 @@ function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
 function stepMonth(dir){const d=Math.floor(T), ci=Math.max(0,ML.findIndex(o=>d<=o.e)); let ni=ci+dir; if(dir>0&&d<ML[ci].e)ni=ci; if(ni>=ML.length)return false; goDay(ni<0?today():Math.max(today(),ML[ni].e)); return true}
 const SPD=[12,8,5,3];   // seconds one week stays on screen
 function playTick(){if(diffOn()){const n=dsteps(S.scen).length; if((S.dstep||0)>=n){playMonths(false);return} S.dstep=(S.dstep||0)+1; refresh(); playI=setTimeout(playTick,Math.max(2500,S.spw*500)); return} const last=ML[ML.length-1].e, d=Math.floor(T); if(d>=last||msFinal){playMonths(false);return} goDay(Math.min(last,d+7)); const d2=Math.floor(T), busy=liveOf(S.scen).some(t=>t.s<=d2&&t.f>=d2-6); playI=setTimeout(playTick,busy?S.spw*1000:700)}   /* weeks without any planned work pass quickly */
-function playMonths(on){clearTimeout(playI); playI=0; if(on&&diffOn()){if((S.dstep||0)>=dsteps(S.scen).length){S.dstep=0; refresh()} playI=setTimeout(playTick,Math.max(2500,S.spw*500)); storyUI(); return} if(on){if(Math.floor(T)>=ML[ML.length-1].e)goDay(today()); playI=setTimeout(playTick,Math.min(1500,S.spw*1000))} storyUI()}
+function playMonths(on){clearTimeout(playI); playI=0; if(on&&diffOn()){if((S.dstep||0)>=dsteps(S.scen).length){S.dstep=0; refresh()} playI=setTimeout(playTick,Math.max(2500,S.spw*500)); storyUI(); return} if(on){if(Math.floor(T)>=ML[ML.length-1].e||msFinal)goDay(scenStart(S.scen)); playI=setTimeout(playTick,Math.min(1500,S.spw*1000))} storyUI()}
 function setSpeed(dir){const i=SPD.indexOf(S.spw); S.spw=dir===0?SPD[(i+1)%SPD.length]:SPD[Math.max(0,Math.min(SPD.length-1,i+dir))]; store.set('spw',S.spw); if(playI){clearTimeout(playI); playI=setTimeout(playTick,S.spw*1000)} storyUI()}
 
 /* ---------- inventory grid with Gantt bars ---------- */
@@ -962,7 +966,7 @@ function bind(){
   // menus: one open at a time, closed by a click elsewhere
   document.addEventListener('click',e=>{const b=e.target.closest('[data-m]'); document.querySelectorAll('.menu').forEach(m=>{if(b&&m.id===b.dataset.m)m.hidden=!m.hidden; else if(!e.target.closest('.menu')||e.target.closest('[data-close] button'))m.hidden=true}); document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('open',!$(x.dataset.m).hidden))});
   const seg=(id,fn)=>{$(id).onclick=e=>{const b=e.target.closest('button'); if(b)fn(b.dataset.v)}};
-  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; S.dstep=0; if(S.scen==='BASE')S.diff=false; S.mslev=S.scen==='BASE'?'pkg':'zone'; S.msI=9999; refresh(); applyRender('bg')};
+  $('mScenList').onclick=e=>{const b=e.target.closest('[data-s]'); if(!b)return; S.scen=b.dataset.s; S.dstep=0; if(S.scen==='BASE')S.diff=false; S.mslev=S.scen==='BASE'?'pkg':'zone'; S.msI=9999; if(S.mode==='story')T=scenStart(S.scen)+.999; refresh(); applyRender('bg')};
   $('mZoneList').onclick=e=>{const b=e.target.closest('[data-z]'); if(!b)return; S.zone=b.dataset.z||null; S.sel.clear(); if(S.zone){tree(); if(rows.filter(r=>!r.leaf).length<=3)rows.forEach(r=>{if(!r.leaf)S.open.add(r.path)})} refresh(); syncZones(); const sp=span(tags.filter(t=>pass(t))); $('gantt').scrollLeft=sp?Math.max(0,(sp[0]-t0)*PX-40):0};
   $('fig').onclick=()=>{S.fig=!S.fig; syncBars(); scard()}; $('bt').onclick=()=>{S.bt=!S.bt; if(S.bt)S.fig=true; syncBars(); scard()};
   $('scard').onclick=e=>{if(e.target.id==='splay'){document.querySelectorAll('.menu').forEach(m=>m.hidden=true); if(S.mode==='ms')goMS(MS.length-1); else{setT(t0); toggle(true)}}};
@@ -970,9 +974,9 @@ function bind(){
   addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){if(e.key==='+'||e.key==='='){setSpeed(1);return} if(e.key==='-'){setSpeed(-1);return} if(e.key===' '){e.preventDefault();playMonths(!playI);return} const k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(k){e.preventDefault(); playMonths(false); if(e.shiftKey)goDay(Math.max(today(),Math.min(ML[ML.length-1].e,Math.floor(T)+7*k))); else stepMonth(k)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
   seg('mode',v=>{S.mode=v; playMonths(false); views.forEach(V=>{V.fkey=null}); if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} if(v!=='story'&&S.stg!=null){S.stg=null;S.disc=new Set()} resetApplied(); refresh(); setTimeout(()=>{resizeAll(); if(v!=='story')buildGrid()},60); syncZones(true); applyRender('bg')});
   $('months').onclick=e=>{const w=e.target.closest('.wkb'), f=e.target.closest('.flag'), m=e.target.closest('.mo'); playMonths(false); if(w)goDay(+w.dataset.d); else if(f)goDay(+f.dataset.d); else if(m)goDay(Math.max(today(),ML[+m.dataset.i].e))};
-  $('sdiff').onclick=()=>{playMonths(false); S.diff=!diffOn(); S.dstep=0; refresh()};
+  $('sdiff').onclick=()=>{playMonths(false); S.diff=!diffOn(); S.dstep=0; if(!S.diff)T=scenStart(S.scen)+.999; refresh()};
   $('ccard').onclick=e=>{if(e.target.closest('[data-cost]')){S.cost=false; costUI()}};
-  $('capt').onclick=e=>{if(e.target.closest('[data-cost]')){S.cost=!S.cost; costUI(); return} const df=e.target.closest('[data-df]'); if(df){const k=df.dataset.df; playMonths(false); if(k==='on'){S.diff=true; S.dstep=0; refresh()} else if(k==='off'){S.diff=false; refresh()} else if(k==='end')diffStep(999); else diffStep(k==='prev'?-1:1); return} const b=e.target.closest('[data-sb]'); if(!b)return; if(b.dataset.sb==='pos')S.sbTop=!S.sbTop; else S.sbMin=!S.sbMin; storyUI()};
+  $('capt').onclick=e=>{if(e.target.closest('[data-cost]')){S.cost=!S.cost; costUI(); return} const df=e.target.closest('[data-df]'); if(df){const k=df.dataset.df; playMonths(false); if(k==='on'){S.diff=true; S.dstep=0; refresh()} else if(k==='off'){S.diff=false; T=scenStart(S.scen)+.999; refresh()} else if(k==='end')diffStep(999); else diffStep(k==='prev'?-1:1); return} const b=e.target.closest('[data-sb]'); if(!b)return; if(b.dataset.sb==='pos')S.sbTop=!S.sbTop; else S.sbMin=!S.sbMin; storyUI()};
   $('splayb').onclick=()=>playMonths(!playI); $('sspd').onclick=()=>setSpeed(0); {const v=store.get('spw'); if(SPD.includes(v))S.spw=v} $('sprev').onclick=()=>{playMonths(false); if(diffOn())diffStep(-1); else stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false); if(diffOn())diffStep(1); else stepMonth(1)};
   $('stages').onclick=e=>{const b=e.target.closest('.stg'); if(!b)return; const i=+b.dataset.g; S.stg=S.stg===i?null:i; S.disc=new Set(S.stg==null?[]:STG[S.stg][1]); refresh()};
   $('zbars').onclick=e=>{const o=e.target.closest('[data-o]'); if(o){S[o.dataset.o]=!S[o.dataset.o]; views.forEach(V=>{V.fkey=null}); refresh(); return} const b=e.target.closest('.zr'); if(!b)return; S.zone=S.zone===b.dataset.z?null:b.dataset.z; refresh()};
