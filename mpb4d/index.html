@@ -164,7 +164,7 @@ body.story .view{background:#e6eaee} body.story .adsk-viewing-viewer .progressbg
 #months{position:relative;flex:1;display:flex;margin-left:6px}
 #ccard{position:absolute;left:152px;top:158px;width:262px;z-index:6;border-radius:14px;padding:12px 14px;font-size:12.5px;color:var(--ink)} #ccard .cc-h{display:flex;justify-content:space-between;align-items:center;font-size:14px} #ccard .cc-s{color:var(--mute);font-size:11px} #ccard .cc-big{font-size:26px;font-weight:700;margin-top:8px} #ccard .cc-big em{display:block;font-size:12px;font-weight:600;font-style:normal;color:#ffb340}
 #ccard table{width:100%;margin-top:8px;border-collapse:collapse} #ccard td{padding:2px 0} #ccard td.n{text-align:right;font-variant-numeric:tabular-nums} #ccard .cc-b{display:flex;align-items:center;gap:8px;margin-top:3px;color:var(--mute)} #ccard .cc-b span{flex:0 0 34px} #ccard .cc-b i{flex:1;height:8px;background:rgba(118,118,128,.3);border-radius:4px;overflow:hidden} #ccard .cc-b u{display:block;height:100%;background:#8e8e93} #ccard .cc-b b{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums} #ccard .cc-b.on{color:var(--ink)} #ccard .cc-b.on u{background:#bf5af2} #ccard .fine{font-size:10.5px;color:var(--mute);margin:8px 0 0}
-body.diff .stg em,body.diff .zr .pc{visibility:hidden} body.diff #months{visibility:hidden} body.diff #sspd{visibility:hidden}
+body.diff .zr .pc{visibility:hidden} body.diff .stg em{color:#d9b3f5} body.diff #months{visibility:hidden} body.diff #sspd{visibility:hidden}
 .mo{flex:1 1 0;text-align:center;padding:2px 0 6px;font-weight:600;font-size:13px;color:#fff;background:#2f6fc0;border-left:1px solid rgba(255,255,255,.22);cursor:pointer;user-select:none}
 .mo{position:relative} .wk{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;padding:6px;gap:4px;white-space:nowrap;background:rgba(28,28,30,.97);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45)} .mo:hover .wk{display:flex} .mo:hover{z-index:9}
 .wkb{border:0;border-radius:6px;background:#1c1c1e;color:#fff;font-size:11px;font-weight:600;padding:3px 8px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.45)} .wkb:hover{background:var(--accent)} .wkb.on{background:#ff453a}
@@ -308,9 +308,9 @@ body.diff .stg em,body.diff .zr .pc{visibility:hidden} body.diff #months{visibil
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-07v29"></script>
-<script src="auth.js?v=2026-10-07v29"></script>
-<script type="module" src="v3d.js?v=2026-10-07v29"></script>
+<script src="config.js?v=2026-10-07v30"></script>
+<script src="auth.js?v=2026-10-07v30"></script>
+<script type="module" src="v3d.js?v=2026-10-07v30"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -458,12 +458,12 @@ function dsteps(sid){
 const diffOn=()=>!!S.diff&&S.mode==='story'&&S.scen!=='BASE';
 const blkD=(t,fl)=>{const c=cutF; cutF=fl; const r=blocksView(t); cutF=c; return r};
 function diffLook(t,sid){
-  const st=dsteps(sid), n=st.length, k=Math.min(S.dstep||0,n), fin=k>=n, fl=fin?null:st[k].floor;
-  if(deferred(t,sid)){if(S.stg!=null&&!S.disc.has(t.disc))return ['off','',0];   /* one stage chosen on the left: only that stage's left-out work */
-    if(fin)return ['solid','d',0]; const i=st.idx.get(t.i); if(i>k)return ['off','',0]; return blkD(t,fl)?['ghost','d',0]:['solid',i===k?'d':'#a48ccf',0]}
-  if(t.zone==='ENV'||t.zone==='ROOF')return ['ghost','',0];
-  if(fin&&S.stg!=null&&S.disc.has(t.disc))return ['solid','o',0];   // with one stage chosen, what the scenario does build of that stage shows solid next to the purple
-  if(fin)return t.floor==='Substructure'?['solid','o',0]:(t.group==='ST-HCS'||t.group==='ST-TOP')?['ghost','k',0]:['ghost','',0];   // the floor slabs stay readable as grey glass plates, so the levels can be told apart   // end picture: the building as a glass shell, everything left out in purple inside it
+  const st=dsteps(sid), n=st.length, k=Math.min(S.dstep||0,n), one=S.stg!=null, fin=one||k>=n, fl=fin?null:st[k].floor, mine=!one||S.disc.has(t.disc);
+  // a stage chosen on the left: everything that stage leaves out in purple, what the scenario does build of it solid, the rest of the building as glass
+  if(deferred(t,sid)){if(!mine)return ['off','',0]; if(fin)return ['solid','d',0]; const i=st.idx.get(t.i); if(i>k)return ['off','',0]; return blkD(t,fl)?['ghost','d',0]:['solid',i===k?'d':'#a48ccf',0]}
+  if(t.zone==='ENV'||t.zone==='ROOF')return one&&mine?['solid','o',0]:['ghost','',0];
+  if(one)return mine?['solid','o',0]:(t.group==='ST-HCS'||t.group==='ST-TOP')?['ghost','k',0]:['ghost','',0];
+  if(fin)return t.floor==='Substructure'?['solid','o',0]:(t.group==='ST-HCS'||t.group==='ST-TOP')?['ghost','k',0]:['ghost','',0];   // end picture: a glass shell with grey glass floor plates, everything left out in purple inside it
   return blkD(t,fl)?['ghost','',0]:['solid','o',0];
 }
 // ---------- cost card: a small pop-up beside the picture, with the figures of the decision sheet
@@ -478,14 +478,15 @@ function costHTML(){
     +'<p class="fine">'+esc(D.scenNote||'')+'</p>';
 }
 function costUI(){const el=$('ccard'); if(!el)return; const on=!!S.cost&&S.mode==='story'; el.hidden=!on; if(on)el.innerHTML=costHTML()}
-function diffStep(d){const n=dsteps(S.scen).length; S.dstep=Math.max(0,Math.min(n,(S.dstep||0)+d)); refresh()}
+function diffStep(d){const n=dsteps(S.scen).length; if(S.stg!=null){S.stg=null; S.disc=new Set()}   /* stepping leaves the one-stage view */ S.dstep=Math.max(0,Math.min(n,(S.dstep||0)+d)); refresh()}
 function diffHTML(sid){
   const st=dsteps(sid), n=st.length, k=Math.min(S.dstep||0,n), fin=k>=n, sc=scenOf(sid), done=st.slice(0,fin?n:k+1).reduce((a,o)=>a+o.ts.length,0), tot=st.reduce((a,o)=>a+o.ts.length,0);
   const names=ts=>{const m=new Map(); ts.forEach(t=>{const nm=t.name.replace(/ \(.*\)$/,''); if(!m.has(nm))m.set(nm,new Set()); m.get(nm).add(t.zoneName.replace(/^.. - /,''))}); return [...m.entries()]};
   const btn=(k2,l,t)=>'<button type="button" class="sbb" data-df="'+k2+'" title="'+t+'" style="width:auto;padding:0 10px">'+l+'</button>';
-  let h='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:sid)+'</b> · what is left out compared with Base</div><div class="sbx">'+(fin?'All of it: '+tot+' work packages wait for Phase 2.':'Step '+(k+1)+' of '+n+' · '+esc(st[k].floor)+' · '+esc(STG[st[k].gi][0])+' · '+done+' of '+tot+' packages so far')+'</div>'+btn('prev','&#8249;','Previous step')+btn('next','&#8250;','Next step')+btn('end','All','Everything that is left out, in one picture')+btn('off','Back to the timeline','Back to the timeline')+'<button type="button" class="sbb" data-cost="t" title="Show or hide the cost figures of this scenario" style="width:auto;padding:0 10px">€ Cost</button>'+'</div>';
-  if(!S.sbMin){const it=fin?names(st.flatMap(o=>o.ts)):names(st[k].ts);
-    h+='<div class="sbg" style="grid-template-columns:1fr"><div class="sbc p2"><h5>'+(fin?'Left for Phase 2':'Left out in this step')+' <span>'+it.length+'</span></h5><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 14px">'+it.slice(0,12).map(([nm,z])=>'<div class="sbi"><i style="background:'+DEFC+'"></i><span>'+esc(nm)+' <em>'+esc([...z].slice(0,3).join(', ')+(z.size>3?' +'+(z.size-3):''))+'</em></span></div>').join('')+(it.length>12?'<div class="sbi more">and '+(it.length-12)+' more</div>':'')+'</div></div></div>'
+  const one=S.stg!=null, mineT=one?tags.filter(t=>S.disc.has(t.disc)):[], outT=mineT.filter(t=>deferred(t,sid)), inN=mineT.filter(t=>!deferred(t,sid)).length, sn=one?STG[S.stg][0].toLowerCase():'';
+  let h='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:sid)+'</b> · what is left out compared with Base</div><div class="sbx">'+(one?(outT.length?esc(STG[S.stg][0])+': '+outT.length+' work packages are left out, '+inN+' are built.':'Nothing of '+esc(sn)+' is left out in this scenario: all '+inN+' work packages are built.'):fin?'All of it: '+tot+' work packages wait for Phase 2.':'Step '+(k+1)+' of '+n+' · '+esc(st[k].floor)+' · '+esc(STG[st[k].gi][0])+' · '+done+' of '+tot+' packages so far')+'</div>'+btn('prev','&#8249;','Previous step')+btn('next','&#8250;','Next step')+btn('end','All','Everything that is left out, in one picture')+btn('off','Back to the timeline','Back to the timeline')+'<button type="button" class="sbb" data-cost="t" title="Show or hide the cost figures of this scenario" style="width:auto;padding:0 10px">€ Cost</button>'+'</div>';
+  if(!S.sbMin){const it=one?names(outT):fin?names(st.flatMap(o=>o.ts)):names(st[k].ts);
+    h+='<div class="sbg" style="grid-template-columns:1fr"><div class="sbc p2"><h5>'+(one?'Left out · '+esc(STG[S.stg][0]):fin?'Left for Phase 2':'Left out in this step')+' <span>'+it.length+'</span></h5><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 14px">'+it.slice(0,12).map(([nm,z])=>'<div class="sbi"><i style="background:'+DEFC+'"></i><span>'+esc(nm)+' <em>'+esc([...z].slice(0,3).join(', ')+(z.size>3?' +'+(z.size-3):''))+'</em></span></div>').join('')+(it.length>12?'<div class="sbi more">and '+(it.length-12)+' more</div>':'')+'</div></div></div>'
       +'<div class="lg"><span><i style="background:'+DEFC+'"></i>Left out in this step</span><span><i style="background:#a48ccf"></i>Left out in earlier steps</span><span><i style="background:#d9dde2"></i>Built in this scenario</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>See-through: facade, roof and what is above</span></div>'}
   return h;
 }
@@ -524,7 +525,7 @@ function storyUI(){
     +fl.map((f,i)=>'<button type="button" class="flag'+(i%2?' r2':'')+(f[1]===d?' on':'')+'" data-d="'+f[1]+'" style="left:'+xOf(f[1])+'%">'+esc(f[0])+' · '+n2s(f[1]).slice(0,5)+'</button>').join('');
   const C=2*Math.PI*29;
   $('stages').innerHTML=STG.map((g,i)=>{const ts=tags.filter(t=>g[1].includes(t.disc)), lv=ts.filter(t=>!deferred(t,sid)), tot=lv.reduce((a,t)=>a+t.n,0), p=tot?lv.reduce((a,t)=>a+t.n*frac(t),0)/tot:0, nd=ts.length-lv.length, wip=lv.some(t=>!t.built&&T>=t.s&&T<=t.f);
-    return '<button type="button" class="stg'+(p<=0?' idle':'')+(S.stg===i?' sel':'')+'" data-g="'+i+'" title="Show only this stage"><span class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="bgc"/><circle cx="32" cy="32" r="29" class="arc" stroke="'+STC[i]+'" stroke-dasharray="'+(C*p)+' '+C+'" transform="rotate(-90 32 32)"/><g transform="translate(18 18) scale(1.17)" class="ic">'+g[2]+'</g></svg></span><b>'+g[0]+'</b><em>'+(tot?Math.round(p*100)+'%':'')+(nd?(tot?' · part ':'')+'Phase 2':'')+'</em></button>'}).join('');
+    return '<button type="button" class="stg'+(p<=0?' idle':'')+(S.stg===i?' sel':'')+'" data-g="'+i+'" title="Show only this stage"><span class="ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" class="bgc"/><circle cx="32" cy="32" r="29" class="arc" stroke="'+STC[i]+'" stroke-dasharray="'+(C*p)+' '+C+'" transform="rotate(-90 32 32)"/><g transform="translate(18 18) scale(1.17)" class="ic">'+g[2]+'</g></svg></span><b>'+g[0]+'</b><em>'+(diffOn()?(nd?nd+' left out':'all built'):(tot?Math.round(p*100)+'%':'')+(nd?(tot?' · part ':'')+'Phase 2':''))+'</em></button>'}).join('');
   $('zbars').innerHTML='<div class="lab">Zones'+(S.stg!=null?' · '+esc(STG[S.stg][0]):'')+'</div>'+D.zones.filter(z=>z[2]==='B'&&tags.some(t=>t.zone===z[0])).map((z,i)=>[z,i]).sort((x,y)=>FLO.indexOf(floorOf(x[0][0]))-FLO.indexOf(floorOf(y[0][0]))||x[1]-y[1]).map(x=>x[0]).map(z=>{const ts=tags.filter(t=>t.zone===z[0]&&(!S.disc.size||S.disc.has(t.disc))), tot=ts.reduce((a,t)=>a+t.n,0)||1; let dn=0,wp=0,df=0;
     ts.forEach(t=>{if(deferred(t,sid)){df+=t.n;return} const f=frac(t); dn+=t.n*f; if(f>0&&f<1)wp+=t.n*(1-f)}); const sc1=tot-df;
     return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
@@ -827,7 +828,7 @@ function view3(V,lookOf){
   V.focusFit=()=>{
     if(!R||S.mode!=='story')return; if(V.zone){V.fkey=null;V.lastT=null;return}
     const bb=V.boundsOf(t=>t.zone!=='EXT'&&t.zone!=='SUB','bld'); if(!bb)return; const bc=bb.getCenter(new THREE.Vector3()), bh=bb.getSize(new THREE.Vector3()).multiplyScalar(0.40); let c=bc, h=bh;
-    if(S.follow){let ids=null; if(diffOn()){const st=dsteps(S.scen), k=S.dstep||0; if(k<st.length)ids=new Set(st[k].ts.map(t=>t.i))} else if(focOn&&FOC.size)ids=FOC;
+    if(S.follow){let ids=null; if(diffOn()){const st=dsteps(S.scen), k=S.dstep||0; if(S.stg!=null){const a=tags.filter(t=>S.disc.has(t.disc)&&deferred(t,S.scen)); if(a.length)ids=new Set(a.map(t=>t.i))} else if(k<st.length)ids=new Set(st[k].ts.map(t=>t.i))} else if(focOn&&FOC.size)ids=FOC;
       if(ids){V.bounds['wk']=null; const wb=V.boundsOf(t=>ids.has(t.i)&&t.zone!=='EXT'&&t.zone!=='SUB'&&t.zone!=='ENV'&&t.zone!=='ROOF','wk');
         if(wb){c=wb.getCenter(new THREE.Vector3()); h=wb.getSize(new THREE.Vector3()).multiplyScalar(0.5*1.25); h.x=Math.min(bh.x,Math.max(h.x,bh.x*0.38)); h.y=Math.min(bh.y,Math.max(h.y,bh.y*0.38)); h.z=Math.max(h.z,2);   // never closer than about a third of the building
           c.x=Math.max(bc.x-bh.x+h.x,Math.min(bc.x+bh.x-h.x,c.x)); c.y=Math.max(bc.y-bh.y+h.y,Math.min(bc.y+bh.y-h.y,c.y))}}}
