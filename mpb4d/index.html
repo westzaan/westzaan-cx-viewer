@@ -161,7 +161,7 @@ body.story .vlab{top:160px}
 #strip .btn{padding:8px 12px;font-size:15px;line-height:20px} #strip #sspd{font-size:12px;font-family:var(--f-num);color:var(--mute);min-width:44px;padding:8px 6px}
 #months{position:relative;flex:1;display:flex;margin-left:6px}
 .mo{flex:1 1 0;text-align:center;padding:2px 0 6px;font-weight:600;font-size:13px;color:#fff;background:#2f6fc0;border-left:1px solid rgba(255,255,255,.22);cursor:pointer;user-select:none}
-.mo{position:relative} .wk{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;padding:6px;gap:4px;white-space:nowrap;background:rgba(28,28,30,.97);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45)} .mo:hover .wk{display:flex}
+.mo{position:relative} .wk{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;padding:6px;gap:4px;white-space:nowrap;background:rgba(28,28,30,.97);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45)} .mo:hover .wk{display:flex} .mo:hover{z-index:9}
 .wkb{border:0;border-radius:6px;background:#1c1c1e;color:#fff;font-size:11px;font-weight:600;padding:3px 8px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.45)} .wkb:hover{background:var(--accent)} .wkb.on{background:#ff453a}
 .mo:first-child{border-radius:8px 0 0 8px;border-left:0} .mo:nth-last-of-type(1){border-radius:0 8px 8px 0}
 .mo small{display:block;font-size:10px;font-weight:500;opacity:.8;height:12px;line-height:12px} .mo.past{background:#6e7480} .mo.cur{background:#0a84ff} .mo:hover{filter:brightness(1.15)}
@@ -182,6 +182,14 @@ body.story .vlab{top:160px}
 .zb{display:flex;height:10px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.12)} .zb i{display:block;height:100%;transition:width .5s}
 .fo{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px 0;font-size:12px} .fo:first-of-type{margin-top:6px;border-top:1px solid var(--line);padding-top:8px}
 #capt{position:absolute;left:152px;right:286px;bottom:12px;z-index:5;padding:10px 16px;font-size:14px;line-height:1.35}
+#capt.top{bottom:auto;top:150px} #capt{transition:top .3s,bottom .3s;max-height:46%;overflow:auto}
+.sbtop .vlab{top:auto!important;bottom:16px}
+.sbh{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap} .sbt{white-space:nowrap} .sbx{flex:1 1 260px;min-width:0;color:var(--ink)}
+.sbb{border:0;background:var(--fill);color:var(--ink);border-radius:7px;width:26px;height:24px;cursor:pointer;font-size:14px;line-height:1;align-self:center} .sbb:hover{background:rgba(118,118,128,.45)}
+.sbg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px} .sbg.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.sbc{background:rgba(118,118,128,.16);border-radius:10px;padding:7px 10px;min-width:0} .sbc.p2{background:rgba(191,90,242,.14)}
+.sbc h5{margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between;gap:8px} .sbc h5 span{font-family:var(--f-num)}
+.sbi{display:flex;align-items:baseline;gap:7px;font-size:12.5px;line-height:1.35;padding:1px 0} .sbi i{flex:0 0 9px;height:9px;border-radius:50%;transform:translateY(1px)} .sbi span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .sbi em{font-style:normal;color:var(--mute);font-size:11.5px} .sbi.more{color:var(--mute);font-size:11.5px;padding-left:16px}
 #capt b{font-size:16px} #capt .tx{margin-top:2px} #capt .cx{margin-top:2px;font-size:12.5px;color:#ffd8a0} #capt .lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11.5px;color:var(--mute);margin-top:6px} #capt .lg span{display:inline-flex;align-items:center;gap:6px} #capt .lg i{width:10px;height:10px;border-radius:3px} #capt .lg .sc{gap:3px} #capt .lg .sc i:last-of-type{margin-right:4px}
 .stg.idle .arc{opacity:.5}
 #msbar{flex-wrap:nowrap} #msn{font-family:var(--f-num);font-size:12.5px;color:var(--mute);white-space:nowrap}
@@ -195,7 +203,7 @@ body.story .vlab{top:160px}
 @media (max-width:820px){
   html,body{height:auto} body{display:block} #main{display:block} #stage{display:block}
   #vws{display:block} .view{height:50vh;min-height:280px;margin-bottom:2px} #side{border-left:0;border-top:1px solid var(--line)} #grid{height:70vh!important} #split{display:none}
-  #stages,#zbars{display:none} #capt{left:8px;right:8px;font-size:12.5px} .flag{display:none} #strip{padding-bottom:7px;left:6px;right:6px} .mo{font-size:10px} #strip .btn{padding:6px 8px}
+  #stages,#zbars{display:none} #capt{left:8px;right:8px;font-size:12.5px} .sbg,.sbg.four{grid-template-columns:1fr} .flag{display:none} #strip{padding-bottom:7px;left:6px;right:6px} .mo{font-size:10px} #strip .btn{padding:6px 8px}
   .gl .c{display:none} #active{display:none} .mrow{grid-template-columns:24px 78px minmax(0,1fr)} .mrow .c,.mrow .p{display:none} .mrow .t{white-space:normal} #msbar{flex-wrap:wrap} #mst{flex-basis:100%;white-space:normal}
   .mwrap{position:static} .bar{position:relative} .menu,.menu.rt{left:8px;right:8px;width:auto;top:auto;margin-top:6px}
 }
@@ -295,8 +303,8 @@ body.story .vlab{top:160px}
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v18"></script>
-<script src="auth.js?v=2026-10-06v18"></script>
+<script src="config.js?v=2026-10-06v19"></script>
+<script src="auth.js?v=2026-10-06v19"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -313,7 +321,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catc
 let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430,views=[],VA=null,VB=null,autoZ=null,MAP={},pkgs=[],colorMap={},rows=[];
 // everything the user can switch. Shared by both 3D views; each view only differs in zone and scenario.
 const S={sel:new Set(),off:new Set(),ns:'off',bu:'ghost',df:'mark',recent:28,grow:true,vis:'normal',colorBy:'real',pick:'tag',time:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set(),
-  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,auto2:true,spw:8,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
+  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,auto2:true,spw:8,sbTop:false,sbMin:false,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
 let MS=[],HI=new Set(),msZone=null,msFinal=false; const HIC='#34c759';
 
 const floorOf=z=>{const m=/^(?:STR-)?(GF|1F|2F|3F)/.exec(z);return m?m[1]:(z==='ROOF'?'Roof':z==='SUB'?'Substructure':'Building')};
@@ -455,9 +463,18 @@ function storyUI(){
     ts.forEach(t=>{if(deferred(t,sid)){df+=t.n;return} const f=frac(t); dn+=t.n*f; if(f>0&&f<1)wp+=t.n*(1-f)}); const sc1=tot-df;
     return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
     +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Two views when two floors are busy</span><button type="button" class="sw'+(S.auto2?' on':'')+'" data-o="auto2" aria-label="Two views when two floors are busy"></button></div><div class="fo"><span>Cut open at the busiest floor</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
-  const wipT=liveOf(sid).filter(t=>T>=t.s&&T<=t.f&&(!S.disc.size||S.disc.has(t.disc))), parts=STG.map(g=>{const zs=[...new Set(wipT.filter(t=>g[1].includes(t.disc)).map(t=>t.zoneName.replace(/^.. - /,'')))]; return zs.length?g[0]+' in '+zs.slice(0,3).join(', ')+(zs.length>3?' and '+(zs.length-3)+' more zones':''):null}).filter(Boolean);
-  const sc=scenOf(sid), f=fl.find(x=>x[1]===d), nd=tags.filter(t=>deferred(t,sid)).length, txt=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):parts.length?'Under way: '+parts.join('; ')+'.':'No work under way on this date.';
-  $('capt').innerHTML='<div><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="tx">'+esc(txt)+'</div>'+(cutF?(two?'<div class="cx">Two busy floors: left cut open above '+esc(cutF)+', right above '+esc(cutF2)+'.</div>':'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>'):'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>';
+  // ---- storyboard: what starts, continues and finishes in the selected week (or month), in plain words
+  const sc=scenOf(sid), f=fl.find(x=>x[1]===d), mo=ML[ci], ws=d>=mo.e?mo.s:d-6, okd=t=>!S.disc.size||S.disc.has(t.disc), lv=liveOf(sid).filter(okd);
+  const zs=a=>{const z=[...new Set(a.map(t=>t.zoneName.replace(/^.. - /,'')))]; return z.slice(0,3).join(', ')+(z.length>3?' +'+(z.length-3):'')};
+  const col=(title,ts,cls)=>{const m=new Map(); ts.forEach(t=>{if(!m.has(t.name))m.set(t.name,[]); m.get(t.name).push(t)}); const it=[...m.entries()].sort((a,b)=>b[1].reduce((x,t)=>x+t.n,0)-a[1].reduce((x,t)=>x+t.n,0));
+    return '<div class="sbc '+cls+'"><h5>'+title+' <span>'+it.length+'</span></h5>'+(it.length?it.slice(0,4).map(([n,a])=>'<div class="sbi"><i style="background:'+(cls==='p2'?DEFC:stgCol(a[0].disc))+'"></i><span>'+esc(n.replace(/ \(.*\)$/,''))+' <em>'+esc(zs(a))+'</em></span></div>').join('')+(it.length>4?'<div class="sbi more">and '+(it.length-4)+' more</div>':''):'<div class="sbi more">nothing</div>')+'</div>'};
+  const st=lv.filter(t=>t.s>=ws&&t.s<=d), fi=lv.filter(t=>t.f>=ws&&t.f<=d), co=lv.filter(t=>t.s<ws&&t.f>d), sk=sid==='BASE'?[]:tags.filter(t=>deferred(t,sid)&&okd(t)&&t.s<=d&&t.f>=ws);
+  const nx=fl.filter(x=>x[1]>d)[0], wk=nx?Math.max(1,Math.round((nx[1]-d)/7)):0, per=d>=mo.e?'this month':'this week', nG=a=>new Set(a.map(t=>t.name)).size;
+  const head=msFinal?(sid==='BASE'?'Everything is built.':'Phase 1 is finished. Left for Phase 2: '+(sc?sc.deferred:'')):(st.length+co.length+fi.length?[nG(st)?nG(st)+' start':'',nG(co)?nG(co)+' continue':'',nG(fi)?nG(fi)+' finish':''].filter(Boolean).join(', ')+' '+per+'.':'No work '+per+'.')+(nx?' Next: '+nx[0]+' in '+wk+(wk===1?' week':' weeks')+'.':'');
+  const nd=tags.filter(t=>deferred(t,sid)).length, CP=$('capt'); CP.classList.toggle('top',S.sbTop); CP.classList.toggle('min',S.sbMin); $('vws').classList.toggle('sbtop',S.sbTop);
+  CP.innerHTML='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="sbx">'+esc(head)+'</div><button type="button" class="sbb" data-sb="pos" title="Move the storyboard to the '+(S.sbTop?'bottom':'top')+'" aria-label="Move the storyboard">'+(S.sbTop?'&#8595;':'&#8593;')+'</button><button type="button" class="sbb" data-sb="min" title="'+(S.sbMin?'Show':'Hide')+' the details" aria-label="Show or hide the details">'+(S.sbMin?'+':'&#8211;')+'</button></div>'
+    +(S.sbMin||msFinal?'':'<div class="sbg'+(sk.length?' four':'')+'">'+col('Starting',st,'s')+col('Continuing',co,'c')+col('Finishing',fi,'f')+(sk.length?col('Skipped here, waits for Phase 2',sk,'p2'):'')+'</div>')
+    +(S.sbMin?'':(cutF?(two?'<div class="cx">Two busy floors: left cut open above '+esc(cutF)+', right above '+esc(cutF2)+'.</div>':'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>'):'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>');
   $('splayb').textContent=playI?'❚❚':'▶'; $('sspd').textContent=S.spw+' s';
 }
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
@@ -836,6 +853,7 @@ function bind(){
   addEventListener('keydown',e=>{if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return; if(S.mode==='story'){if(e.key==='+'||e.key==='='){setSpeed(1);return} if(e.key==='-'){setSpeed(-1);return} if(e.key===' '){e.preventDefault();playMonths(!playI);return} const k=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0; if(k){e.preventDefault(); playMonths(false); if(e.shiftKey)goDay(Math.max(today(),Math.min(ML[ML.length-1].e,Math.floor(T)+7*k))); else stepMonth(k)} return} if(S.mode!=='ms')return; if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();goMS(S.msI+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goMS(S.msI-1)}});
   seg('mode',v=>{S.mode=v; playMonths(false); views.forEach(V=>{V.fkey=null}); if(v!=='ms'){HI=new Set();msZone=null;autoZ=null} if(v!=='story'&&S.stg!=null){S.stg=null;S.disc=new Set()} resetApplied(); refresh(); setTimeout(()=>{resizeAll(); if(v!=='story')buildGrid()},60); syncZones(true); applyRender('bg')});
   $('months').onclick=e=>{const w=e.target.closest('.wkb'), f=e.target.closest('.flag'), m=e.target.closest('.mo'); playMonths(false); if(w)goDay(+w.dataset.d); else if(f)goDay(+f.dataset.d); else if(m)goDay(Math.max(today(),ML[+m.dataset.i].e))};
+  $('capt').onclick=e=>{const b=e.target.closest('[data-sb]'); if(!b)return; if(b.dataset.sb==='pos')S.sbTop=!S.sbTop; else S.sbMin=!S.sbMin; storyUI()};
   $('splayb').onclick=()=>playMonths(!playI); $('sspd').onclick=()=>setSpeed(0); {const v=store.get('spw'); if(SPD.includes(v))S.spw=v} $('sprev').onclick=()=>{playMonths(false);stepMonth(-1)}; $('snext').onclick=()=>{playMonths(false);stepMonth(1)};
   $('stages').onclick=e=>{const b=e.target.closest('.stg'); if(!b)return; const i=+b.dataset.g; S.stg=S.stg===i?null:i; S.disc=new Set(S.stg==null?[]:STG[S.stg][1]); refresh()};
   $('zbars').onclick=e=>{const o=e.target.closest('[data-o]'); if(o){S[o.dataset.o]=!S[o.dataset.o]; views.forEach(V=>{V.fkey=null}); refresh(); return} const b=e.target.closest('.zr'); if(!b)return; S.zone=S.zone===b.dataset.z?null:b.dataset.z; refresh()};
