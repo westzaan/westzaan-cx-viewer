@@ -157,6 +157,8 @@ body.story #stage{grid-template-columns:minmax(0,1fr)}
 body.story .adsk-viewing-viewer .adsk-toolbar,body.story .viewcubeWrapper,body.story .homeViewWrapper{display:none!important}
 #vws{position:relative} #story{position:absolute;inset:0;pointer-events:none;z-index:5} #story>*{pointer-events:auto}
 body.story .vlab{top:160px}
+/* in the overview the 3D picture sits between the panels, so nothing covers the building */
+body.story .view{background:#e6eaee} body.story .adsk-viewing-viewer .progressbg,body.story .adsk-viewing-viewer .progresstext{display:none!important} body.story #vws:not(.two):not(.sbtop) .fv{left:148px;right:282px;top:150px;bottom:236px}
 #strip{position:absolute;left:12px;right:12px;top:10px;z-index:5;display:flex;align-items:flex-start;gap:6px;padding:7px 10px 44px}
 #strip .btn{padding:8px 12px;font-size:15px;line-height:20px} #strip #sspd{font-size:12px;font-family:var(--f-num);color:var(--mute);min-width:44px;padding:8px 6px}
 #months{position:relative;flex:1;display:flex;margin-left:6px}
@@ -264,7 +266,7 @@ body.story .vlab{top:160px}
 <div id="main">
   <div id="stage">
     <div id="vws">
-      <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div></div>
+      <div class="view" id="vwA"><div class="fv" id="fvA"></div><div class="vlab glass" id="labA" hidden></div><div class="load glass" id="loadA">Starting…</div><div id="ms3" hidden style="position:absolute;right:10px;bottom:10px;z-index:5;background:rgba(30,30,32,.82);color:#f2f2f7;border-radius:9px;padding:5px 9px;font:12px system-ui"></div><button class="btn on" id="signin" type="button" hidden>Sign in with Autodesk</button><div class="legend glass" id="legend"></div><div class="glass" id="active"></div><div class="glass" id="rpanel" hidden></div></div>
       <div class="view" id="vwB" hidden><div class="fv" id="fvB"></div><div class="vlab glass" id="labB" hidden></div><div class="load glass" id="loadB" hidden></div></div>
         <div id="story" hidden>
           <div id="strip" class="glass"><button class="btn" id="sprev" type="button" aria-label="Previous month">&#8249;</button><button class="btn" id="splayb" type="button" aria-label="Play week by week" title="Play week by week">&#9654;</button><button class="btn" id="sspd" type="button" aria-label="Play speed: seconds per week" title="Seconds per week while playing. Click to change, or use the + and - keys">8 s</button><button class="btn" id="snext" type="button" aria-label="Next month">&#8250;</button><div id="months"></div></div>
@@ -303,8 +305,9 @@ body.story .vlab{top:160px}
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-06v19"></script>
-<script src="auth.js?v=2026-10-06v19"></script>
+<script src="config.js?v=2026-10-07v21"></script>
+<script src="auth.js?v=2026-10-07v21"></script>
+<script type="module" src="v3d.js?v=2026-10-07v21"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -321,7 +324,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem('mpb4d.'+k))}catc
 let D,tags=null,T=0,t0=null,t1,playing=false,PX=3,LW=430,views=[],VA=null,VB=null,autoZ=null,MAP={},pkgs=[],colorMap={},rows=[];
 // everything the user can switch. Shared by both 3D views; each view only differs in zone and scenario.
 const S={sel:new Set(),off:new Set(),ns:'off',bu:'ghost',df:'mark',recent:28,grow:true,vis:'normal',colorBy:'real',pick:'tag',time:true,clip:true,zone:null,g1:'zone',g2:'',disc:new Set(),q:'',open:new Set(),
-  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,auto2:true,spw:8,sbTop:false,sbMin:false,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
+  scen:'BASE',fig:false,bt:false,dual:false,bmode:'follow',orbit:false,side:true,mode:'story',stg:null,focus:true,follow:true,cut:true,auto2:false,spw:8,sbTop:false,sbMin:false,mslev:'pkg',msI:9999,mszoom:true,btab:'ms'};
 let MS=[],HI=new Set(),msZone=null,msFinal=false; const HIC='#34c759';
 
 const floorOf=z=>{const m=/^(?:STR-)?(GF|1F|2F|3F)/.exec(z);return m?m[1]:(z==='ROOF'?'Roof':z==='SUB'?'Substructure':'Building')};
@@ -398,6 +401,8 @@ function refresh(){
     focOn=S.focus&&FOC.size>0;
     // the floor with most work on this date: the building is cut open just above it
     cutF=null; cutUp=[]; cutF2=null; if(!(focOn&&S.cut&&!msFinal&&!S.zone))two=false; if(focOn&&S.cut&&!msFinal&&!S.zone){const FO=['Substructure','GF','1F','2F','3F','Roof'], w={}; FOC.forEach(i=>{const t=tags[i]; if(FO.includes(t.floor))w[t.floor]=(w[t.floor]||0)+t.n}); let b=null; for(const f in w)if(!b||w[f]>w[b])b=f;
+      if(b&&cutPrev&&cutPrev!==b&&w[cutPrev]>=0.7*w[b])b=cutPrev;   // stay on the floor we were looking at unless another one is clearly busier
+      cutPrev=b;
       const b2=Object.keys(w).filter(f=>f!==b&&f!=='Roof').sort((x,y)=>w[y]-w[x])[0], ratio=b&&b2?w[b2]/w[b]:0;
       // two areas about equally busy: show both, side by side. Enter at 60 %, leave under 40 %, so the layout does not flip every week
       two=!!(S.auto2&&b&&b!=='Roof'&&b2&&(two?ratio>=0.4:ratio>=0.6)); cutF2=two?b2:null;
@@ -434,7 +439,11 @@ function goMS(i){if(!MS.length)return; S.msI=i; S.mode='ms'; toggle(false); refr
 /* ---------- overview: a month strip, five stages, eleven zone bars and one sentence ---------- */
 const STG=[['Structure',['CI','ST'],'<path d="M4 20V8l8-4 8 4v12M4 14h16M9 20V9M15 20V9"/>'],['Envelope',['FA'],'<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M12 3v18M6 12h12"/>'],['Services',['HV','FF','PH','PI','EL'],'<path d="M3 8h7a3 3 0 0 1 3 3v2a3 3 0 0 0 3 3h5M3 5v6M21 13v6"/>'],['Interior',['AR'],'<rect x="4" y="4" width="13" height="5" rx="1"/><path d="M17 6.5h3v5h-8v3M12 14.5v6"/>'],['Furniture and lab equipment',['FU'],'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3M7.5 15h9"/>']];
 const STC=['#2f6fde','#12a5a5','#e03131','#e6a700','#2f9e44'], stgCol=d=>{const i=STG.findIndex(g=>g[1].includes(d)); return i<0?'#8e8e93':STC[i]};   // one colour per stage; purple stays reserved for Phase 2
-let ML=[],playI=0,FOC=new Set(),focOn=false,cutF=null,cutUp=[],cutF2=null,two=false,twoAuto=false;
+let ML=[],playI=0,FOC=new Set(),focOn=false,cutF=null,cutUp=[],cutF2=null,two=false,twoAuto=false,cutPrev=null;
+const FLO=['Substructure','GF','1F','2F','3F','Roof'];
+// built work that would hide the floor we are looking at: envelope and roof, everything above that floor, and the ceiling and slab over it
+function blocksView(t){if(!cutF)return false; if(t.zone==='ENV'||t.zone==='ROOF')return true; const a=FLO.indexOf(t.floor), b=FLO.indexOf(cutF); if(a<0)return false; if(a>b)return true;
+  return a===b&&(t.group==='AR-CEIL'||(t.zone.startsWith('STR-')&&(t.group==='ST-HCS'||t.group==='ST-TOP'||t.group==='ST-BEAM'||t.group==='ST-BRAC')))}
 const today=()=>Math.max(t0,Math.min(t1,Math.floor(Date.now()/DAY)));
 const liveOf=sid=>tags.filter(t=>!t.built&&!deferred(t,sid));
 const frac=t=>t.built||T>t.f?1:T<t.s?0:(T-t.s)/(t.f-t.s+1);
@@ -462,7 +471,7 @@ function storyUI(){
   $('zbars').innerHTML='<div class="lab">Zones'+(S.stg!=null?' · '+esc(STG[S.stg][0]):'')+'</div>'+D.zones.filter(z=>z[2]==='B'&&tags.some(t=>t.zone===z[0])).map(z=>{const ts=tags.filter(t=>t.zone===z[0]&&(!S.disc.size||S.disc.has(t.disc))), tot=ts.reduce((a,t)=>a+t.n,0)||1; let dn=0,wp=0,df=0;
     ts.forEach(t=>{if(deferred(t,sid)){df+=t.n;return} const f=frac(t); dn+=t.n*f; if(f>0&&f<1)wp+=t.n*(1-f)}); const sc1=tot-df;
     return '<button type="button" class="zr'+(S.zone===z[0]?' on':'')+'" data-z="'+z[0]+'" title="Zoom to this zone"><span class="zn">'+esc(z[1].replace(/^(..) - /,'$1 '))+'</span><span class="zb"><i style="width:'+dn/tot*100+'%;background:#e5e5ea"></i><i style="width:'+wp/tot*100+'%;background:#ff9f0a"></i><i style="flex:1"></i><i style="width:'+df/tot*100+'%;background:'+DEFC+'"></i></span><span class="pc">'+(sc1>0?Math.round(dn/sc1*100)+'%':'P2')+'</span></button>'}).join('')
-    +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Two views when two floors are busy</span><button type="button" class="sw'+(S.auto2?' on':'')+'" data-o="auto2" aria-label="Two views when two floors are busy"></button></div><div class="fo"><span>Cut open at the busiest floor</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
+    +'<div class="fo"><span>Fade everything else</span><button type="button" class="sw'+(S.focus?' on':'')+'" data-o="focus" aria-label="Fade everything that is not the work of this date"></button></div><div class="fo"><span>Camera goes to the work</span><button type="button" class="sw'+(S.follow?' on':'')+'" data-o="follow" aria-label="Camera goes to the work"></button></div><div class="fo"><span>Two views when two floors are busy</span><button type="button" class="sw'+(S.auto2?' on':'')+'" data-o="auto2" aria-label="Two views when two floors are busy"></button></div><div class="fo"><span>See through what hides the work</span><button type="button" class="sw'+(S.cut?' on':'')+'" data-o="cut" aria-label="Cut the building open above the work"></button></div>';
   // ---- storyboard: what starts, continues and finishes in the selected week (or month), in plain words
   const sc=scenOf(sid), f=fl.find(x=>x[1]===d), mo=ML[ci], ws=d>=mo.e?mo.s:d-6, okd=t=>!S.disc.size||S.disc.has(t.disc), lv=liveOf(sid).filter(okd);
   const zs=a=>{const z=[...new Set(a.map(t=>t.zoneName.replace(/^.. - /,'')))]; return z.slice(0,3).join(', ')+(z.length>3?' +'+(z.length-3):'')};
@@ -474,7 +483,7 @@ function storyUI(){
   const nd=tags.filter(t=>deferred(t,sid)).length, CP=$('capt'); CP.classList.toggle('top',S.sbTop); CP.classList.toggle('min',S.sbMin); $('vws').classList.toggle('sbtop',S.sbTop);
   CP.innerHTML='<div class="sbh"><div class="sbt"><b>'+esc(sc?sc.name:'Build sequence')+'</b> · '+(f?esc(f[0])+', ':'')+(ML.some(o=>o.e===d)||f?'':'week '+isoWk(d)+', ')+n2s(d)+'</div><div class="sbx">'+esc(head)+'</div><button type="button" class="sbb" data-sb="pos" title="Move the storyboard to the '+(S.sbTop?'bottom':'top')+'" aria-label="Move the storyboard">'+(S.sbTop?'&#8595;':'&#8593;')+'</button><button type="button" class="sbb" data-sb="min" title="'+(S.sbMin?'Show':'Hide')+' the details" aria-label="Show or hide the details">'+(S.sbMin?'+':'&#8211;')+'</button></div>'
     +(S.sbMin||msFinal?'':'<div class="sbg'+(sk.length?' four':'')+'">'+col('Starting',st,'s')+col('Continuing',co,'c')+col('Finishing',fi,'f')+(sk.length?col('Skipped here, waits for Phase 2',sk,'p2'):'')+'</div>')
-    +(S.sbMin?'':(cutF?(two?'<div class="cx">Two busy floors: left cut open above '+esc(cutF)+', right above '+esc(cutF2)+'.</div>':'<div class="cx">Cut open above '+esc(cutF)+'.'+(cutUp.length?' Also under way higher up, not in view: '+esc(cutUp.join(', '))+'.':'')+'</div>'):'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>Ghost: everything else</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>');
+    +(S.sbMin?'':(cutF?(two?'<div class="cx">Two busy floors: left looks at '+esc(cutF)+', right at '+esc(cutF2)+'.</div>':'<div class="cx">Looking at '+esc(cutF)+': facade, roof and the floors above are see-through.</div>'):'')+'<div class="lg">'+(focOn?'<span class="sc">'+STC.map(c=>'<i style="background:'+c+'"></i>').join('')+'Work of this date, coloured by stage</span><span><i style="background:#d9dde2"></i>Built: as built</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1px #98989f"></i>See-through: what would hide the work</span>':'<span><i style="background:#ff9f0a"></i>Under way</span><span><i style="background:'+HIC+'"></i>Just finished</span><span><i style="background:#e5e5ea"></i>Built earlier</span>')+(nd?'<span><i style="background:'+DEFC+'"></i>Waits for Phase 2: '+nd+' tags</span>':'')+'</div>');
   $('splayb').textContent=playI?'❚❚':'▶'; $('sspd').textContent=S.spw+' s';
 }
 function goDay(d){T=Math.max(t0,Math.min(t1,d))+.999; refresh()}
@@ -635,7 +644,7 @@ function makeView(key){
     }
     say(''); const tot=V.rep.reduce((a,r)=>a+r[1],0),hit=V.rep.reduce((a,r)=>a+r[2],0);
     if(key==='A'){$('msg').textContent='Models: '+V.rep.length+' loaded. Elements linked to tags: '+num(hit)+' of '+num(tot)+'.'+(V.miss.length?' Not loaded: '+V.miss.join(', ')+'.':'')+' '+V.rep.filter(r=>r[2]<r[1]*0.8).map(r=>r[0]+' '+Math.round(r[2]/r[1]*100)+'%').join(', ');
-      window.MPB4D={rep:V.rep,miss:V.miss,models:V.models,S,views,dbg:()=>({cutF,cutF2,two,twoAuto,focOn,foc:FOC.size,msFinal})}}
+      window.MPB4D={rep:V.rep,miss:V.miss,models:V.models,S,views,dbg:()=>({cutF,cutF2,two,twoAuto,focOn,foc:FOC.size,msFinal}),go:d=>goDay(d),scen:id=>{S.scen=id; refresh(); applyRender('bg')},months:()=>ML,today:()=>today(),T:()=>T}}
     V.syncZone(true); applyRenderV(V,'bg'); V.fkey=null; setTimeout(()=>V.focusFit(),1500);
   };
   // ---- three ways an element can be drawn: solid (visible, coloured), ghost (x-ray) or off (not drawn at all)
@@ -657,11 +666,11 @@ function makeView(key){
     if(!pass(t,V.zone)||S.off.has(t.i))return ['off','',0];
     const isSel=S.sel.has(t.i); if(hasSel){if(S.vis==='isolate'&&!isSel)return ['off','',0]; if(S.vis==='hide'&&isSel)return ['off','',0]; if(S.vis==='ghost'&&!isSel)return ['ghost','',0]}
     if(S.mode!=='tl'){   // a still moment: everything solid, no x-ray. Green = finished at this step, white = built before, purple = waits for Phase 2
-      if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; if(focOn&&!msFinal)return ['ghost','d',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
+      if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; if(focOn&&!msFinal&&blocksView(t))return ['ghost','d',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
       const r=t.built?2:T<t.s?0:T<=t.f?1:2; if(r===0)return ['off','',0];
       if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',0];
-      if(focOn&&(r===1||HI.has(t.i)))return ['solid',stgCol(t.disc),0];   // the work of this date is coloured by its stage
-      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return ['ghost','',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
+      if(focOn&&(r===1||HI.has(t.i)))return blocksView(t)?['ghost',stgCol(t.disc),0]:['solid',stgCol(t.disc),0];   // the work of this date is coloured by its stage; coloured glass when it would hide the floor in view
+      if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return blocksView(t)?['ghost','',0]:['solid','o',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
       return ['solid',R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint,0];
     }
     const s=st(t,sid); if(s===0)return [S.ns,'',0];
@@ -674,7 +683,7 @@ function makeView(key){
   };
   V.apply=()=>{
     const viewer=V.viewer; if(!viewer||!tags)return; const hasSel=S.sel.size>0, sid=V.scen(); let changed=false;
-    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), key=L.join('|'), prev=V.applied[t.i]; if(prev===key)return; V.applied[t.i]=key; changed=true; const gd=L[0]==='ghost'&&(L[1]==='d'||L[1]==='k'), clr=L[0]==='ghost'&&!gd&&!!V.tint[t.i]; if(L[0]==='solid')V.tint[t.i]=L[1]!=='o'; else if(gd)V.tint[t.i]=true; else if(clr)V.tint[t.i]=false;
+    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), key=L.join('|'), prev=V.applied[t.i]; if(prev===key)return; V.applied[t.i]=key; changed=true; const gd=L[0]==='ghost'&&!!L[1], clr=L[0]==='ghost'&&!gd&&!!V.tint[t.i]; if(L[0]==='solid')V.tint[t.i]=L[1]!=='o'; else if(gd)V.tint[t.i]=true; else if(clr)V.tint[t.i]=false;
       const c=L[0]==='solid'||gd?colOf(L[1]==='d'?DEFC:L[1]==='k'?'#9aa5b1':L[1]):null;   // 'k': context, a grey glass that still reads on a light background
       for(const code in V.models){const all=MAP[code]&&MAP[code].tagIds[t.i]; if(!all||!all.length)continue; const m=V.models[code];
         if(L[2]>0&&L[2]<16){const ids=ordered(code,t.i),k=Math.max(1,Math.round(ids.length*L[2]/16)); draw(ids.slice(0,k),m,'solid',c); draw(ids.slice(k),m,S.ns,null)}
@@ -692,7 +701,7 @@ function makeView(key){
     const lo=xs[0].length>200?.01:0, bx=new THREE.Box3(new THREE.Vector3(pc(xs[0],lo),pc(xs[1],lo),pc(xs[2],lo)),new THREE.Vector3(pc(xs[3],1-lo),pc(xs[4],1-lo),pc(xs[5],1-lo)));
     return V.bounds[key2]=bx;
   };
-  const look=bx=>{const go=()=>{try{V.viewer.navigation.fitBounds(true,bx)}catch(e){}}; if(!V.cubed){V.cubed=true; try{const x=V.viewer.getExtension('Autodesk.ViewCubeUi'); if(x){x.setViewCube('front top right'); setTimeout(go,900); return}}catch(e){}} go()};
+  V.look=bx=>{const go=()=>{try{V.viewer.navigation.fitBounds(true,bx)}catch(e){}}; if(!V.cubed){V.cubed=true; try{const x=V.viewer.getExtension('Autodesk.ViewCubeUi'); if(x){x.setViewCube('back top left'); setTimeout(go,900); return}}catch(e){}} go()};
   V.syncZone=force=>{const z=V.wantZone()||null; if(!force&&z===V.zone)return; V.zone=z; V.label(); V.apply(); V.frame()};
   V.frame=()=>{
     const viewer=V.viewer; if(!viewer)return; const z=V.zone, zoned=z&&(/^(GF|1F|2F|3F)/.test(z));
@@ -701,23 +710,59 @@ function makeView(key){
     if(S.clip&&zoned){const e=bx.clone().expandByScalar(Math.max(bx.max.x-bx.min.x,bx.max.y-bx.min.y)*0.004+0.05), P=[];
       P.push(new THREE.Vector4(0,0,1,-e.max.z),new THREE.Vector4(0,0,-1,e.min.z),new THREE.Vector4(1,0,0,-e.max.x),new THREE.Vector4(-1,0,0,e.min.x),new THREE.Vector4(0,1,0,-e.max.y),new THREE.Vector4(0,-1,0,e.min.y));
       viewer.setCutPlanes(P)} else viewer.setCutPlanes([]);
-    look(bx);
+    V.look(bx);
   };
   // turn the camera to the work of this date. Only moves when the set of focus items has changed.
+  // camera: stays on the floor in view and only moves when that floor changes; no section plane, blockers are drawn as glass instead
   V.focusFit=()=>{
     if(!V.viewer||S.mode!=='story'||!Object.keys(V.models).length)return; if(V.zone){V.fkey=null;return}
-    const cf=two&&S.dual&&V.key==='B'?cutF2:cutF, key=(focOn?[...FOC].sort((a,b)=>a-b).join(','):'')+'|'+S.cut+S.follow+msFinal+cf+two; if(V.fkey===key)return; V.fkey=key;
-    if(!focOn){V.viewer.setCutPlanes([]); if(S.follow)V.fit(); return}
-    const inb=[...FOC].some(i=>tags[i].zone!=='EXT'), bx=V.boundsOf(t=>FOC.has(t.i)&&(!inb||t.zone!=='EXT'),'fo:'+key); if(!bx)return;   // work outside the building does not pull the camera away
-    // section plane that follows the work: the building is cut open just above the highest item of this date
-    let P=[],fb=null; if(cf){const all=V.boundsOf(()=>true,'all'); fb=V.boundsOf(t=>FOC.has(t.i)&&t.floor===cf,'fc:'+key); if(all&&fb){const H=all.max.z-all.min.z, zc=fb.max.z+H*0.012; if(zc<all.max.z-H*0.03)P=[new THREE.Vector4(0,0,1,-zc)]; else fb=null}}
-    V.viewer.setCutPlanes(P);
-    if(S.follow){const b2=(fb||bx).clone(), sz=Math.max(b2.max.x-b2.min.x,b2.max.y-b2.min.y,b2.max.z-b2.min.z); b2.expandByScalar(sz*0.12+1); look(b2)}
+    const cf=two&&S.dual&&V.key==='B'?cutF2:cutF, key=(focOn?cf:'-')+'|'+S.follow; if(V.fkey===key)return; V.fkey=key; V.viewer.setCutPlanes([]);
+    if(!S.follow)return; if(!focOn||!cf){V.fit(); return}
+    const fb=V.boundsOf(t=>t.floor===cf&&t.zone!=='EXT','flr:'+cf); if(!fb){V.fit();return}
+    const c=fb.getCenter(new THREE.Vector3()), h=fb.getSize(new THREE.Vector3()).multiplyScalar(0.44), b2=new THREE.Box3(c.clone().sub(h),c.clone().add(h)); V.look(b2);   // a tighter box than the floor itself: the fit leaves a wide margin otherwise
   };
-  V.fit=()=>{if(!V.viewer)return; const bx=V.boundsOf(t=>pass(t,V.zone),'f:'+V.zone+[...S.disc].join('')+S.q); if(bx)look(bx)};
-  V.fitSel=()=>{if(!V.viewer||V.zone)return; const bx=V.boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)look(bx)};
+  V.fit=()=>{if(!V.viewer)return; const bx=V.boundsOf(t=>pass(t,V.zone),'f:'+V.zone+[...S.disc].join('')+S.q); if(bx)V.look(bx)};
+  V.fitSel=()=>{if(!V.viewer||V.zone)return; const bx=V.boundsOf(t=>S.sel.has(t.i),'s:'+[...S.sel].sort().join(',')); if(bx)V.look(bx)};
   V.orbit=dt=>{try{const nav=V.viewer.navigation,p=nav.getPosition(),c=nav.getPivotPoint?nav.getPivotPoint():nav.getTarget(),a=dt*0.12,dx=p.x-c.x,dy=p.y-c.y,cs=Math.cos(a),sn=Math.sin(a),np=new THREE.Vector3(c.x+dx*cs-dy*sn,c.y+dx*sn+dy*cs,p.z); nav.setView(np,nav.getTarget().clone().sub(p).applyAxisAngle(new THREE.Vector3(0,0,1),a).add(np))}catch(e){}};
+  if(USE3)view3(V,lookOf);
   return V;
+}
+// ---------- the app's own renderer (three.js) in place of the Autodesk viewer. Same view object, other drawing engine.
+// It reads two files from the ACC data folder: mpb4d_3d.json and mpb4d_3d.bin. If they are missing, the Autodesk viewer is used.
+const USE3=new URLSearchParams(location.search).get('viewer')!=='aps'&&CFG.renderer!=='aps';
+let d3P=null;
+const load3D=()=>d3P||(d3P=(async()=>{
+  if(!window.MPB3D)await new Promise(r=>{addEventListener('mpb3d-ready',r,{once:true}); setTimeout(r,8000)}); if(!window.MPB3D)throw new Error('3D engine did not load');
+  if(CFG.local3d){const man=await (await fetch(CFG.local3d+'.json')).json(), buf=await (await fetch(CFG.local3d+'.bin')).arrayBuffer(); return [man,buf]}
+  const man=await A.readDataFile('mpb4d_3d.json'), b=man&&await A.readDataBlob('mpb4d_3d.bin'); if(!man||!b)throw new Error('mpb4d_3d files are not in the ACC data folder'); return [man,await b.arrayBuffer()]})());
+function view3(V,lookOf){
+  const key=V.key, say=t=>{const l=$('load'+key); l.hidden=!t; l.textContent=t}, aps={load:V.load,apply:V.apply,boundsOf:V.boundsOf,look:V.look,orbit:V.orbit}; let R=null, BB={};
+  const hex=k=>k==='d'?DEFC:k==='k'?'#9aa5b1':k==='a'?'#eef0f2':/^[twm]#/.test(k)?k.slice(1,8):k;
+  V.load=async()=>{
+    say('Loading the 3D model…'); let man,buf;
+    try{[man,buf]=await load3D()}catch(e){console.warn('own renderer not used:',e); Object.assign(V,aps); return V.load()}   // fall back to the Autodesk viewer
+    R=V.r3=window.MPB3D.create($('fv'+key),man,buf); man.tags.forEach(m=>{BB[m.tag]=m.bb}); const byName=Object.fromEntries(tags.map(t=>[t.tag,t]));
+    R.onPick=name=>{if(S.pick==='tag'&&byName[name])pickTag(byName[name])}; $('fv'+key).addEventListener('pointerdown',()=>{V.moved=true},true);
+    const ms=$('ms3'); if(ms&&key==='A'&&new URLSearchParams(location.search).get('speed')==='1'){ms.hidden=false; R.meter=(t,n)=>{ms.textContent=t.toFixed(0)+' ms per picture · '+(n/1e6).toFixed(2)+' M triangles'}}
+    V.viewer={setCutPlanes(){},resize(){R.resize()},impl:{invalidate(){R.touch()}},clearSelection(){},getScreenShot(w,h,cb){cb(R.shot(w,h))},getState(){return R.getCam()},restoreState(st){R.setCam(st)}};
+    V.models={'3D':1}; V.applied={}; V.bounds={}; V.apply(); say('');
+    if(key==='A'){const n=tags.filter(t=>BB[t.tag]).length; $('msg').textContent='3D model: '+n+' of '+tags.length+' work packages have geometry.';
+      window.MPB4D={S,views,r3:R,dbg:()=>({cutF,cutF2,two,twoAuto,focOn,foc:FOC.size,msFinal}),go:d=>goDay(d),scen:id=>{S.scen=id; refresh(); applyRender('bg')},months:()=>ML,today:()=>today(),T:()=>T}}
+    V.syncZone(true); V.fkey=null; setTimeout(()=>V.focusFit(),300);
+  };
+  V.apply=()=>{
+    if(!R||!tags)return; const hasSel=S.sel.size>0, sid=V.scen(), mark=S.vis==='normal';
+    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), sel=mark&&S.sel.has(t.i), k=L[0]+'|'+L[1]+'|'+sel; if(V.applied[t.i]===k)return; V.applied[t.i]=k;
+      if(L[0]==='off')R.setLook(t.tag,'off'); else if(L[0]==='ghost')R.setLook(t.tag,'ghost',L[1]?hex(L[1]):null,false); else if(L[1]==='o')R.setLook(t.tag,'built',null,sel); else R.setLook(t.tag,'solid',hex(L[1]),sel)});
+    R.touch();
+  };
+  V.boundsOf=(pred,k2)=>{
+    if(V.bounds[k2])return V.bounds[k2]; const bx=new THREE.Box3(); let n=0;
+    tags.filter(pred).forEach(t=>{const b=BB[t.tag]; if(!b)return; n++; bx.expandByPoint(new THREE.Vector3(b[0],b[1],b[2])); bx.expandByPoint(new THREE.Vector3(b[3],b[4],b[5]))});
+    return n?(V.bounds[k2]=bx):null;
+  };
+  V.look=bx=>{if(R)R.fit([bx.min.x,bx.min.y,bx.min.z],[bx.max.x,bx.max.y,bx.max.z])};
+  V.orbit=dt=>{if(R)R.orbit(dt)};
 }
 function setOff(ids,m,off){const vm=m.visibilityManager; if(!vm)return; for(const id of ids){try{vm.setNodeOff(id,off)}catch(e){}}}
 // link the IFC GlobalIds in the data file to the model's element ids. Done once per model and shared by both views.
@@ -738,7 +783,10 @@ async function mapModel(code,m){
 function onPick(V,ev){
   if(V.muting||S.pick!=='tag')return; const s=ev.selections&&ev.selections[0]; if(!s||!s.dbIdArray.length)return; const m=s.model,M=MAP[m._code]; if(!M)return; const map=M.id2tag;
   const tree=m.getInstanceTree(); let id=s.dbIdArray[0],k=0; while(id!=null&&map[id]==null&&tree&&k++<12)id=tree.getNodeParentId(id);
-  if(id==null||map[id]==null)return; const t=tags[map[id]]; S.sel.clear(); S.sel.add(t.i); openTo(t);
+  if(id==null||map[id]==null)return; pickTag(tags[map[id]]);
+}
+function pickTag(t){
+  S.sel.clear(); S.sel.add(t.i); openTo(t);
   views.forEach(x=>{x.applied._h=null}); buildGrid(); panel(); applyAll(); const i=rows.findIndex(r=>r.leaf&&r.t===t), el=document.querySelector('#g .row[data-i="'+i+'"]'); if(el)el.scrollIntoView({block:'nearest'});
 }
 function setDual(on){
@@ -761,9 +809,9 @@ let R=Object.assign({},RDEF,store.get('render3')||{});
 const rgb=h=>{const c=new THREE.Color(h);return [Math.round(c.r*255),Math.round(c.g*255),Math.round(c.b*255)]};
 function applyRender(only){views.forEach(V=>applyRenderV(V,only))}
 function applyRenderV(V,only){
-  const viewer=V.viewer; if(!viewer)return; const I=viewer.impl, T_=f=>{try{f()}catch(e){console.warn('render setting',e.message)}}, is=k=>!only||only===k||(Array.isArray(only)&&only.includes(k));
+  const viewer=V.viewer; if(!viewer||V.r3)return; const I=viewer.impl, T_=f=>{try{f()}catch(e){console.warn('render setting',e.message)}}, is=k=>!only||only===k||(Array.isArray(only)&&only.includes(k));
   if(is('preset')){T_(()=>viewer.setLightPreset(+R.preset)); V.baseDir=null; only=null}
-  const xr=S.mode==='tl'&&R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), st=S.mode==='story', a=rgb(xr?'#232a33':st?'#cfd6de':R.bgTop),b=rgb(xr?'#0c0f13':st?'#eef1f4':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
+  const xr=S.mode==='tl'&&R.xrayDark&&(S.bu==='ghost'||S.ns==='ghost'), st=S.mode==='story', a=rgb(xr?'#232a33':st?'#e6eaee':R.bgTop),b=rgb(xr?'#0c0f13':st?'#e6eaee':R.bgBot);   // x-ray elements are drawn as light glass: they only read on a dark backdrop
   const bg=()=>{T_(()=>viewer.setEnvMapBackground(false)); T_(()=>viewer.setBackgroundColor(a[0],a[1],a[2],b[0],b[1],b[2])); T_(()=>{const fm=I.fadeMaterial; if(fm&&st){fm.color.setRGB(.42,.48,.56); fm.opacity=.06; fm.needsUpdate=true}}); I.invalidate(true,true,true)}; bg(); clearTimeout(V.bgT1); clearTimeout(V.bgT2); V.bgT1=setTimeout(bg,400); V.bgT2=setTimeout(bg,2000);   // a light preset loads its own background a moment later
   T_(()=>viewer.setTheme((a[0]+a[1]+a[2])/3<110?'dark-theme':'light-theme'));
   T_(()=>I.setTonemapMethod(+R.tone)); T_(()=>I.setTonemapExposureBias(+R.expo)); T_(()=>I.matman().setEnvExposure(+R.envExpo)); T_(()=>I.renderer().setEnvExposure(+R.envExpo)); T_(()=>{I.matman().setEnvRotation(R.envRot*Math.PI/180); I.renderer().setEnvRotation(R.envRot*Math.PI/180)});
