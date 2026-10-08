@@ -31,8 +31,8 @@ function create(box,man,buf){
     const ground=new T3.Mesh(new T3.PlaneGeometry(r*5,r*5),new T3.ShadowMaterial({opacity:0.14})); ground.position.set(c.x,c.y,gz-0.05); ground.receiveShadow=true; ground.material.depthWrite=false; ground.visible=SH; scene.add(ground); I.ground=ground;
   }
   // state: 'off' | 'built' | 'solid' | 'ghost'.  hex: colour for solid, or for coloured glass.  sel: picked in the list
-  I.setLook=(tag,state,hex,sel,grow)=>{
-    const t=tags[tag]; if(!t)return; const key=state+'|'+(hex||'')+'|'+(sel?1:0)+'|'+(grow||0); if(key===t.key)return; t.key=key; const m=t.mat, me=t.mesh;
+  I.setLook=(tag,state,hex,sel,grow,vert)=>{
+    const t=tags[tag]; if(!t)return; const key=state+'|'+(hex||'')+'|'+(sel?1:0)+'|'+(grow||0)+(vert?'v':'h'); if(key===t.key)return; t.key=key; const m=t.mat, me=t.mesh;
     me.visible=state!=='off'; renderer.shadowMap.needsUpdate=true; if(!me.visible){dirty=2;return}
     const glass=state==='ghost'; m.transparent=glass; m.opacity=glass?(hex?0.24:0.07):1; m.depthWrite=true;   /* glass also writes depth: only the nearest sheet of glass shows, so many sheets cannot add up to fog */ me.renderOrder=glass?2:0; me.castShadow=!glass; me.receiveShadow=!glass;
     if(state==='built'){m.vertexColors=true; m.color.set('#ffffff'); m.emissive.set('#000000'); m.emissiveIntensity=0}
@@ -40,7 +40,7 @@ function create(box,man,buf){
     if(sel){m.emissive.set('#0a84ff'); m.emissiveIntensity=0.35}
     if(t.edges){t.edges.visible=!glass&&!I.low; t.edges.material.color.set(state==='solid'?'#111827':'#4b5563'); t.edges.material.opacity=state==='solid'?0.8:0.24}
     // grow: only the lower part is drawn, up to a level that rises with the progress of the work
-    if(grow&&t.bb){if(!t.plane)t.plane=new T3.Plane(new T3.Vector3(0,0,-1),0); t.plane.constant=t.bb[2]+(t.bb[5]-t.bb[2])*grow; m.clippingPlanes=[t.plane]; if(t.edges)t.edges.material.clippingPlanes=[t.plane]}
+    if(grow&&t.bb){if(!t.plane)t.plane=new T3.Plane(new T3.Vector3(0,0,-1),0); const b=t.bb, ax=vert?2:(b[3]-b[0]>=b[4]-b[1]?0:1), pad=0.3; t.plane.normal.set(ax===0?-1:0,ax===1?-1:0,ax===2?-1:0); t.plane.constant=(b[ax]-pad)+(b[ax+3]-b[ax]+2*pad)*grow;   /* the box is the middle 98% of the package, so start a little outside it */ m.clippingPlanes=[t.plane]; if(t.edges)t.edges.material.clippingPlanes=[t.plane]}
     else if(m.clippingPlanes&&m.clippingPlanes.length){m.clippingPlanes=[]; if(t.edges){t.edges.material.clippingPlanes=[]; t.edges.material.needsUpdate=true}}
     m.needsUpdate=true; dirty=2;
   };
