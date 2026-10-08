@@ -7,7 +7,7 @@ T3.ShaderChunk.shadowmap_vertex=T3.ShaderChunk.shadowmap_vertex.replace('vec3 sh
 const DIR=new T3.Vector3(-0.62,-0.5,0.8).normalize();   // from the west side, from above
 function create(box,man,buf){
   const QS=new URLSearchParams(location.search), low0=QS.get('q')==='low', SH=QS.get('shadows')==='1';   // shadows are off unless asked for
-  const renderer=new T3.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); renderer.setClearColor('#e6eaee'); renderer.toneMapping=T3.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
+  const renderer=new T3.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); renderer.setClearColor('#e6eaee'); renderer.localClippingEnabled=true; renderer.toneMapping=T3.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
   const cv=renderer.domElement; cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block;outline:none'; box.appendChild(cv);
   const scene=new T3.Scene(), camera=new T3.PerspectiveCamera(32,1,0.5,2000); camera.up.set(0,0,1);
   scene.add(new T3.HemisphereLight(0xffffff,0xb9c0c9,1.15)); const sun=new T3.DirectionalLight(0xffffff,1.9); sun.position.set(-60,-90,140); scene.add(sun); scene.add(sun.target);
@@ -22,7 +22,7 @@ function create(box,man,buf){
     const mesh=new T3.Mesh(g,mat); mesh.position.set(m.q[0],m.q[1],m.q[2]); mesh.scale.setScalar(m.q[3]); mesh.visible=false; mesh.userData.tag=m.tag; mesh.castShadow=true; mesh.receiveShadow=true; scene.add(mesh);
     let edges=null; if(m.edg&&m.edg[1]){const eg=new T3.BufferGeometry(); eg.setAttribute('position',pos); eg.setIndex(new T3.BufferAttribute(m.i16?new Uint16Array(buf,m.edg[0],m.edg[1]):new Uint32Array(buf,m.edg[0],m.edg[1]),1));
       edges=new T3.LineSegments(eg,new T3.LineBasicMaterial({color:0x4b5563,transparent:true,opacity:0.26})); mesh.add(edges)}
-    const t={mesh,mat,edges,key:''}; tags[m.tag]=t; list.push(t);
+    const t={mesh,mat,edges,key:'',bb:m.bb,plane:null}; tags[m.tag]=t; list.push(t);
   }
   { // the sun and its shadow cover the whole building; the shadow is drawn again only when the work on show changes, not when the camera moves
     const lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9]; let gz=1e9; const pc=(k,q)=>{const a=man.tags.map(m=>m.bb[k]).sort((x,y)=>x-y); return a[Math.round(q*(a.length-1))]}; for(let i=0;i<3;i++){lo[i]=pc(i,0.03); hi[i]=pc(i+3,0.97)} gz=pc(2,0.03);   /* a few stray parts far away must not stretch the shadow area */
@@ -31,14 +31,17 @@ function create(box,man,buf){
     const ground=new T3.Mesh(new T3.PlaneGeometry(r*5,r*5),new T3.ShadowMaterial({opacity:0.14})); ground.position.set(c.x,c.y,gz-0.05); ground.receiveShadow=true; ground.material.depthWrite=false; ground.visible=SH; scene.add(ground); I.ground=ground;
   }
   // state: 'off' | 'built' | 'solid' | 'ghost'.  hex: colour for solid, or for coloured glass.  sel: picked in the list
-  I.setLook=(tag,state,hex,sel)=>{
-    const t=tags[tag]; if(!t)return; const key=state+'|'+(hex||'')+'|'+(sel?1:0); if(key===t.key)return; t.key=key; const m=t.mat, me=t.mesh;
+  I.setLook=(tag,state,hex,sel,grow)=>{
+    const t=tags[tag]; if(!t)return; const key=state+'|'+(hex||'')+'|'+(sel?1:0)+'|'+(grow||0); if(key===t.key)return; t.key=key; const m=t.mat, me=t.mesh;
     me.visible=state!=='off'; renderer.shadowMap.needsUpdate=true; if(!me.visible){dirty=2;return}
     const glass=state==='ghost'; m.transparent=glass; m.opacity=glass?(hex?0.24:0.07):1; m.depthWrite=true;   /* glass also writes depth: only the nearest sheet of glass shows, so many sheets cannot add up to fog */ me.renderOrder=glass?2:0; me.castShadow=!glass; me.receiveShadow=!glass;
     if(state==='built'){m.vertexColors=true; m.color.set('#ffffff'); m.emissive.set('#000000'); m.emissiveIntensity=0}
     else{m.vertexColors=false; m.color.set(hex||'#9fb0c2'); m.emissive.set(hex||'#000000'); m.emissiveIntensity=glass?0:0.12}
     if(sel){m.emissive.set('#0a84ff'); m.emissiveIntensity=0.35}
     if(t.edges){t.edges.visible=!glass&&!I.low; t.edges.material.color.set(state==='solid'?'#111827':'#4b5563'); t.edges.material.opacity=state==='solid'?0.8:0.24}
+    // grow: only the lower part is drawn, up to a level that rises with the progress of the work
+    if(grow&&t.bb){if(!t.plane)t.plane=new T3.Plane(new T3.Vector3(0,0,-1),0); t.plane.constant=t.bb[2]+(t.bb[5]-t.bb[2])*grow; m.clippingPlanes=[t.plane]; if(t.edges)t.edges.material.clippingPlanes=[t.plane]}
+    else if(m.clippingPlanes&&m.clippingPlanes.length){m.clippingPlanes=[]; if(t.edges){t.edges.material.clippingPlanes=[]; t.edges.material.needsUpdate=true}}
     m.needsUpdate=true; dirty=2;
   };
   I.touch=()=>{dirty=2};

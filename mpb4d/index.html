@@ -308,9 +308,9 @@ body.diff .zr .pc{visibility:hidden} body.diff .stg em{color:#d9b3f5} body.diff 
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-08v31"></script>
-<script src="auth.js?v=2026-10-08v31"></script>
-<script type="module" src="v3d.js?v=2026-10-08v31"></script>
+<script src="config.js?v=2026-10-08v32"></script>
+<script src="auth.js?v=2026-10-08v32"></script>
+<script type="module" src="v3d.js?v=2026-10-08v32"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -729,6 +729,8 @@ function makeView(key){
       if(deferred(t,sid)){if(!(msFinal||t.zone===msZone||T>t.s))return ['off','',0]; if(focOn&&!msFinal&&blocksView(t))return ['ghost','d',0]; return S.df==='mark'?['solid','d',0]:[S.df,'',0]}
       const r=t.built?2:T<t.s?0:T<=t.f?1:2; if(r===0)return ['off','',0];
       if(S.colorBy!=='real'&&S.colorBy!=='status')return ['solid',colorMap[KEY[S.colorBy](t)]||'#999999',0];
+      // envelope and roof skin: never a solid wall in front of the work. While it is being built it grows from the bottom up as coloured glass; once built it is grey glass.
+      if(S.mode==='story'&&focOn&&(t.zone==='ENV'||(t.zone==='ROOF'&&(t.disc==='FA'||t.group==='AR-ROOF')))){if(r===1)return ['ghost',stgCol(t.disc),Math.max(1,Math.min(16,Math.ceil(frac(t)*16)))]; if(!HI.has(t.i))return ['ghost',cutF?'':'k',0]}
       if(focOn&&(r===1||HI.has(t.i)))return blocksView(t)?['ghost',stgCol(t.disc),0]:['solid',stgCol(t.disc),0];   // the work of this date is coloured by its stage; coloured glass when it would hide the floor in view
       if(r===1)return ['solid','w'+R.wip+R.wipS,0]; if(HI.has(t.i))return ['solid',HIC,0]; if(focOn)return blocksView(t)?['ghost','',0]:['solid','o',0];   // everything that is not the work of this date becomes faint glass, so it cannot block the view
       return ['solid',R.mat==='original'?'o':R.mat==='arctic'?'a':'t'+DC[t.disc]+R.tint,0];
@@ -812,8 +814,8 @@ function view3(V,lookOf){
   };
   V.apply=()=>{
     if(!R||!tags)return; const hasSel=S.sel.size>0, sid=V.scen(), mark=S.vis==='normal';
-    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), sel=mark&&S.sel.has(t.i), k=L[0]+'|'+L[1]+'|'+sel; if(V.applied[t.i]===k)return; V.applied[t.i]=k;
-      if(L[0]==='off')R.setLook(t.tag,'off'); else if(L[0]==='ghost')R.setLook(t.tag,'ghost',L[1]?hex(L[1]):null,false); else if(L[1]==='o')R.setLook(t.tag,'built',null,sel); else R.setLook(t.tag,'solid',hex(L[1]),sel)});
+    tags.forEach(t=>{const L=lookOf(t,hasSel,sid), sel=mark&&S.sel.has(t.i), k=L[0]+'|'+L[1]+'|'+sel+'|'+L[2]; if(V.applied[t.i]===k)return; V.applied[t.i]=k;
+      if(L[0]==='off')R.setLook(t.tag,'off'); else if(L[0]==='ghost')R.setLook(t.tag,'ghost',L[1]?hex(L[1]):null,false,L[2]>0&&L[2]<16?L[2]/16:0); else if(L[1]==='o')R.setLook(t.tag,'built',null,sel); else R.setLook(t.tag,'solid',hex(L[1]),sel)});
     R.touch();
   };
   V.boundsOf=(pred,k2)=>{
