@@ -308,9 +308,9 @@ body.diff .zr .pc{visibility:hidden} body.diff .stg em{color:#d9b3f5} body.diff 
 </div>
 <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="config.js?v=2026-10-08v34"></script>
-<script src="auth.js?v=2026-10-08v34"></script>
-<script type="module" src="v3d.js?v=2026-10-08v34"></script>
+<script src="config.js?v=2026-10-08v35"></script>
+<script src="auth.js?v=2026-10-08v35"></script>
+<script type="module" src="v3d.js?v=2026-10-08v35"></script>
 <script>
 (function(){
 const DC={CI:'#8c8478',ST:'#5b6c8f',FA:'#2e86ab',AR:'#d9a021',HV:'#3aa17e',FF:'#d1495b',PH:'#7b5ea7',PI:'#e07a3f',EL:'#b0408f',FU:'#946b4a'};
@@ -514,6 +514,7 @@ function flags(){
   const sid=S.scen, lv=liveOf(sid), mx=f=>{const a=lv.filter(f); return a.length?Math.max(...a.map(t=>t.f)):null}, labs=['GF-LAB','1F-QC','1F-PD','1F-CTR'], out=[[today()>realToday()?'Start':'Today',today()]];
   const r=mx(t=>t.zone==='ROOF'&&(t.disc==='FA'||t.disc==='ST')), en=mx(t=>t.zone==='ENV'); if(r)out.push(['Roof closed',r]); if(en)out.push(['Envelope closed',en]);
   if(!tags.some(t=>labs.includes(t.zone)&&deferred(t,sid))){const l=mx(t=>labs.includes(t.zone)); if(l)out.push(['Labs complete',l])}
+  {const oz=D.zones.filter(z=>/office/i.test(z[1])).map(z=>z[0]); if(oz.length&&!tags.some(t=>oz.includes(t.zone)&&deferred(t,sid))){const o=mx(t=>oz.includes(t.zone)); if(o)out.push(['Offices ready',o])}}
   const e=mx(()=>true); if(e)out.push([sid==='BASE'?'Building complete':'End of Phase 1',e]); return out.filter(f=>f[1]>=today());   // a milestone before the start of the timeline has no place on it
 }
 function storyUI(){
