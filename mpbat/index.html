@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>MPB Asset Tracker</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* layout: top bar with tabs; Rooms = plan + room list on the left, room data sheet on the right; passport opens as a side drawer */
+:root{--bg:#f2f4f6;--surface:#ffffff;--sunk:#e9edf1;--fg:#17212b;--muted:#5a6773;--line:#d3dae1;--accent:#0b6e8a;--accent-soft:#d8ecf2;--ok:#2c7a4b;--warn:#a86400;--crit:#b3261e;--plan:#dfe5ea;
+ --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11171d;--surface:#19212a;--sunk:#222c36;--fg:#e6ecf1;--muted:#9aa8b5;--line:#2f3b47;--accent:#56b8d4;--accent-soft:#173a46;--ok:#6cc08d;--warn:#e0a550;--crit:#ef8a82;--plan:#26323d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11171d;--surface:#19212a;--sunk:#222c36;--fg:#e6ecf1;--muted:#9aa8b5;--line:#2f3b47;--accent:#56b8d4;--accent-soft:#173a46;--ok:#6cc08d;--warn:#e0a550;--crit:#ef8a82;--plan:#26323d;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);padding-inline:16px;padding-block:0 40px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1500px;margin-inline:auto}
+header.top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;padding-block:14px 10px}
+h1{font-size:19px;font-weight:600;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--muted);font-weight:400}
+.src{color:var(--muted);font-size:12px;margin-left:auto}
+nav{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;color:var(--muted);font-weight:500}
+nav button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav .n{font:12px var(--mono);color:var(--muted);margin-left:4px}
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;min-width:0}
+.panel>h2,.sec>h3{margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.panel>h2{padding:10px 14px;border-bottom:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{background:var(--surface);border:0;border-right:1px solid var(--line);padding:5px 11px;font-family:var(--mono);font-size:13px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+input[type=search],select{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:5px 9px;min-width:0}
+input[type=search]{flex:1 1 160px}
+.plan{padding:4px 10px 10px}
+.plan svg{display:block;width:100%;height:auto}
+.plan .rm{fill:var(--plan);stroke:var(--surface);stroke-width:.12;cursor:pointer}
+.plan .rm:hover{fill:var(--accent-soft)}
+.plan .rm.sel{fill:var(--accent)}
+.plan text{font:1px var(--mono);fill:var(--fg);pointer-events:none;text-anchor:middle}
+.plan text.sel{fill:var(--surface)}
+.plan .dr{fill:var(--warn);pointer-events:none}
+.legend{color:var(--muted);font-size:12px;padding:0 14px 10px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap;background:var(--surface);position:sticky;top:0}
+th.sort{cursor:pointer}
+td.num,th.num{text-align:right}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--sunk)}
+tbody tr.sel{background:var(--accent-soft)}
+.mono{font-family:var(--mono);font-size:13px}
+.scroll{max-height:420px;overflow:auto}
+.sheet{position:sticky;top:8px}
+.sheet .head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:14px;border-bottom:1px solid var(--line)}
+.roomno{font:500 30px/1 var(--mono);color:var(--accent)}
+.rname{font-size:18px;font-weight:600;text-wrap:balance}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.facts div{background:var(--surface);padding:9px 14px}
+.facts b{display:block;font:500 17px var(--mono)}
+.facts span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.sec{padding:12px 14px 4px}
+.sec>h3{margin-bottom:4px;display:flex;gap:8px;justify-content:space-between}
+.sec>h3 small{font-weight:400;text-transform:none;letter-spacing:0}
+.sec table td,.sec table th{padding-inline:0 12px}
+.empty{color:var(--muted);padding:6px 0 10px}
+.pill{display:inline-block;font-size:11px;font-weight:500;border-radius:10px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}.pill.crit{color:var(--crit)}.pill.mut{color:var(--muted)}
+.lnk{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+details{border-bottom:1px solid var(--line)}
+details summary{display:flex;gap:10px;align-items:baseline;padding:7px 0;cursor:pointer}
+details summary .c{margin-left:auto;font-family:var(--mono)}
+details summary small{color:var(--muted)}
+details .in{padding:0 0 8px 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
+.kpi b{font:500 24px var(--mono);display:block}
+.kpi span{color:var(--muted);font-size:12px}
+.note{color:var(--muted);max-width:75ch;padding:10px 14px}
+.note li{margin-bottom:4px}
+#drawer{position:fixed;inset:0 0 0 auto;width:min(480px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:-8px 0 30px rgb(0 0 0 / .18);overflow:auto;z-index:20;padding:env(safe-area-inset-top,0px) 0 30px}
+#drawer .dh{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+#drawer .dh div{flex:1;min-width:0}
+#drawer .tag{font:500 22px var(--mono);color:var(--accent);overflow-wrap:anywhere}
+#drawer .x{background:var(--sunk);border:0;border-radius:5px;padding:5px 10px}
+dl{display:grid;grid-template-columns:minmax(110px,38%) 1fr;gap:5px 12px;margin:0}
+dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere}
+.life{display:grid;gap:0;padding-left:4px}
+.life div{display:flex;gap:10px;align-items:center;padding:5px 0;color:var(--muted);border-left:2px solid var(--line);padding-left:14px;position:relative}
+.life div::before{content:"";position:absolute;left:-6px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--line)}
+.life div.done{color:var(--fg)}.life div.done::before{background:var(--ok);border-color:var(--ok)}
+.life small{margin-left:auto}
+ul.chk{margin:0;padding-left:18px}
+#toast{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:7px 14px;border-radius:5px;z-index:30}
+textarea{width:100%;height:160px;font:12px var(--mono);background:var(--sunk);color:var(--fg);border:1px solid var(--line)}
+body{margin:0}[hidden]{display:none!important}
+#vp{margin-bottom:14px;overflow:hidden}
+#vp .bar{border-bottom:1px solid var(--line);padding-block:8px}
+#vp .bar b{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+#vp .btn,.btn{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:4px 10px}
+#vp .btn[aria-pressed="true"],.btn[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+#vmsg{color:var(--muted);font-size:12px;flex:1 1 200px;min-width:0}
+#fv{position:relative;height:46vh;min-height:300px;background:var(--sunk)}
+#fv.big{height:74vh}
+#gate{max-width:520px;margin:12vh auto;padding:28px;text-align:center}
+#gate h2{margin:0 0 8px;font-size:20px}
+#gate p{color:var(--muted)}
+#gate button{background:var(--accent);color:var(--surface);border:0;border-radius:5px;padding:9px 18px;font-weight:600;margin-top:10px}
+#who{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><h1>MPB Asset Tracker <span>· 66A Multi Purpose Building</span></h1><div class="src" id="src"></div></header>
+<section class="panel" id="gate"><h2>MPB Asset Tracker</h2><p id="gmsg">Sign in with your Autodesk account. You see the models and data your ACC permissions allow.</p><button id="signin" hidden>Sign in with Autodesk</button></section>
+<div id="app" hidden>
+<nav role="tablist" id="tabs"></nav>
+<section class="panel" id="vp"><div class="bar"><b>3D model</b><span id="vmsg">Not loaded.</span>
+<button class="btn" id="vload">Load 3D</button><button class="btn" id="vassets" hidden>Load equipment models</button><button class="btn" id="vceil" aria-pressed="false" hidden>Ceiling zone</button><button class="btn" id="vcol" aria-pressed="false" hidden>Colour doors</button><button class="btn" id="vall" hidden>Whole building</button><button class="btn" id="vbig" aria-pressed="false" hidden>Larger</button></div>
+<div id="fv" hidden></div></section>
+<main id="main"></main>
+</div>
+</div>
+<aside id="drawer" hidden></aside>
+<div id="toast" hidden></div>
+<script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script>
+const CFG=window.CX_CONFIG,A=window.CX_AUTH;let D;const $=s=>document.querySelector(s),FL=['BG','1e','2e','3e'],FLN=['Ground floor','1st floor','2nd floor','3rd floor'];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f1=v=>v==null||v===''?'':Number(v).toLocaleString('en-GB',{minimumFractionDigits:1,maximumFractionDigits:1});
+const RI={};let roomDoors=[],roomAssets=[];
+function setup(){D.rooms.forEach((r,i)=>RI[r.no]=i);roomDoors=D.rooms.map(()=>[]);roomAssets=D.rooms.map(()=>[]);
+D.doors.forEach((d,i)=>d.rooms.forEach(n=>RI[n]!=null&&roomDoors[RI[n]].push(i)));
+D.assets.forEach((a,i)=>a[2]>=0&&roomAssets[a[2]].push(i))}
+const S={tab:'rooms',fl:0,room:null,q:'',dq:'',dfl:'',dst:'',dsort:'nr',aopen:null};
+const ST={ok:['In model','ok'],list:['Not in model','crit'],lift:['Lift door','mut'],extra:['Not on door list','warn']};
+const dname=d=>d.nr||d.merk||'Door';
+function pill(d){const s=ST[d.st];return `<span class="pill ${s[1]}">${s[0]}</span>`}
+function tabs(){const t=[['rooms','Rooms',D.rooms.length],['doors','Door schedule',D.doors.length],['assets','Equipment and assets',D.assets.length],['check','Model check','']];
+ $('#tabs').innerHTML=t.map(x=>`<button role="tab" aria-selected="${S.tab==x[0]}" data-tab="${x[0]}">${x[1]}<span class="n">${x[2]}</span></button>`).join('')}
+function plan(){const rs=D.rooms.map((r,i)=>[r,i]).filter(x=>x[0].fl==S.fl);let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+ D.rooms.forEach(r=>r.poly.forEach(p=>{x0=Math.min(x0,p[1]);x1=Math.max(x1,p[1]);y0=Math.min(y0,p[0]);y1=Math.max(y1,p[0])}));
+ const P=p=>(p[1]-x0).toFixed(2)+','+(p[0]-y0).toFixed(2);let h='',t='';
+ rs.forEach(([r,i])=>{const d='M'+r.poly.map(P).join('L')+'Z'+r.holes.map(q=>'M'+q.map(P).join('L')+'Z').join('');
+  h+=`<path class="rm${S.room==i?' sel':''}" fill-rule="evenodd" d="${d}" data-room="${i}"><title>${esc(r.no+' '+r.name)}</title></path>`;
+  let cx=0,cy=0;r.poly.forEach(p=>{cx+=p[1];cy+=p[0]});cx=cx/r.poly.length-x0;cy=cy/r.poly.length-y0;
+  if(r.area>9)t+=`<text class="${S.room==i?'sel':''}" x="${cx.toFixed(2)}" y="${(cy+.35).toFixed(2)}">${esc(r.no)}</text>`});
+ D.doors.filter(d=>d.fl==S.fl&&d.bb).forEach(d=>{h+=`<circle class="dr" r=".28" cx="${((d.bb[1]+d.bb[4])/2-x0).toFixed(2)}" cy="${((d.bb[0]+d.bb[3])/2-y0).toFixed(2)}"/>`});
+ return `<svg viewBox="-1 -1 ${(x1-x0+2).toFixed(1)} ${(y1-y0+2).toFixed(1)}" role="img" aria-label="Floor plan ${FLN[S.fl]}">${h}${t}</svg>`}
+function roomsView(){const q=S.q.toLowerCase();const list=D.rooms.map((r,i)=>[r,i]).filter(([r])=>q?(r.no+' '+r.name).toLowerCase().includes(q):r.fl==S.fl);
+ return `<div class="grid"><div style="display:grid;gap:16px;min-width:0"><section class="panel"><div class="bar"><div class="seg">${FL.map((f,i)=>`<button aria-pressed="${S.fl==i}" data-fl="${i}">${f}</button>`).join('')}</div>
+ <input type="search" id="rq" placeholder="Find a room by number or name" value="${esc(S.q)}" aria-label="Find a room"></div>
+ <div class="plan" id="plan">${plan()}</div><div class="legend">${FLN[S.fl]}. Click a room to open its data sheet. Orange dots are doors.</div></section>
+ <section class="panel"><h2>${q?'Search results':'Rooms on '+FLN[S.fl].toLowerCase()}</h2><div class="tw scroll"><table><thead><tr><th>Room</th><th>Name</th><th class="num">Floor m²</th><th class="num">Doors</th><th class="num">Assets</th></tr></thead><tbody id="rlist">
+ ${list.map(([r,i])=>`<tr class="click${S.room==i?' sel':''}" data-room="${i}"><td class="mono">${esc(r.no)}</td><td>${esc(r.name)}</td><td class="num">${f1(r.area)}</td><td class="num">${roomDoors[i].length}</td><td class="num">${roomAssets[i].length}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No room matches.</td></tr>'}
+ </tbody></table></div></section></div><section class="panel sheet" id="sheet">${sheet()}</section></div>`}
+function sheet(){if(S.room==null)return `<h2>Room data sheet</h2><p class="note">Pick a room on the plan or in the list. The sheet shows the floor, ceiling and wall quantities, the doors, and the equipment and assets inside the room.</p>`;
+ const i=S.room,r=D.rooms[i],f=D.fin[i];
+ const tb=(rows,cols)=>rows.length?`<div class="tw"><table><thead><tr>${cols.map(c=>`<th${c[1]?' class="num"':''}>${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`:`<p class="empty">Nothing modelled for this room.</p>`;
+ const cats={};roomAssets[i].forEach(k=>{const a=D.assets[k];((cats[a[0]]??={})[a[1]]??=[]).push(k)});
+ return `<div class="head"><span class="roomno">${esc(r.no)}</span><span class="rname">${esc(r.name)}</span><span style="color:var(--muted)">${FLN[r.fl]}</span></div>
+ <div class="facts"><div><b>${f1(r.area)}</b><span>Floor m²</span></div><div><b>${f1(r.ceil)}</b><span>Ceiling m²</span></div><div><b>${f1(r.wall)}</b><span>Wall m² net</span></div><div><b>${f1(r.perim)}</b><span>Perimeter m</span></div><div><b>${r.h.toFixed(2)}</b><span>Height m</span></div></div>
+ <div class="sec"><h3>Floor finish</h3>${tb(f.floor.map(x=>`<tr><td>${esc(x[0])}</td><td class="num">${f1(x[1])}</td></tr>`),[['Type'],['m²',1]])}</div>
+ <div class="sec"><h3>Ceiling</h3>${tb(f.ceil.map(x=>`<tr><td>${esc(x[0])}</td><td class="num">${f1(x[1])}</td></tr>`),[['Type'],['m²',1]])}</div>
+ <div class="sec"><h3>Walls <small>room side, openings not deducted</small></h3>${tb(f.walls.map(x=>`<tr><td>${esc(x[0])}</td><td class="num">${f1(x[1])}</td><td class="num">${f1(x[2])}</td></tr>`),[['Type'],['Length m',1],['m²',1]])}
+ ${f.cas.length?`<p class="empty">Column and beam casings: ${f.cas.map(c=>esc(c[0])+' × '+c[1]).join(', ')}</p>`:''}</div>
+ <div class="sec"><h3>Doors <small>${roomDoors[i].length}</small></h3>${tb(roomDoors[i].map(k=>{const d=D.doors[k];return `<tr class="click" data-door="${k}"><td class="mono">${esc(d.nr||'no number')}</td><td>${esc(d.merk)}</td><td>${esc(d.deurtype||d.lib)}</td><td class="num mono">${d.b||''}×${d.h||''}</td><td>${esc(d.rooms.filter(n=>n!=r.no).join(', ')||(d.side=='buiten'?'outside':''))}</td><td>${pill(d)}</td></tr>`}),[['Door'],['Mark'],['Type'],['W×H',1],['To'],['Status']])}</div>
+ <div class="sec"><h3>Equipment and assets <small>${roomAssets[i].length}</small></h3>${Object.keys(cats).length?Object.entries(cats).map(([c,ls])=>{const n=Object.values(ls).reduce((s,v)=>s+v.length,0);
+  return `<details><summary><b>${esc(D.cats[c])}</b><small>${esc(D.pk[c])}</small><span class="c">${n}</span></summary><div class="in">${Object.entries(ls).sort((a,b)=>b[1].length-a[1].length).map(([l,ks])=>`<div style="display:flex;gap:10px;padding:2px 0"><button class="lnk" data-inst="${ks.join(',')}" style="text-align:left">${esc(D.labels[l])}</button><span class="mono" style="margin-left:auto">${ks.length}</span></div>`).join('')}</div></details>`}).join(''):'<p class="empty">No equipment or assets found in this room in the models read so far.</p>'}</div>`}
+const DC=[['nr','Door'],['merk','Mark'],['fl','Floor'],['side','In/out'],['deurtype','Type'],['b','W',1],['h','H',1],['fire','Fire'],['dranger','Closer'],['tag','Card reader'],['rooms','Rooms'],['st','Model']];
+function doorRows(){const q=S.dq.toLowerCase();let r=D.doors.map((d,i)=>[d,i]).filter(([d])=>(S.dfl===''||d.fl==S.dfl)&&(S.dst===''||d.st==S.dst)&&(!q||[d.nr,d.merk,d.inst,d.deurtype,d.rooms.join(' '),d.guid].join(' ').toLowerCase().includes(q)));
+ const k=S.dsort;return r.sort((a,b)=>{const x=a[0][k]??'',y=b[0][k]??'';return (x===''?1:0)-(y===''?1:0)||(typeof x=='number'&&typeof y=='number'?x-y:String(x).localeCompare(String(y),'en',{numeric:true}))})}
+function doorsView(){const rows=doorRows();return `<section class="panel"><div class="bar"><input type="search" id="dq" placeholder="Filter by number, mark, type, room or GUID" value="${esc(S.dq)}" aria-label="Filter doors">
+ <select id="dfl" aria-label="Floor"><option value="">All floors</option>${FL.map((f,i)=>`<option value="${i}"${S.dfl===String(i)?' selected':''}>${f}</option>`).join('')}</select>
+ <select id="dst" aria-label="Model status"><option value="">All statuses</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}"${S.dst==k?' selected':''}>${v[0]}</option>`).join('')}</select>
+ <button class="x" id="copy" style="border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:5px 10px">Copy table for Excel</button><span style="color:var(--muted)">${rows.length} of ${D.doors.length} doors</span></div>
+ <div id="copybox" hidden style="padding:0 14px 10px"><p class="empty">Copying was blocked here. Select the text below and copy it, then paste into Excel.</p><textarea id="copytxt" readonly aria-label="Door schedule as tab-separated text"></textarea></div>
+ <div class="tw" style="max-height:70vh;overflow:auto"><table><thead><tr>${DC.map(c=>`<th class="sort${c[2]?' num':''}" data-sort="${c[0]}">${c[1]}${S.dsort==c[0]?' ↓':''}</th>`).join('')}</tr></thead><tbody>
+ ${rows.map(([d,i])=>`<tr class="click" data-door="${i}"><td class="mono">${esc(d.nr)}</td><td>${esc(d.merk)}</td><td>${FL[d.fl]}</td><td>${esc(d.side)}</td><td>${esc(d.deurtype||d.lib)}</td><td class="num">${d.b||''}</td><td class="num">${d.h||''}</td><td>${esc(d.fire??'')}</td><td>${esc(d.dranger??'')}</td><td>${esc(d.tag??'')}</td><td class="mono">${esc(d.rooms.join(' / '))}</td><td>${pill(d)}</td></tr>`).join('')}
+ </tbody></table></div></section>`}
+function tsv(){const H=['Deurnummer','Merk + nr','Merk','Verdieping','binnen/buiten','Deurtype','Breedte','Hoogte','Deurblad b','Deurblad h','Brandwerend','Deurdranger','Venster','Tagbediening','El. slot','Cilinder','Kleur','Vluchtdeur','dB','Toegangscontrole','Ruimte 1','Ruimte 2','Model status','IFC GUID','Te controleren'];
+ return [H].concat(doorRows().map(([d])=>[d.nr,d.inst,d.merk,FL[d.fl],d.side,d.deurtype||d.lib,d.b,d.h,d.lb,d.lh,d.fire,d.dranger,d.venster,d.tag,d.sluit,d.cil,d.kl,d.vlucht,d.db,d.ac,d.rooms[0],d.rooms[1],ST[d.st][0],d.guid,d.chk.concat(d.note||[]).join('; ')].map(v=>String(v??'').replace(/[\t\n]/g,' ')))).map(r=>r.join('\t')).join('\n')}
+function assetsView(){const by={};D.assets.forEach((a,i)=>{((by[a[0]]??={})[a[1]]??=[]).push(i)});
+ return `<section class="panel"><h2>By package and type</h2><div style="padding:4px 14px 10px">${Object.entries(by).sort((a,b)=>D.pk[a[0]].localeCompare(D.pk[b[0]])||D.cats[a[0]].localeCompare(D.cats[b[0]])).map(([c,ls])=>{const n=Object.values(ls).reduce((s,v)=>s+v.length,0);
+ return `<details${S.aopen==c?' open':''} data-cat="${c}"><summary><b>${esc(D.cats[c])}</b><small>${esc(D.pk[c])} · ${Object.keys(ls).length} types</small><span class="c">${n}</span></summary><div class="in tw"><table><thead><tr><th>Type</th><th class="num">Count</th><th class="num">Rooms</th><th class="num">No room</th></tr></thead><tbody>
+ ${Object.entries(ls).sort((a,b)=>b[1].length-a[1].length).map(([l,ks])=>`<tr class="click" data-inst="${ks.join(',')}"><td>${esc(D.labels[l])}</td><td class="num">${ks.length}</td><td class="num">${new Set(ks.map(k=>D.assets[k][2]).filter(x=>x>=0)).size}</td><td class="num">${ks.filter(k=>D.assets[k][2]<0).length||''}</td></tr>`).join('')}</tbody></table></div></details>`}).join('')}</div></section>`}
+function checkView(){const c=k=>D.doors.filter(d=>d.st==k),nm=D.doors.filter(d=>d.chk.some(x=>x.startsWith('Door has no Nunc mark'))),sz=D.doors.filter(d=>d.chk.some(x=>x.startsWith('Size differs')));
+ const tbl=ds=>`<div class="tw"><table><thead><tr><th>Door</th><th>Mark</th><th>Floor</th><th>Rooms</th><th>Finding</th></tr></thead><tbody>${ds.map(d=>`<tr class="click" data-door="${D.doors.indexOf(d)}"><td class="mono">${esc(d.nr||'no number')}</td><td>${esc(d.merk)}</td><td>${FL[d.fl]}</td><td class="mono">${esc(d.rooms.join(' / '))}</td><td>${esc(d.chk.join('; '))}</td></tr>`).join('')}</tbody></table></div>`;
+ return `<div class="kpis"><div class="kpi"><b>${D.doors.filter(d=>d.nr).length}</b><span>doors on the list</span></div><div class="kpi"><b>${D.doors.filter(d=>d.guid).length}</b><span>door objects in the model</span></div><div class="kpi"><b>${c('ok').length}</b><span>matched one to one</span></div><div class="kpi"><b>${c('list').length}</b><span>on the list, not in the model</span></div><div class="kpi"><b>${c('extra').length}</b><span>in the model, not on the list</span></div><div class="kpi"><b>${c('lift').length}</b><span>lift doors in the model</span></div><div class="kpi"><b>${nm.length}</b><span>matched doors without a mark in the model</span></div></div>
+ <div style="display:grid;gap:16px"><section class="panel"><h2>On the list, not in the model</h2>${tbl(c('list'))}</section><section class="panel"><h2>In the model, not on the list</h2>${tbl(c('extra').concat(c('lift')))}</section>
+ <section class="panel"><h2>Size differs between list and model</h2>${sz.length?tbl(sz):'<p class="note">None.</p>'}</section>
+ <section class="panel"><h2>Sources and method</h2><ul class="note">
+ <li>Coordination model: 66A-MPB-Coordination Model.nwd, version ${D.nwd[0]} of ${D.nwd[1]}. Door objects and their properties were read from it.</li>
+ <li>Rooms: the ${D.rooms.length} room spaces of 3D-66A-AR-01 version ${D.ver['AR-01 rooms'][0]} (${D.ver['AR-01 rooms'][1]}). Later versions of AR-01 carry no rooms. Floor, ceiling and wall areas in the header of a room sheet are the quantities stored on those spaces.</li>
+ <li>Finishes, walls and doors: 3D-66A-AR-01 version ${D.ver['AR-01'][0]} (${D.ver['AR-01'][1]}). Finish and wall quantities per type are measured from element bounding boxes against the room outline, so they are estimates.</li>
+ <li>Equipment and assets: ${D.mods.map(m=>'3D-66A-'+m+' v'+D.ver[m][0]).join(', ')}. An object belongs to the room that contains its centre point; ceiling-mounted objects go to the room below.</li>
+ <li>Interior doors are linked to the model by the GUIDs in the door schedule with rooms of 15-09-2026. Exterior doors are linked by Nunc mark and floor.</li>
+ <li>Door numbers are provisional.</li></ul></section></div>`}
+const LIFE=['Design model','Shop drawing','Approval','Order','Delivery','Installation','Inspection','Handover'];
+function life(src){return `<div class="life">${LIFE.map((l,i)=>`<div class="${i?'':'done'}"><span>${l}</span><small>${i?'not started':esc(src)}</small></div>`).join('')}</div>`}
+function dl(o){return '<dl>'+o.filter(x=>x[1]!==''&&x[1]!=null&&x[1]!==undefined).map(x=>`<dt>${x[0]}</dt><dd>${x[2]?x[1]:esc(x[1])}</dd>`).join('')+'</dl>'}
+const rl=n=>`<button class="lnk" data-goroom="${RI[n]}">${esc(n)} ${esc(D.rooms[RI[n]].name)}</button>`;
+function drawer(html){const d=$('#drawer');d.innerHTML=html;d.hidden=false;d.scrollTop=0}
+function doorPass(i,from3d){const d=D.doors[i];if(!from3d)V.obj('AR-01',d.guid);location.hash='d-'+(d.nr||d.guid.replace(/\$/g,'~'));
+ drawer(`<div class="dh"><div><div class="tag">${esc(d.nr||'No door number')}</div><div>${esc(d.merk)} · ${esc(d.deurtype||d.lib)}</div><div style="margin-top:6px">${pill(d)} <span class="pill mut">Doors · FP207 Interior</span></div></div><button class="x" data-close>Close</button></div>
+ <div class="sec"><h3>Identity</h3>${dl([['Door number',d.nr],['Nunc mark',d.inst||d.merk],['Floor',FLN[d.fl]],['Position',d.side=='buiten'?'Exterior':'Interior'],['Rooms',d.rooms.map(rl).join('<br>'),1],['Model object',d.lib],['IFC GUID',d.guid?`<span class="mono">${esc(d.guid)}</span> <button class="lnk" data-copy="${esc(d.guid)}">copy</button>`:'',1],['Source',d.bron]])}</div>
+ ${d.chk.length||d.note?`<div class="sec"><h3>To check</h3><ul class="chk">${d.chk.concat(d.note?d.note.split('; '):[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`:''}
+ <div class="sec"><h3>Design data</h3>${dl([['Type (Nunc)',d.nunctype],['Frame W × H',d.b?d.b+' × '+d.h+' mm':''],['Leaf W × H',d.lb?d.lb+' × '+d.lh+' mm':''],['Swing',d.draai],['Fire rating',d.fire===''?'not stated':d.fire],['Fire rating in model',d.mfire],['Smoke control',d.rook],['Sound insulation',d.db?d.db+' dB':''],['Escape door',d.vlucht],['Door closer',d.dranger],['Vision panel',d.venster],['Automatic',d.auto],['Card reader',d.tag],['Electric lock',d.sluit],['Access control',d.ac],['Handles',d.beslag],['Lock',d.slot],['Cylinder',d.cil],['Frame',d.kozijn],['Leaf',d.deur],['Glazing',d.glas],['Colour',d.kleurtxt||d.mkl],['Nunc remark',d.opm]])}</div>
+ <div class="sec"><h3>Lifecycle</h3>${life(d.guid?'in AR-01':'not modelled')}</div><div class="sec"><h3>Documents</h3><p class="empty">No documents linked yet. Shop drawings, approvals and delivery notes will be listed here per door.</p></div>`)}
+function instList(ks){const a0=D.assets[ks[0]];if(ks.length==1)return assetPass(ks[0]);
+ drawer(`<div class="dh"><div><div style="font-weight:600;font-size:16px">${esc(D.labels[a0[1]])}</div><div>${esc(D.cats[a0[0]])} · ${ks.length} objects</div></div><button class="x" data-close>Close</button></div>
+ <div class="sec"><div class="tw"><table><thead><tr><th>Room</th><th>Floor</th><th>Tag</th><th>GUID</th></tr></thead><tbody>${ks.map(k=>{const a=D.assets[k];return `<tr class="click" data-asset="${k}"><td class="mono">${a[2]>=0?esc(D.rooms[a[2]].no):'none'}</td><td>${FL[a[6]]}</td><td class="mono">${esc(a[4])}</td><td class="mono">${esc(a[3].slice(0,8))}…</td></tr>`}).join('')}</tbody></table></div></div>`)}
+function assetPass(k,from3d){const a=D.assets[k],m=D.mods[a[5]];if(!from3d)V.obj(m,a[3]);location.hash='a-'+a[3].replace(/\$/g,'~');
+ drawer(`<div class="dh"><div><div class="tag">${esc(a[4]||'No tag yet')}</div><div>${esc(D.labels[a[1]])}</div><div style="margin-top:6px"><span class="pill mut">${esc(D.cats[a[0]])} · ${esc(D.pk[a[0]])}</span></div></div><button class="x" data-close>Close</button></div>
+ <div class="sec"><h3>Identity</h3>${dl([['Asset tag',a[4]||'not assigned'],['Type',D.labels[a[1]]],['Category',D.cats[a[0]]],['Package',D.pk[a[0]]],['Room',a[2]>=0?rl(D.rooms[a[2]].no):'not inside a room outline',1],['Floor',FLN[a[6]]],['Position x, y, z',a[7]+', '+a[8]+', '+a[9]+' m'],['Source model','3D-66A-'+m+' v'+D.ver[m][0]+' ('+D.ver[m][1]+')'],['IFC GUID',`<span class="mono">${esc(a[3])}</span> <button class="lnk" data-copy="${esc(a[3])}">copy</button>`,1]])}</div>
+ <div class="sec"><h3>Lifecycle</h3>${life('in '+m)}</div><div class="sec"><h3>Documents</h3><p class="empty">No documents linked yet.</p></div>`)}
+function render(){tabs();$('#main').innerHTML={rooms:roomsView,doors:doorsView,assets:assetsView,check:checkView}[S.tab]()}
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,1600)}
+function goRoom(i){S.tab='rooms';S.room=i;S.fl=D.rooms[i].fl;S.q='';$('#drawer').hidden=true;location.hash='r-'+D.rooms[i].no;render();V.room(i)}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-fl],[data-room],[data-door],[data-inst],[data-asset],[data-close],[data-goroom],[data-copy],[data-sort],#copy');if(!t)return;const d=t.dataset;
+ if(d.tab){S.tab=d.tab;render()}else if(d.fl){S.fl=+d.fl;S.q='';render()}else if(d.goroom)goRoom(+d.goroom);else if(d.room)goRoom(+d.room);
+ else if(d.door)doorPass(+d.door);else if(d.asset)assetPass(+d.asset);else if(d.inst){e.preventDefault();instList(d.inst.split(',').map(Number))}
+ else if('close' in d)$('#drawer').hidden=true;else if(d.sort){S.dsort=d.sort;render()}
+ else if(d.copy)navigator.clipboard.writeText(d.copy).then(()=>toast('Copied'),()=>toast('Copy blocked: select the text'));
+ else if(t.id=='copy'){const x=tsv();navigator.clipboard.writeText(x).then(()=>toast('Copied. Paste into Excel.'),()=>{$('#copybox').hidden=false;$('#copytxt').value=x;$('#copytxt').select()})}});
+document.addEventListener('input',e=>{const t=e.target;if(t.id=='rq'){S.q=t.value;render();const n=$('#rq');n.focus();n.setSelectionRange(n.value.length,n.value.length)}
+ if(t.id=='dq'){S.dq=t.value;render();const n=$('#dq');n.focus();n.setSelectionRange(n.value.length,n.value.length)}if(t.id=='dfl'){S.dfl=t.value;render()}if(t.id=='dst'){S.dst=t.value;render()}});
+document.addEventListener('toggle',e=>{const c=e.target.dataset&&e.target.dataset.cat;if(c!=null&&e.target.open)S.aopen=c},true);
+document.addEventListener('keydown',e=>{if(e.key=='Escape')$('#drawer').hidden=true});
+
+/* ---------- Autodesk viewer ---------- */
+const V=(function(){let viewer=null,unit='mm',off=null,busy=false,ceil=false,col=false,T=null;const models={},g2id={},id2g={};
+ const say=t=>$('#vmsg').textContent=t,files={};
+ async function listFiles(){let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
+  while(url){const j=await A.api(url);const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v]));for(const it of j.data||[]){const v=inc[it.id];if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber}}url=j.links?.next?.href||null}}
+ async function init(){if(viewer||busy)return;busy=true;$('#fv').hidden=false;$('#vload').hidden=true;say('Starting the viewer…');
+  try{const getToken=async cb=>{const t=await A.token();if(!t)return A.login();cb(t.access,Math.floor((t.exp-Date.now())/1000))};
+   await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
+   viewer=new Autodesk.Viewing.GuiViewer3D($('#fv'),{extensions:[]});viewer.start();viewer.setGhosting(true);viewer.setGroundShadow(false);viewer.setLightPreset(1);viewer.setQualityLevel(false,true);viewer.setOptimizeNavigation(true);
+   try{const dk=matchMedia('(prefers-color-scheme: dark)').matches;viewer.setTheme(dk?'dark-theme':'light-theme');if(dk)viewer.setBackgroundColor(34,44,54,17,23,29);else viewer.setBackgroundColor(244,246,248,222,228,233)}catch(e){}
+   viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
+   say('Listing models…');await listFiles();await load('AR-01');calibrate();
+   ['#vassets','#vceil','#vcol','#vall','#vbig'].forEach(s=>$(s).hidden=false);if(S.room!=null)room(S.room)}
+  catch(e){console.error(e);say('The 3D model could not be loaded: '+e.message);$('#vload').hidden=false}
+  busy=false}
+ async function load(code){const fn='3D-66A-'+code+'.ifc',f=files[fn];if(!f)throw new Error(fn+' not found in 00.Coordination Models');
+  say('Loading '+fn+' (v'+f.n+')…');const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0];if(!g)return rej(new Error('no 3D view for '+fn));
+   const o={keepCurrentModels:true,applyRefPoint:true,preserveView:!!off};if(off){o.globalOffset=off;o.applyScaling=unit}try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(fn+': '+(msg||'code '+c)))));
+  if(!off){off=m.getData().globalOffset;unit=m.getUnitString()||'mm'}m._code=code;models[code]=m;
+  await new Promise(r=>m.getObjectTree(r,r));
+  let map=await m.getPropertyDb().executeUserFunction(function(pdb){var ai=[];pdb.enumAttributes(function(i,def){var nm=def.displayName||def.name;if((/^(ifcguid|ifc guid|globalid)$/i.test(nm)||/parameter_IfcGUID$/i.test(def.name))&&!/type/i.test(def.category||''))ai.push(i)});var out={};pdb.enumObjects(function(dbId){pdb.enumObjectProperties(dbId,function(a,v){if(ai.indexOf(a)>=0){var g=pdb.getAttrValue(a,v);if(!(g in out))out[g]=dbId}})});return out}).catch(()=>({}));
+  if(!map||Object.keys(map).length<5)map=await new Promise(r=>m.getExternalIdMapping(r,()=>r({})));
+  g2id[code]=map;window.__g2id=g2id;id2g[code]={};for(const g in map)id2g[code][map[g]]=g;
+  const want=code=='AR-01'?D.doors.filter(d=>d.guid).map(d=>d.guid):D.assets.filter(a=>D.mods[a[5]]==code).map(a=>a[3]);
+  const hit=want.filter(g=>map[g]!=null).length;say(fn+' v'+f.n+' loaded. '+hit+' of '+want.length+' objects linked.');return[hit,want.length]}
+ function bounds(m,id){const it=m.getInstanceTree(),fl=m.getFragmentList(),b=new THREE.Box3(),fb=new THREE.Box3();it.enumNodeFragments(id,f=>{fl.getWorldBounds(f,fb);b.union(fb)},true);return b}
+ // world (IFC, metres) -> viewer: similarity transform fitted on the doors
+ function calibrate(){const P=[];for(const d of D.doors){const id=d.guid&&g2id['AR-01'][d.guid];if(id==null||!d.bb)continue;const b=bounds(models['AR-01'],id);if(b.isEmpty())continue;const c=b.getCenter(new THREE.Vector3());
+   P.push([(d.bb[0]+d.bb[3])/2,(d.bb[1]+d.bb[4])/2,(d.bb[2]+d.bb[5])/2,c.x,c.y,c.z])}
+  if(P.length<3){T=null;return}const n=P.length,mw=[0,0,0],mv=[0,0,0];P.forEach(p=>{for(let k=0;k<3;k++){mw[k]+=p[k]/n;mv[k]+=p[3+k]/n}});
+  let ar=0,ai=0,den=0;P.forEach(p=>{const wx=p[0]-mw[0],wy=p[1]-mw[1],vx=p[3]-mv[0],vy=p[4]-mv[1];ar+=vx*wx+vy*wy;ai+=vy*wx-vx*wy;den+=wx*wx+wy*wy});ar/=den;ai/=den;
+  const s=Math.hypot(ar,ai);T={ar,ai,s,bx:mv[0]-(ar*mw[0]-ai*mw[1]),by:mv[1]-(ai*mw[0]+ar*mw[1]),bz:mv[2]-s*mw[2]};
+  let err=0;P.forEach(p=>{const q=w2v(p[0],p[1],p[2]);err=Math.max(err,Math.hypot(q.x-p[3],q.y-p[4],q.z-p[5]))});T.err=err;T.n=n;window.__cal=T}
+ const w2v=(x,y,z)=>new THREE.Vector3(T.ar*x-T.ai*y+T.bx,T.ai*x+T.ar*y+T.by,T.s*z+T.bz);
+ function room(i){if(!viewer||!T)return;const r=D.rooms[i];const b=new THREE.Box3();const top=ceil?(r.z0+Math.max(r.h,4.7)):(r.z0+Math.min(r.h,2.6));
+  r.poly.forEach(p=>{b.expandByPoint(w2v(p[0],p[1],r.z0-.15));b.expandByPoint(w2v(p[0],p[1],top))});b.expandByScalar(.25*T.s);
+  viewer.setCutPlanes([new THREE.Vector4(1,0,0,-b.max.x),new THREE.Vector4(-1,0,0,b.min.x),new THREE.Vector4(0,1,0,-b.max.y),new THREE.Vector4(0,-1,0,b.min.y),new THREE.Vector4(0,0,1,-b.max.z),new THREE.Vector4(0,0,-1,b.min.z)]);
+  viewer.clearSelection();const c=b.getCenter(new THREE.Vector3()),sz=b.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*1.1+sz.z;
+  viewer.navigation.setView(new THREE.Vector3(c.x-d*.45,c.y-d*.6,c.z+d*.9),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,b)}
+ function all(){if(!viewer)return;viewer.setCutPlanes([]);viewer.clearSelection();viewer.fitToView()}
+ let mute=false;
+ function obj(code,guid){if(!viewer||!guid)return;const m=models[code];if(!m){if(code!='AR-01')say('Load the equipment models to see this object in 3D.');return}const id=g2id[code][guid];if(id==null){say('This object was not found in the loaded version of '+code+'.');return}
+  mute=true;viewer.setCutPlanes([]);viewer.impl.selector.setAggregateSelection([{model:m,ids:[id]}]);viewer.fitToView([{model:m,selection:[id]}]);mute=false}
+ function onPick(ev){if(mute)return;const s=ev.selections&&ev.selections[0];if(!s||!s.dbIdArray.length)return;const m=s.model,code=m._code,it=m.getInstanceTree();let id=s.dbIdArray[0],g=null;
+  for(let k=0;k<8&&id;k++){g=id2g[code][id];if(g&&(code!='AR-01'?aIdx[g]!=null:dIdx[g]!=null))break;g=null;id=it.getNodeParentId(id)}
+  if(!g)return;if(code=='AR-01')doorPass(dIdx[g],true);else assetPass(aIdx[g],true)}
+ async function assets(){if(!viewer||busy)return;busy=true;$('#vassets').hidden=true;let h=0,n=0;const miss=[];
+  for(const code of D.mods){if(models[code])continue;try{const r=await load(code);h+=r[0];n+=r[1]}catch(e){console.warn(e);miss.push(code)}}
+  say('Equipment models loaded. '+h.toLocaleString('en-GB')+' of '+n.toLocaleString('en-GB')+' objects linked.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':''));busy=false}
+ function colour(on){if(!viewer)return;const m=models['AR-01'],C={ok:[.18,.55,.32],extra:[.85,.5,0],lift:[.45,.5,.55]};viewer.clearThemingColors(m);
+  if(on)D.doors.forEach(d=>{const id=d.guid&&g2id['AR-01'][d.guid],c=C[d.st];if(id!=null&&c)viewer.setThemingColor(id,new THREE.Vector4(c[0],c[1],c[2],1),m,true)});viewer.impl.invalidate(true,true,true)}
+ document.addEventListener('click',e=>{const id=e.target.id;if(id=='vload')init();else if(id=='vassets')assets();else if(id=='vall')all();
+  else if(id=='vceil'){ceil=!ceil;e.target.setAttribute('aria-pressed',ceil);if(S.room!=null)room(S.room)}
+  else if(id=='vcol'){col=!col;e.target.setAttribute('aria-pressed',col);colour(col)}
+  else if(id=='vbig'){const b=$('#fv').classList.toggle('big');e.target.setAttribute('aria-pressed',b);viewer&&viewer.resize()}});
+ return{init,room,obj,get ready(){return !!viewer}}})();
+const dIdx={},aIdx={};
+(async function(){const gm=$('#gmsg');
+ try{const t=await A.init();if(!t){$('#signin').hidden=false;$('#signin').onclick=()=>A.login();return}
+  gm.textContent='Reading the data file from ACC…';D=await A.readDataFile(CFG.dataFile);
+  if(!D){gm.textContent='The data file '+CFG.dataFile+' was not found in the ACC folder Internal Check > Cx Viewer data, or you have no access to that folder.';return}
+  setup();D.doors.forEach((d,i)=>{if(d.guid)dIdx[d.guid]=i});D.assets.forEach((a,i)=>aIdx[a[3]]=i);
+  $('#gate').hidden=true;$('#app').hidden=false;
+$('#src').textContent='Coordination model v'+D.nwd[0]+' of '+D.nwd[1]+' · built '+D.built+' · door numbers provisional';
+  const h=decodeURIComponent(location.hash.slice(1));S.room=RI['0.17']??0;
+ if(h.startsWith('r-')&&RI[h.slice(2)]!=null)S.room=RI[h.slice(2)];S.fl=D.rooms[S.room].fl;render();
+ if(h.startsWith('d-')){const k=h.slice(2).replace(/~/g,'$'),i=D.doors.findIndex(d=>d.nr==k||d.guid==k);if(i>=0){S.tab='doors';render();doorPass(i)}}
+ if(h.startsWith('a-')){const k=h.slice(2).replace(/~/g,'$'),i=D.assets.findIndex(a=>a[3]==k);if(i>=0)assetPass(i)}
+ }catch(e){console.error(e);gm.textContent='Could not start: '+e.message;$('#signin').hidden=false;$('#signin').textContent='Sign in again';$('#signin').onclick=()=>A.login()}})();
+</script>
+</body>
+</html>
