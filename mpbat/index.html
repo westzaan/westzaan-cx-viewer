@@ -33,6 +33,11 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .seg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px;gap:0}
 .seg button{padding:4px 11px;border-radius:7px;font-size:13px;font-weight:500;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--card);box-shadow:0 1px 3px rgb(0 0 0 / .18)}
+#dbar{position:absolute;left:10px;top:56px;z-index:5;display:flex;flex-direction:column;gap:6px}
+#dbar button{width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--card) 90%,transparent);backdrop-filter:blur(12px);display:grid;place-items:center;color:var(--sub);box-shadow:0 1px 4px rgb(0 0 0 / .18)}
+#dbar button[aria-pressed="true"]{background:var(--tint);color:#fff}
+#dbar svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#dbar i{height:4px}
 #legend3d{position:absolute;left:10px;bottom:10px;z-index:5;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(12px);border-radius:10px;padding:7px 10px;font-size:12px;max-width:60%;max-height:45%;overflow:auto}
 #legend3d div{display:flex;gap:7px;align-items:center;padding:1px 0}
 .sw{width:11px;height:11px;border-radius:3px;flex:none}
@@ -122,8 +127,8 @@ textarea{width:100%;height:150px;font:12px ui-monospace,Menlo,monospace;backgrou
 <div id="app" hidden>
  <div id="left">
   <section class="card" id="vcard"><div class="vbar"><span class="msg" id="vmsg">3D not loaded.</span>
-   <button class="pillbtn on" id="vload">Load 3D</button><button class="pillbtn" id="vmodels" hidden>Models</button><button class="pillbtn" id="vceil" aria-pressed="false" hidden>Cut at 2.6 m</button><button class="pillbtn" id="vall" hidden>Whole building</button></div>
-   <div id="fv"></div><div id="legend3d" hidden></div></section>
+   <button class="pillbtn on" id="vload">Load 3D</button><button class="pillbtn" id="vceil" aria-pressed="false" hidden>Cut at 2.6 m</button><button class="pillbtn" id="vall" hidden>Whole building</button></div>
+   <div id="fv"></div><div id="dbar" hidden></div><div id="legend3d" hidden></div></section>
   <section class="card" id="pcard"><div class="vbar"><div class="seg" id="flseg"></div><span class="msg" id="pmsg"></span><button class="pillbtn" id="ptoggle">Hide plan</button></div>
    <div id="plan"></div><div id="fnleg"></div></section>
  </div>
@@ -206,7 +211,7 @@ function checkView(){const c=k=>D.doors.map((d,i)=>i).filter(i=>D.doors[i].st==k
  GK=[];const blk=(t,a)=>{GK.push(['doors',a]);return `<h3 class="sec">${t} · ${a.length} ${a.length?`<button class="lnk" data-only="${GK.length-1}">Show in 3D</button>`:''}</h3>${a.length?`<div class="list">${a.slice(0,80).map(i=>leaf('doors',i)).join('')}</div>`:'<p class="note">None.</p>'}`};
  return `<div class="facts"><div><b>${D.doors.filter(d=>d.nr).length}</b><span>Doors on the list</span></div><div><b>${D.doors.filter(d=>d.guid).length}</b><span>Door objects in the model</span></div><div><b>${c('ok').length}</b><span>Matched one to one</span></div></div>
  ${blk('On the list, not in the model',c('list'))}${blk('In the model, not on the list',c('extra'))}${blk('Lift doors in the model',c('lift'))}${blk('Size differs between list and model',sz)}${blk('Matched, but no Nunc mark in the model',nm)}
- <h3 class="sec">Sources and method</h3><ul class="note"><li>Coordination model: 66A-MPB-Coordination Model.nwd, version ${D.nwd[0]} of ${D.nwd[1]}.</li>
+ <h3 class="sec">Sources and method</h3><ul class="note"><li>3D view: 66A-MPB-Coordination Model.nwd, the latest version in ACC, with all its files. The lists were built from the model versions named below.</li>
  <li>Rooms: the ${D.rooms.length} room spaces of 3D-66A-AR-01 version ${D.ver['AR-01 rooms'][0]} (${D.ver['AR-01 rooms'][1]}). Later versions carry no rooms. Room functions are derived from the room names.</li>
  <li>Plan lines: a horizontal cut through 3D-66A-AR-01 version ${D.ver['AR-01'][0]} at 1.2 m above each floor.</li>
  <li>Finish and wall quantities per type are measured from element bounding boxes against the room outline, so they are estimates. The areas in the room header are stored on the rooms.</li>
@@ -259,7 +264,7 @@ function state(){const o={t:S.tab,fl:S.fl,m:S.mode};if(S.room!=null&&S.roomOpen)
 function restore(o){try{S.tab=o.t||'rooms';S.fl=o.fl||0;S.mode=o.m||'ghost';if(o.r&&RI[o.r]!=null){S.room=RI[o.r];S.roomOpen=true}
  for(const k of['doors','assets']){const x=o[k[0]];if(!x)continue;const L=LS[k];L.q=x.q||'';if(x.g)L.g=x.g;L.f={};for(const f in x.f||{})L.f[f]=new Set(x.f[f]);L.open=new Set(x.o||[]);
   (x.s||[]).forEach(id=>{const i=k=='doors'?D.doors.findIndex(d=>d.nr==id||d.guid==id):aIdx[id];if(i!=null&&i>=0)L.sel.add(i)})}}catch(e){console.warn(e)}}
-document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-fl],[data-fn],[data-room],[data-pass],[data-selg],[data-only],[data-item],[data-open],[data-more],[data-mode],[data-clear],[data-close],[data-back],[data-rgroup],[data-filter],[data-fv],[data-fclear],[data-unf],[data-copy],[data-link],[data-clip],[data-mload],[data-mset],#ptoggle');if(!t)return;const d=t.dataset;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-fl],[data-fn],[data-room],[data-pass],[data-selg],[data-only],[data-item],[data-open],[data-more],[data-mode],[data-clear],[data-close],[data-back],[data-rgroup],[data-filter],[data-fv],[data-fclear],[data-unf],[data-copy],[data-link],[data-clip],#ptoggle');if(!t)return;const d=t.dataset;
  if(t.id=='ptoggle'){const c=$('#pcard').classList.toggle('closed');t.textContent=c?'Show plan':'Hide plan';V.resize();return}
  if(d.tab){S.tab=d.tab;$('#body').scrollTop=0;render()}else if(d.fl!=null&&d.fl!==undefined&&t.closest('#flseg')){S.fl=+d.fl;render();V.floor(S.fl)}
  else if(d.fn){S.fnsel=S.fnsel==d.fn?null:d.fn;if(S.fnsel&&S.tab=='rooms'){S.rgroup='fn';S.roomOpen=false}render()}
@@ -278,52 +283,61 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  else if(d.unf){const[f,v]=d.unf.split('\u0001');LS[S.tab].f[f]?.delete(v);render()}
  else if(d.copy)clip(tsv(d.copy),'Copied. Paste into Excel.')
  else if('link' in d){const u=location.origin+location.pathname+'?s='+btoa(unescape(encodeURIComponent(JSON.stringify(state())))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');clip(u,'Link copied')}
- else if(d.clip)clip(d.clip,'Copied')
- else if(d.mload)V.toggle(d.mload)
- else if(d.mset)V.loadSet(d.mset)});
+ else if(d.clip)clip(d.clip,'Copied')});
 document.addEventListener('input',e=>{const t=e.target,keep=id=>{render();const n=$('#'+id);n.focus();n.setSelectionRange(n.value.length,n.value.length)};
  if(t.id=='rq'){S.rq=t.value;keep('rq')}else if(t.id=='lq'){LS[S.tab].q=t.value;keep('lq')}});
 document.addEventListener('change',e=>{const t=e.target;if(t.id=='g1'||t.id=='g2'){const L=LS[S.tab];L.g[t.id=='g1'?0:1]=t.value;if(!L.g[0]&&L.g[1]){L.g=[L.g[1],'']}L.open.clear();render();V.apply(false)}});
 document.addEventListener('keydown',e=>{if(e.key=='Escape')$('#sheet').hidden=true});
-/* ---------- Autodesk viewer ---------- */
-const V=(function(){let viewer=null,unit='mm',off=null,busy=null,low=false,cut=null,T=null,mute=false;const models={},g2id={},id2g={},files={};
- const say=t=>$('#vmsg').textContent=t;
- async function listFiles(){let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
-  while(url){const j=await A.api(url);const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v]));for(const it of j.data||[]){const v=inc[it.id];if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber,mb:Math.round((v.attributes.storageSize||0)/1e6),date:(v.attributes.lastModifiedTime||'').slice(0,10)}}url=j.links?.next?.href||null}}
+/* ---------- Autodesk viewer: the coordination NWD, one model with every discipline ---------- */
+const IC={csa:'<path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6M3 20h18"/>',ffe:'<path d="M6 11V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5M4 11h16v5H4zM6 16v4M18 16v4"/>',
+ hvac:'<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-6 3-6s3 3 0 6M14 12c4 0 6 1 6 3s-3 3-6 0M12 14c0 4-1 6-3 6s-3-3 0-6M10 12c-4 0-6-1-6-3s3-3 6 0"/>',
+ el:'<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',phe:'<path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/>',
+ ff:'<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>',conv:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="m9 10 3-3 3 3M9 14l3 3 3-3"/>',
+ ceil:'<path d="m12 4 9 4-9 4-9-4zM3 12l9 4 9-4M3 16l9 4 9-4"/>',files:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>'};
+const DISC=[['csa','CSA: architecture and structure'],['ffe','Furniture and lab equipment'],['hvac','HVAC'],['el','Electrical and instrumentation'],['phe','Plumbing, drainage and piping'],['ff','Fire fighting'],['conv','Conveying: lifts and hoists']];
+function discOf(n){const m=n.match(/^3D-\d\d[A-Z]-([A-Z]{2})-(\d\d)/),c=m?m[1]:'',k=m?+m[2]:0;
+ if(c=='AR')return k==1||k==2||k==6?'csa':'ffe';if(/^(ST|CI|FA)$/.test(c)||/Dakplaten|grids|Grids/i.test(n))return'csa';if(c=='HV'||c=='ME')return'hvac';if(c=='EL'||c=='IN')return'el';
+ if(c=='PH'||c=='PI')return'phe';if(c=='FF')return'ff';if(c=='VT'||c=='OH')return'conv';return CFG.otherFiles&&CFG.otherFiles[n]||'csa'}
+const V=(function(){let viewer=null,M=null,busy=null,low=false,cut=null,T=null,mute=false,g2id={},id2g={},tops=[],ceilIds=[];
+ const say=t=>$('#vmsg').textContent=t,off={},fileOff=new Set();let ceilGhost=true;
  function init(){return busy||=(async()=>{$('#vload').hidden=true;say('Starting the viewer…');
   try{const getToken=async cb=>{const t=await A.token();if(!t)return A.login();cb(t.access,Math.floor((t.exp-Date.now())/1000))};
    await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
    viewer=new Autodesk.Viewing.GuiViewer3D($('#fv'),{extensions:[]});viewer.start();viewer.setGhosting(true);viewer.setGroundShadow(false);viewer.setLightPreset(1);viewer.setQualityLevel(false,true);viewer.setOptimizeNavigation(true);
    try{viewer.setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark-theme':'light-theme')}catch(e){}
    viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
-   say('Listing models…');await listFiles();await load('AR-01');calibrate();bg();['#vmodels','#vceil','#vall'].forEach(s=>$(s).hidden=false);
-   if(LS.doors.sel.size+LS.assets.sel.size)await apply(true);else if(S.room!=null&&S.roomOpen)room(S.room)}
+   say('Finding the coordination model…');const tip=await A.api('/data/v1/projects/'+CFG.projectId+'/items/'+encodeURIComponent(CFG.nwdItem)+'/tip');const vn=tip.data.attributes.versionNumber;
+   const urn=btoa(tip.data.id).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');say('Loading the coordination model v'+vn+'. This takes a minute or two…');
+   M=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().getDefaultGeometry()||doc.getRoot().search({type:'geometry',role:'3d'})[0];if(!g)return rej(new Error('no 3D view in the coordination model'));
+    try{res(await viewer.loadDocumentNode(doc,g,{}))}catch(e){rej(e)}},(c,msg)=>rej(new Error(msg||'code '+c))));
+   const prog=ev=>{if(ev.model===M||!ev.model)say('Loading the coordination model v'+vn+': '+Math.round(ev.percent||0)+'%')};viewer.addEventListener(Autodesk.Viewing.PROGRESS_UPDATE_EVENT,prog);
+   await new Promise(r=>M.getObjectTree(r,r));
+   if(!M.isLoadDone())await new Promise(r=>{const E=Autodesk.Viewing.GEOMETRY_LOADED_EVENT,h=ev=>{if(ev.model===M){viewer.removeEventListener(E,h);r()}};viewer.addEventListener(E,h)});
+   viewer.removeEventListener(Autodesk.Viewing.PROGRESS_UPDATE_EVENT,prog);say('Linking objects…');
+   g2id=await M.getPropertyDb().executeUserFunction(function(pdb){var ai=[];pdb.enumAttributes(function(i,def){var nm=def.displayName||def.name;if((/^(ifcguid|ifc guid)$/i.test(nm)||/parameter_IfcGUID$/i.test(def.name))&&!/type/i.test(def.category||''))ai.push(i)});var out={};pdb.enumObjects(function(dbId){pdb.enumObjectProperties(dbId,function(a,v){if(ai.indexOf(a)>=0){var g=pdb.getAttrValue(a,v);if(!(g in out))out[g]=dbId}})});return out});
+   id2g={};for(const g in g2id)id2g[g2id[g]]=g;
+   const it=M.getInstanceTree();const ch=id=>{const a=[];it.enumNodeChildren(id,c=>{a.push(c)});return a};let kids=ch(it.getRootId());for(let n=0;n<4&&kids.length==1&&!/\.(ifc|dwg|nwc|rvt)$/i.test(it.getNodeName(kids[0])||'');n++)kids=ch(kids[0]);
+   tops=kids.map(id=>({id,name:it.getNodeName(id)||''})).map(t=>({...t,disc:discOf(t.name)}));ceilIds=(D.ceil||[]).map(g=>g2id[g]).filter(x=>x!=null);
+   calibrate();bg();window.__v={viewer,M,tops,g2id};['#vceil','#vall','#dbar'].forEach(q=>$(q).hidden=false);dbar();
+   const nd=D.doors.filter(d=>d.guid&&g2id[d.guid]!=null).length,na=D.assets.filter(a=>g2id[a[3]]!=null).length;
+   await apply(true);if(!(LS.doors.sel.size+LS.assets.sel.size)){if(S.room!=null&&S.roomOpen)room(S.room)}
+   say('Coordination model v'+vn+' loaded: '+tops.length+' files. '+nd+' doors and '+na.toLocaleString('en-GB')+' equipment objects linked.')}
   catch(e){console.error(e);say('The 3D model could not be loaded: '+e.message);$('#vload').hidden=false;viewer=null;busy=null}})()}
  function bg(){try{const dk=matchMedia('(prefers-color-scheme: dark)').matches;viewer.setEnvMapBackground(false);dk?viewer.setBackgroundColor(44,44,46,20,20,22):viewer.setBackgroundColor(250,250,252,226,228,234)}catch(e){}}
- const loading={};
- function load(code){return loading[code]||=(async()=>{const fn='3D-66A-'+code+'.ifc',f=files[fn];if(!f)throw new Error(fn+' not found in 00.Coordination Models');
-  say('Loading '+fn+' (v'+f.n+')…');const urn=btoa(f.ver).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  const m=await new Promise((res,rej)=>Autodesk.Viewing.Document.load('urn:'+urn,async doc=>{const g=doc.getRoot().search({type:'geometry',role:'3d'})[0];if(!g)return rej(new Error('no 3D view for '+fn));
-   const o={keepCurrentModels:true,applyRefPoint:true,preserveView:!!off};if(off){o.globalOffset=off;o.applyScaling=unit}try{res(await viewer.loadDocumentNode(doc,g,o))}catch(e){rej(e)}},(c,msg)=>rej(new Error(fn+': '+(msg||'code '+c)))));
-  if(!off){off=m.getData().globalOffset;unit=m.getUnitString()||'mm'}m._code=code;
-  await new Promise(r=>m.getObjectTree(r,r));
-  if(!m.isLoadDone())await new Promise(r=>{const E=Autodesk.Viewing.GEOMETRY_LOADED_EVENT,h=ev=>{if(ev.model===m){viewer.removeEventListener(E,h);r()}};viewer.addEventListener(E,h);setTimeout(r,120000)});
-  let map=await m.getPropertyDb().executeUserFunction(function(pdb){var ai=[];pdb.enumAttributes(function(i,def){var nm=def.displayName||def.name;if((/^(ifcguid|ifc guid|globalid)$/i.test(nm)||/parameter_IfcGUID$/i.test(def.name))&&!/type/i.test(def.category||''))ai.push(i)});var out={};pdb.enumObjects(function(dbId){pdb.enumObjectProperties(dbId,function(a,v){if(ai.indexOf(a)>=0){var g=pdb.getAttrValue(a,v);if(!(g in out))out[g]=dbId}})});return out}).catch(()=>({}));
-  if(!map||Object.keys(map).length<5)map=await new Promise(r=>m.getExternalIdMapping(r,()=>r({})));
-  g2id[code]=map;id2g[code]={};for(const g in map)id2g[code][map[g]]=g;models[code]=m;say(fn+' v'+f.n+' loaded.');window.__v={models,g2id,viewer};return m})().catch(e=>{delete loading[code];throw e})}
- function bounds(m,id){const it=m.getInstanceTree(),fl=m.getFragmentList(),b=new THREE.Box3(),fb=new THREE.Box3();it.enumNodeFragments(id,f=>{fl.getWorldBounds(f,fb);b.union(fb)},true);return b}
- function calibrate(){const Pp=[];for(const d of D.doors){const id=d.guid&&g2id['AR-01'][d.guid];if(id==null||!d.bb)continue;const b=bounds(models['AR-01'],id);if(b.isEmpty())continue;const c=b.getCenter(new THREE.Vector3());
+ function bounds(id){const it=M.getInstanceTree(),fl=M.getFragmentList(),b=new THREE.Box3(),fb=new THREE.Box3();it.enumNodeFragments(id,f=>{fl.getWorldBounds(f,fb);b.union(fb)},true);return b}
+ function calibrate(){const Pp=[];for(const d of D.doors){const id=d.guid&&g2id[d.guid];if(id==null||!d.bb)continue;const b=bounds(id);if(b.isEmpty())continue;const c=b.getCenter(new THREE.Vector3());
    Pp.push([(d.bb[0]+d.bb[3])/2,(d.bb[1]+d.bb[4])/2,(d.bb[2]+d.bb[5])/2,c.x,c.y,c.z])}
   if(Pp.length<3){T=null;return}const n=Pp.length,mw=[0,0,0],mv=[0,0,0];Pp.forEach(p=>{for(let k=0;k<3;k++){mw[k]+=p[k]/n;mv[k]+=p[3+k]/n}});
   let ar=0,ai=0,den=0;Pp.forEach(p=>{const wx=p[0]-mw[0],wy=p[1]-mw[1],vx=p[3]-mv[0],vy=p[4]-mv[1];ar+=vx*wx+vy*wy;ai+=vy*wx-vx*wy;den+=wx*wx+wy*wy});ar/=den;ai/=den;
-  const s=Math.hypot(ar,ai);T={ar,ai,s,bx:mv[0]-(ar*mw[0]-ai*mw[1]),by:mv[1]-(ai*mw[0]+ar*mw[1]),bz:mv[2]-s*mw[2]}}
+  const s=Math.hypot(ar,ai);T={ar,ai,s,bx:mv[0]-(ar*mw[0]-ai*mw[1]),by:mv[1]-(ai*mw[0]+ar*mw[1]),bz:mv[2]-s*mw[2]};
+  let err=0;Pp.forEach(p=>{const q=w2v(p[0],p[1],p[2]);err=Math.max(err,Math.hypot(q.x-p[3],q.y-p[4],q.z-p[5]))});window.__cal={n,err,s}}
  const w2v=(x,y,z)=>new THREE.Vector3(T.ar*x-T.ai*y+T.bx,T.ai*x+T.ar*y+T.by,T.s*z+T.bz);
+ const LEVZ=[1.6,6.6,11.6,16.6,22.4];
  function room(i){if(!viewer||!T)return;cut={room:i};const r=D.rooms[i],b=new THREE.Box3(),top=low?(r.z0+Math.min(r.h,2.6)):(LEVZ[r.fl+1]-.55);
   r.poly.forEach(p=>{b.expandByPoint(w2v(p[0],p[1],r.z0-.15));b.expandByPoint(w2v(p[0],p[1],top))});b.expandByScalar(.25*T.s);
   viewer.setCutPlanes([new THREE.Vector4(1,0,0,-b.max.x),new THREE.Vector4(-1,0,0,b.min.x),new THREE.Vector4(0,1,0,-b.max.y),new THREE.Vector4(0,-1,0,b.min.y),new THREE.Vector4(0,0,1,-b.max.z),new THREE.Vector4(0,0,-1,b.min.z)]);
   const c=b.getCenter(new THREE.Vector3()),sz=b.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*1.1+sz.z;
   viewer.navigation.setView(new THREE.Vector3(c.x-d*.45,c.y-d*.6,c.z+d*.9),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,b)}
- const LEVZ=[1.6,6.6,11.6,16.6,22.4];
  // section through one floor: everything below the floor and above the ceiling zone is cut away
  function floor(f,keepView){if(!viewer||!T)return;cut={floor:f};const z0=w2v(0,0,LEVZ[f]-.35).z,z1=w2v(0,0,low?LEVZ[f]+2.6:LEVZ[f+1]-.55).z;
   viewer.setCutPlanes([new THREE.Vector4(0,0,1,-z1),new THREE.Vector4(0,0,-1,z0)]);if(keepView)return;
@@ -332,44 +346,37 @@ const V=(function(){let viewer=null,unit='mm',off=null,busy=null,low=false,cut=n
   viewer.navigation.setView(new THREE.Vector3(c.x-d*.55,c.y-d*.2,c.z+d*.8),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,b)}
  function recut(){if(cut&&cut.room!=null)room(cut.room);else if(cut&&cut.floor!=null)floor(cut.floor,true)}
  function all(){if(!viewer)return;cut=null;viewer.setCutPlanes([]);viewer.fitToView()}
- const ASSETS=()=>D.mods.slice(),isInst=c=>/^(EL|HV|PH|FF|IN|PI|ME)-/.test(c),isFurn=c=>/^AR-0[3-7]/.test(c);
- function modelSheet(){const rows=Object.keys(files).filter(n=>/^3D-66A-[A-Z]{2}-\d\d\.ifc$/.test(n)).sort().map(n=>{const c=n.slice(7,12),f=files[n],on=!!models[c],ld=loading[c]&&!on;
-   return `<button class="row" data-mload="${c}"><span class="ck${on?' on':''}">${on?'✓':''}</span><div class="t"><b>${c}${c=='AR-01'?' · architecture (always on)':''}</b><span>v${f.n} of ${f.date} · ${f.mb} MB${f.mb>250?' · heavy, may be slow':''}${ld?' · loading…':''}</span></div></button>`}).join('');
-  sheet('Models in 3D',`<p class="note">Tick the models you want to see. Equipment models also load by themselves when you select objects from them.</p><div class="tools"><button class="pillbtn" data-mset="furn">Furniture and equipment</button><button class="pillbtn" data-mset="inst">All installations</button><button class="pillbtn" data-mset="none">Architecture only</button></div><div class="list">${rows}</div>`)}
- async function toggle(c){if(c=='AR-01')return;if(models[c]){viewer.unloadModel(models[c]);delete models[c];delete loading[c];delete g2id[c];delete id2g[c];say('3D-66A-'+c+' removed.')}
-  else{modelSheet();try{await load(c);await apply(false)}catch(e){say(e.message)}}if(!$('#sheet').hidden)modelSheet()}
- async function loadSet(k){const codes=Object.keys(files).filter(n=>/^3D-66A-[A-Z]{2}-\d\d\.ifc$/.test(n)).map(n=>n.slice(7,12)).filter(c=>c!='AR-01');
-  if(k=='none'){for(const c of codes)if(models[c]){viewer.unloadModel(models[c]);delete models[c];delete loading[c];delete g2id[c];delete id2g[c]}say('Architecture only.');modelSheet();return}
-  const want=codes.filter(c=>k=='furn'?(isFurn(c)&&files['3D-66A-'+c+'.ifc'].mb<=250)||ASSETS().includes(c)&&!isInst(c):isInst(c)&&files['3D-66A-'+c+'.ifc'].mb<=250);const miss=[];
-  for(const c of want){if(models[c])continue;modelSheet();try{await load(c)}catch(e){console.warn(e);miss.push(c)}}
-  await apply(false);say(want.length-miss.length+' models loaded.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':''));if(!$('#sheet').hidden)modelSheet()}
- const refOf=(k,i)=>k=='doors'?['AR-01',D.doors[i].guid]:[D.mods[D.assets[i][5]],D.assets[i][3]];
+ // discipline and file visibility: switched-off files are fully invisible, also when the rest is ghosted
+ function vis(){if(!M)return;const vm=M.visibilityManager;for(const t of tops)vm.setNodeOff(t.id,!!off[t.disc]||fileOff.has(t.name));viewer.impl.invalidate(true,true,true);dbar()}
+ function dbar(){const n={};tops.forEach(t=>n[t.disc]=(n[t.disc]||0)+1);
+  $('#dbar').innerHTML=DISC.filter(d=>n[d[0]]).map(d=>`<button data-disc="${d[0]}" aria-pressed="${!off[d[0]]}" title="${d[1]}" aria-label="${d[1]}"><svg viewBox="0 0 24 24">${IC[d[0]]}</svg></button>`).join('')+
+   `<i></i><button data-ceilg aria-pressed="${ceilGhost}" title="Ceilings transparent" aria-label="Ceilings transparent"><svg viewBox="0 0 24 24">${IC.ceil}</svg></button><button data-files title="Show or hide single files" aria-label="Show or hide single files"><svg viewBox="0 0 24 24">${IC.files}</svg></button>`}
+ function fileSheet(){sheet('Files in the coordination model',`<p class="note">Each file of the coordination model, grouped by discipline. Untick a file to take it out of the 3D view.</p>`+DISC.map(d=>{const fs=tops.filter(t=>t.disc==d[0]).sort((a,b)=>nat(a.name,b.name));if(!fs.length)return'';
+   return `<h3 class="sec">${d[1]}${off[d[0]]?' · switched off':''}</h3><div class="list">${fs.map(t=>`<button class="row" data-ftog="${esc(t.name)}"><span class="ck${fileOff.has(t.name)?'':' on'}">${fileOff.has(t.name)?'':'✓'}</span><div class="t"><b>${esc(t.name)}</b></div></button>`).join('')}</div>`}).join(''))}
+ const gid=(k,i)=>k=='doors'?D.doors[i].guid:D.assets[i][3];
  // highlight the selection, ghost or hide the rest; one colour per value of the first group field
- let run=0;
- async function apply(fit){const total=LS.doors.sel.size+LS.assets.sel.size;if(!viewer){if(total)init();return}const my=++run;
-  const per={},leg=new Map();let miss=0;
+ async function apply(fit){const total=LS.doors.sel.size+LS.assets.sel.size;if(!viewer||!M){if(total)init();return}
+  const leg=new Map(),ids=[];let miss=0;viewer.clearThemingColors(M);const pend=[];
   for(const k of['doors','assets']){const L=LS[k];if(!L.sel.size)continue;const gf=L.g[0];
-   for(const i of L.sel){const[code,guid]=refOf(k,i);if(!guid){miss++;continue}const key=gf?vals(k,i,gf)[0]:(k=='doors'?'Doors':'Equipment');let e=leg.get(key);if(!e)leg.set(key,e={n:0});e.n++;(per[code]??=[]).push([guid,key])}}
-  const need=Object.keys(per).filter(c=>!models[c]);
-  for(const c of need){try{await load(c)}catch(e){console.warn(e);say(e.message)}if(my!=run)return}
-  const keys=[...leg.keys()].sort(nat),multi=keys.length>1&&keys.length<=PAL.length;keys.forEach((k,i)=>leg.get(k).c=multi?PAL[i]:PAL[0]);
-  const agg=[];mute=true;viewer.clearSelection();
-  for(const code in models){const m=models[code];viewer.clearThemingColors(m);const ids=[];
-   for(const[g,key]of per[code]||[]){const id=g2id[code][g];if(id==null){miss++;continue}ids.push(id);const c=new THREE.Color(leg.get(key).c);try{viewer.setThemingColor(id,new THREE.Vector4(c.r,c.g,c.b,1),m,true)}catch(e){}}
-   if(!total||S.mode=='show')viewer.isolate([],m);else{viewer.setGhosting(S.mode=='ghost');viewer.isolate(ids.length?ids:[2147483000],m)}
-   if(ids.length)agg.push({model:m,selection:ids})}
-  mute=false;viewer.impl.invalidate(true,true,true);
-  const lg=$('#legend3d');if(total){lg.hidden=false;lg.innerHTML=(multi?keys:[keys.length>1?keys.length+' groups':keys[0]]).map((k,i)=>`<div><span class="sw" style="background:${multi?PAL[i]:PAL[0]}"></span>${esc(k)} · ${multi?leg.get(k).n:total}</div>`).join('')}else lg.hidden=true;
-  if(total){if(fit&&agg.length&&!cut)try{const bx=new THREE.Box3();let n=0;for(const g of agg)for(const id of g.selection){if(n++>600)break;bx.union(bounds(g.model,id))}if(bx.isEmpty())viewer.fitToView(agg);else{bx.expandByScalar(.6*T.s);const c=bx.getCenter(new THREE.Vector3()),sz=bx.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*.9+sz.z;viewer.navigation.setView(new THREE.Vector3(c.x-d*.5,c.y-d*.65,c.z+d*.75),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,bx)}}catch(e){console.warn(e)}}
+   for(const i of L.sel){const g=gid(k,i),id=g?g2id[g]:null;if(id==null){miss++;continue}const key=gf?vals(k,i,gf)[0]:(k=='doors'?'Doors':'Equipment');let e=leg.get(key);if(!e)leg.set(key,e={n:0});e.n++;ids.push(id);pend.push([id,key])}}
+  const keys=[...leg.keys()].sort(nat),multi=keys.length>1&&keys.length<=PAL.length;keys.forEach((k,i)=>leg.get(k).c=new THREE.Color(multi?PAL[i]:PAL[0]));
+  for(const[id,key]of pend){const c=leg.get(key).c;try{viewer.setThemingColor(id,new THREE.Vector4(c.r,c.g,c.b,1),M,true)}catch(e){}}
+  mute=true;viewer.clearSelection();
+  if(!ids.length||S.mode=='show'){viewer.setGhosting(true);viewer.isolate([],M);if(ceilGhost&&ceilIds.length)viewer.hide(ceilIds,M)}
+  else{viewer.setGhosting(S.mode=='ghost');viewer.isolate(ids,M)}
+  mute=false;vis();
+  const lg=$('#legend3d');if(total){lg.hidden=false;lg.innerHTML=(multi?keys:[keys.length>1?keys.length+' groups':keys[0]||'Selection']).map((k,i)=>`<div><span class="sw" style="background:${multi?PAL[i]:PAL[0]}"></span>${esc(k)} · ${multi?leg.get(k).n:total-miss}</div>`).join('')}else lg.hidden=true;
+  if(ids.length&&fit&&!cut)try{const bx=new THREE.Box3();let n=0;for(const id of ids){if(n++>600)break;bx.union(bounds(id))}if(bx.isEmpty())viewer.fitToView(ids,M);else{bx.expandByScalar(.6*T.s);const c=bx.getCenter(new THREE.Vector3()),sz=bx.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*.9+sz.z;viewer.navigation.setView(new THREE.Vector3(c.x-d*.5,c.y-d*.65,c.z+d*.75),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,bx)}}catch(e){console.warn(e)}
   say((total?(total-miss).toLocaleString('en-GB')+' objects highlighted'+(miss?', '+miss+' not in the 3D model':'')+'.':'Nothing selected.')+(cut?' Section: '+(cut.room!=null?'room '+D.rooms[cut.room].no:FLN[cut.floor])+'.':''))}
- async function focus(k,i){if(!viewer)return;const[code,guid]=refOf(k,i);if(!guid)return;try{if(!models[code])await load(code)}catch(e){return}const id=g2id[code][guid];if(id==null)return;const m=models[code];
-  mute=true;viewer.impl.selector.setAggregateSelection([{model:m,ids:[id]}]);mute=false;viewer.fitToView([{model:m,selection:[id]}])}
- function onPick(ev){if(mute)return;const s=ev.selections&&ev.selections[0];if(!s||!s.dbIdArray.length)return;const m=s.model,code=m._code,it=m.getInstanceTree();let id=s.dbIdArray[0],g=null;
-  for(let k=0;k<8&&id;k++){g=id2g[code][id];if(g&&(code!='AR-01'?aIdx[g]!=null:dIdx[g]!=null))break;g=null;id=it.getNodeParentId(id)}
-  if(!g)return;if(code=='AR-01')doorPass(dIdx[g],true);else assetPass(aIdx[g],true)}
- document.addEventListener('click',e=>{const id=e.target.id;if(id=='vload')init();else if(id=='vall')all();else if(id=='vmodels')modelSheet();
-  else if(id=='vceil'){low=!low;e.target.setAttribute('aria-pressed',low);recut()}});
- return{init,room,floor,all,apply,focus,toggle,loadSet,resize(){viewer&&setTimeout(()=>viewer.resize(),50)}}})();
+ function focus(k,i){if(!viewer||!M)return;const g=gid(k,i),id=g?g2id[g]:null;if(id==null)return;mute=true;viewer.select([id],M);mute=false;viewer.fitToView([id],M)}
+ function onPick(ev){if(mute)return;const s=ev.selections&&ev.selections[0];if(!s||!s.dbIdArray.length)return;const it=M.getInstanceTree();let id=s.dbIdArray[0],g=null;
+  for(let k=0;k<8&&id;k++){g=id2g[id];if(g&&(aIdx[g]!=null||dIdx[g]!=null))break;g=null;id=it.getNodeParentId(id)}
+  if(!g)return;if(dIdx[g]!=null)doorPass(dIdx[g],true);else assetPass(aIdx[g],true)}
+ document.addEventListener('click',e=>{const t=e.target.closest('#vload,#vall,#vceil,[data-disc],[data-ceilg],[data-files],[data-ftog]');if(!t)return;const d=t.dataset;
+  if(t.id=='vload')init();else if(t.id=='vall')all();else if(t.id=='vceil'){low=!low;t.setAttribute('aria-pressed',low);recut()}
+  else if(d.disc){off[d.disc]=!off[d.disc];vis()}else if('ceilg' in d){ceilGhost=!ceilGhost;apply(false)}else if('files' in d)fileSheet()
+  else if(d.ftog){fileOff.has(d.ftog)?fileOff.delete(d.ftog):fileOff.add(d.ftog);vis();const sb=$('#sheet .sb'),st=sb.scrollTop;fileSheet();$('#sheet .sb').scrollTop=st}});
+ return{init,room,floor,all,apply,focus,resize(){viewer&&setTimeout(()=>viewer.resize(),50)}}})();
 /* ---------- start ---------- */
 (async function(){const gm=$('#gmsg');
  try{const t=await A.init();if(!t){$('#signin').hidden=false;$('#signin').onclick=()=>A.login();return}

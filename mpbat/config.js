@@ -6,6 +6,8 @@ window.CX_CONFIG = {
   dataFolderId: 'urn:adsk.wipemea:fs.folder:co.rAE_ZqAiQuiV6BFoV8j2_w',
   // ACC folder with the coordination models (00.Coordination Models)
   modelFolderId: 'urn:adsk.wipemea:fs.folder:co.YPdQjwvJSvG9wFg9ZYYgoQ',
+  // the coordination model shown in 3D (00.Coordination Models > NWD (General Coordination Updates))
+  nwdItem: 'urn:adsk.wipemea:dm.lineage:N11uzEWnT86mYS8e7VVQng',
   dataFile: 'mpbat_data.json',
   viewerApi: 'streamingV2_EU',
   scopes: 'data:read viewables:read user-profile:read',
