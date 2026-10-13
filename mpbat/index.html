@@ -122,7 +122,7 @@ textarea{width:100%;height:150px;font:12px ui-monospace,Menlo,monospace;backgrou
 <div id="app" hidden>
  <div id="left">
   <section class="card" id="vcard"><div class="vbar"><span class="msg" id="vmsg">3D not loaded.</span>
-   <button class="pillbtn on" id="vload">Load 3D</button><button class="pillbtn" id="vceil" aria-pressed="false" hidden>Ceiling zone</button><button class="pillbtn" id="vall" hidden>Whole building</button></div>
+   <button class="pillbtn on" id="vload">Load 3D</button><button class="pillbtn" id="vmodels" hidden>Models</button><button class="pillbtn" id="vceil" aria-pressed="false" hidden>Cut at 2.6 m</button><button class="pillbtn" id="vall" hidden>Whole building</button></div>
    <div id="fv"></div><div id="legend3d" hidden></div></section>
   <section class="card" id="pcard"><div class="vbar"><div class="seg" id="flseg"></div><span class="msg" id="pmsg"></span><button class="pillbtn" id="ptoggle">Hide plan</button></div>
    <div id="plan"></div><div id="fnleg"></div></section>
@@ -259,9 +259,9 @@ function state(){const o={t:S.tab,fl:S.fl,m:S.mode};if(S.room!=null&&S.roomOpen)
 function restore(o){try{S.tab=o.t||'rooms';S.fl=o.fl||0;S.mode=o.m||'ghost';if(o.r&&RI[o.r]!=null){S.room=RI[o.r];S.roomOpen=true}
  for(const k of['doors','assets']){const x=o[k[0]];if(!x)continue;const L=LS[k];L.q=x.q||'';if(x.g)L.g=x.g;L.f={};for(const f in x.f||{})L.f[f]=new Set(x.f[f]);L.open=new Set(x.o||[]);
   (x.s||[]).forEach(id=>{const i=k=='doors'?D.doors.findIndex(d=>d.nr==id||d.guid==id):aIdx[id];if(i!=null&&i>=0)L.sel.add(i)})}}catch(e){console.warn(e)}}
-document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-fl],[data-fn],[data-room],[data-pass],[data-selg],[data-only],[data-item],[data-open],[data-more],[data-mode],[data-clear],[data-close],[data-back],[data-rgroup],[data-filter],[data-fv],[data-fclear],[data-unf],[data-copy],[data-link],[data-clip],#ptoggle');if(!t)return;const d=t.dataset;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-fl],[data-fn],[data-room],[data-pass],[data-selg],[data-only],[data-item],[data-open],[data-more],[data-mode],[data-clear],[data-close],[data-back],[data-rgroup],[data-filter],[data-fv],[data-fclear],[data-unf],[data-copy],[data-link],[data-clip],[data-mload],[data-mset],#ptoggle');if(!t)return;const d=t.dataset;
  if(t.id=='ptoggle'){const c=$('#pcard').classList.toggle('closed');t.textContent=c?'Show plan':'Hide plan';V.resize();return}
- if(d.tab){S.tab=d.tab;$('#body').scrollTop=0;render()}else if(d.fl!=null&&d.fl!==undefined&&t.closest('#flseg')){S.fl=+d.fl;render()}
+ if(d.tab){S.tab=d.tab;$('#body').scrollTop=0;render()}else if(d.fl!=null&&d.fl!==undefined&&t.closest('#flseg')){S.fl=+d.fl;render();V.floor(S.fl)}
  else if(d.fn){S.fnsel=S.fnsel==d.fn?null:d.fn;if(S.fnsel&&S.tab=='rooms'){S.rgroup='fn';S.roomOpen=false}render()}
  else if(d.pass){const[k,i]=d.pass.split(':');k=='doors'?doorPass(+i):assetPass(+i)}
  else if(d.selg!=null){const[k,a]=GK[+d.selg],s=LS[k].sel,all=a.every(i=>s.has(i));a.forEach(i=>all?s.delete(i):s.add(i));changed()}
@@ -270,7 +270,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  else if(d.open!=null){const o=LS[S.tab].open;o.has(d.open)?o.delete(d.open):o.add(d.open);render()}
  else if(d.more!=null){LS[S.tab].more.add(d.more);render()}
  else if(d.mode){S.mode=d.mode;changed(false)}else if('clear' in d){LS.doors.sel.clear();LS.assets.sel.clear();changed()}
- else if('close' in d){$('#sheet').hidden=true}else if('back' in d){S.roomOpen=false;render();V.all()}
+ else if('close' in d){$('#sheet').hidden=true}else if('back' in d){S.roomOpen=false;render();V.floor(S.fl)}
  else if(d.room!=null)goRoom(+d.room);else if(d.rgroup){S.rgroup=d.rgroup;render()}
  else if(d.filter)filterSheet(d.filter)
  else if(d.fv){const[k,f,v]=d.fv.split('\u0001'),set=LS[k].f[f]??=new Set();set.has(v)?set.delete(v):set.add(v);const sb=$('#sheet .sb'),st=sb.scrollTop;filterSheet(k);$('#sheet .sb').scrollTop=st;render()}
@@ -278,23 +278,25 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  else if(d.unf){const[f,v]=d.unf.split('\u0001');LS[S.tab].f[f]?.delete(v);render()}
  else if(d.copy)clip(tsv(d.copy),'Copied. Paste into Excel.')
  else if('link' in d){const u=location.origin+location.pathname+'?s='+btoa(unescape(encodeURIComponent(JSON.stringify(state())))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');clip(u,'Link copied')}
- else if(d.clip)clip(d.clip,'Copied')});
+ else if(d.clip)clip(d.clip,'Copied')
+ else if(d.mload)V.toggle(d.mload)
+ else if(d.mset)V.loadSet(d.mset)});
 document.addEventListener('input',e=>{const t=e.target,keep=id=>{render();const n=$('#'+id);n.focus();n.setSelectionRange(n.value.length,n.value.length)};
  if(t.id=='rq'){S.rq=t.value;keep('rq')}else if(t.id=='lq'){LS[S.tab].q=t.value;keep('lq')}});
 document.addEventListener('change',e=>{const t=e.target;if(t.id=='g1'||t.id=='g2'){const L=LS[S.tab];L.g[t.id=='g1'?0:1]=t.value;if(!L.g[0]&&L.g[1]){L.g=[L.g[1],'']}L.open.clear();render();V.apply(false)}});
 document.addEventListener('keydown',e=>{if(e.key=='Escape')$('#sheet').hidden=true});
 /* ---------- Autodesk viewer ---------- */
-const V=(function(){let viewer=null,unit='mm',off=null,busy=null,ceil=false,T=null,mute=false,want=false;const models={},g2id={},id2g={},files={};
+const V=(function(){let viewer=null,unit='mm',off=null,busy=null,low=false,cut=null,T=null,mute=false;const models={},g2id={},id2g={},files={};
  const say=t=>$('#vmsg').textContent=t;
  async function listFiles(){let url='/data/v1/projects/'+CFG.projectId+'/folders/'+encodeURIComponent(CFG.modelFolderId)+'/contents?page[limit]=200';
-  while(url){const j=await A.api(url);const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v]));for(const it of j.data||[]){const v=inc[it.id];if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber}}url=j.links?.next?.href||null}}
+  while(url){const j=await A.api(url);const inc=Object.fromEntries((j.included||[]).map(v=>[v.relationships?.item?.data?.id,v]));for(const it of j.data||[]){const v=inc[it.id];if(v)files[it.attributes.displayName]={ver:v.id,n:v.attributes.versionNumber,mb:Math.round((v.attributes.storageSize||0)/1e6),date:(v.attributes.lastModifiedTime||'').slice(0,10)}}url=j.links?.next?.href||null}}
  function init(){return busy||=(async()=>{$('#vload').hidden=true;say('Starting the viewer…');
   try{const getToken=async cb=>{const t=await A.token();if(!t)return A.login();cb(t.access,Math.floor((t.exp-Date.now())/1000))};
    await new Promise(res=>Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:CFG.viewerApi,getAccessToken:getToken},res));
    viewer=new Autodesk.Viewing.GuiViewer3D($('#fv'),{extensions:[]});viewer.start();viewer.setGhosting(true);viewer.setGroundShadow(false);viewer.setLightPreset(1);viewer.setQualityLevel(false,true);viewer.setOptimizeNavigation(true);
    try{viewer.setTheme(matchMedia('(prefers-color-scheme: dark)').matches?'dark-theme':'light-theme')}catch(e){}
    viewer.addEventListener(Autodesk.Viewing.AGGREGATE_SELECTION_CHANGED_EVENT,onPick);
-   say('Listing models…');await listFiles();await load('AR-01');calibrate();bg();['#vceil','#vall'].forEach(s=>$(s).hidden=false);
+   say('Listing models…');await listFiles();await load('AR-01');calibrate();bg();['#vmodels','#vceil','#vall'].forEach(s=>$(s).hidden=false);
    if(LS.doors.sel.size+LS.assets.sel.size)await apply(true);else if(S.room!=null&&S.roomOpen)room(S.room)}
   catch(e){console.error(e);say('The 3D model could not be loaded: '+e.message);$('#vload').hidden=false;viewer=null;busy=null}})()}
  function bg(){try{const dk=matchMedia('(prefers-color-scheme: dark)').matches;viewer.setEnvMapBackground(false);dk?viewer.setBackgroundColor(44,44,46,20,20,22):viewer.setBackgroundColor(250,250,252,226,228,234)}catch(e){}}
@@ -316,12 +318,31 @@ const V=(function(){let viewer=null,unit='mm',off=null,busy=null,ceil=false,T=nu
   let ar=0,ai=0,den=0;Pp.forEach(p=>{const wx=p[0]-mw[0],wy=p[1]-mw[1],vx=p[3]-mv[0],vy=p[4]-mv[1];ar+=vx*wx+vy*wy;ai+=vy*wx-vx*wy;den+=wx*wx+wy*wy});ar/=den;ai/=den;
   const s=Math.hypot(ar,ai);T={ar,ai,s,bx:mv[0]-(ar*mw[0]-ai*mw[1]),by:mv[1]-(ai*mw[0]+ar*mw[1]),bz:mv[2]-s*mw[2]}}
  const w2v=(x,y,z)=>new THREE.Vector3(T.ar*x-T.ai*y+T.bx,T.ai*x+T.ar*y+T.by,T.s*z+T.bz);
- function room(i){if(!viewer||!T)return;const r=D.rooms[i],b=new THREE.Box3(),top=ceil?(r.z0+Math.max(r.h,4.7)):(r.z0+Math.min(r.h,2.6));
+ function room(i){if(!viewer||!T)return;cut={room:i};const r=D.rooms[i],b=new THREE.Box3(),top=low?(r.z0+Math.min(r.h,2.6)):(LEVZ[r.fl+1]-.55);
   r.poly.forEach(p=>{b.expandByPoint(w2v(p[0],p[1],r.z0-.15));b.expandByPoint(w2v(p[0],p[1],top))});b.expandByScalar(.25*T.s);
   viewer.setCutPlanes([new THREE.Vector4(1,0,0,-b.max.x),new THREE.Vector4(-1,0,0,b.min.x),new THREE.Vector4(0,1,0,-b.max.y),new THREE.Vector4(0,-1,0,b.min.y),new THREE.Vector4(0,0,1,-b.max.z),new THREE.Vector4(0,0,-1,b.min.z)]);
   const c=b.getCenter(new THREE.Vector3()),sz=b.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*1.1+sz.z;
   viewer.navigation.setView(new THREE.Vector3(c.x-d*.45,c.y-d*.6,c.z+d*.9),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,b)}
- function all(){if(!viewer)return;viewer.setCutPlanes([]);if(!(LS.doors.sel.size+LS.assets.sel.size))viewer.fitToView()}
+ const LEVZ=[1.6,6.6,11.6,16.6,22.4];
+ // section through one floor: everything below the floor and above the ceiling zone is cut away
+ function floor(f,keepView){if(!viewer||!T)return;cut={floor:f};const z0=w2v(0,0,LEVZ[f]-.35).z,z1=w2v(0,0,low?LEVZ[f]+2.6:LEVZ[f+1]-.55).z;
+  viewer.setCutPlanes([new THREE.Vector4(0,0,1,-z1),new THREE.Vector4(0,0,-1,z0)]);if(keepView)return;
+  const b=new THREE.Box3();D.rooms.forEach(r=>{if(r.fl==f)r.poly.forEach(p=>{b.expandByPoint(w2v(p[0],p[1],LEVZ[f]));b.expandByPoint(w2v(p[0],p[1],LEVZ[f]+3))})});
+  const c=b.getCenter(new THREE.Vector3()),sz=b.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*.75;
+  viewer.navigation.setView(new THREE.Vector3(c.x-d*.55,c.y-d*.2,c.z+d*.8),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,b)}
+ function recut(){if(cut&&cut.room!=null)room(cut.room);else if(cut&&cut.floor!=null)floor(cut.floor,true)}
+ function all(){if(!viewer)return;cut=null;viewer.setCutPlanes([]);viewer.fitToView()}
+ const ASSETS=()=>D.mods.slice(),isInst=c=>/^(EL|HV|PH|FF|IN|PI|ME)-/.test(c),isFurn=c=>/^AR-0[3-7]/.test(c);
+ function modelSheet(){const rows=Object.keys(files).filter(n=>/^3D-66A-[A-Z]{2}-\d\d\.ifc$/.test(n)).sort().map(n=>{const c=n.slice(7,12),f=files[n],on=!!models[c],ld=loading[c]&&!on;
+   return `<button class="row" data-mload="${c}"><span class="ck${on?' on':''}">${on?'✓':''}</span><div class="t"><b>${c}${c=='AR-01'?' · architecture (always on)':''}</b><span>v${f.n} of ${f.date} · ${f.mb} MB${f.mb>250?' · heavy, may be slow':''}${ld?' · loading…':''}</span></div></button>`}).join('');
+  sheet('Models in 3D',`<p class="note">Tick the models you want to see. Equipment models also load by themselves when you select objects from them.</p><div class="tools"><button class="pillbtn" data-mset="furn">Furniture and equipment</button><button class="pillbtn" data-mset="inst">All installations</button><button class="pillbtn" data-mset="none">Architecture only</button></div><div class="list">${rows}</div>`)}
+ async function toggle(c){if(c=='AR-01')return;if(models[c]){viewer.unloadModel(models[c]);delete models[c];delete loading[c];delete g2id[c];delete id2g[c];say('3D-66A-'+c+' removed.')}
+  else{modelSheet();try{await load(c);await apply(false)}catch(e){say(e.message)}}if(!$('#sheet').hidden)modelSheet()}
+ async function loadSet(k){const codes=Object.keys(files).filter(n=>/^3D-66A-[A-Z]{2}-\d\d\.ifc$/.test(n)).map(n=>n.slice(7,12)).filter(c=>c!='AR-01');
+  if(k=='none'){for(const c of codes)if(models[c]){viewer.unloadModel(models[c]);delete models[c];delete loading[c];delete g2id[c];delete id2g[c]}say('Architecture only.');modelSheet();return}
+  const want=codes.filter(c=>k=='furn'?(isFurn(c)&&files['3D-66A-'+c+'.ifc'].mb<=250)||ASSETS().includes(c)&&!isInst(c):isInst(c)&&files['3D-66A-'+c+'.ifc'].mb<=250);const miss=[];
+  for(const c of want){if(models[c])continue;modelSheet();try{await load(c)}catch(e){console.warn(e);miss.push(c)}}
+  await apply(false);say(want.length-miss.length+' models loaded.'+(miss.length?' Not loaded: '+miss.join(', ')+'.':''));if(!$('#sheet').hidden)modelSheet()}
  const refOf=(k,i)=>k=='doors'?['AR-01',D.doors[i].guid]:[D.mods[D.assets[i][5]],D.assets[i][3]];
  // highlight the selection, ghost or hide the rest; one colour per value of the first group field
  let run=0;
@@ -339,16 +360,16 @@ const V=(function(){let viewer=null,unit='mm',off=null,busy=null,ceil=false,T=nu
    if(ids.length)agg.push({model:m,selection:ids})}
   mute=false;viewer.impl.invalidate(true,true,true);
   const lg=$('#legend3d');if(total){lg.hidden=false;lg.innerHTML=(multi?keys:[keys.length>1?keys.length+' groups':keys[0]]).map((k,i)=>`<div><span class="sw" style="background:${multi?PAL[i]:PAL[0]}"></span>${esc(k)} · ${multi?leg.get(k).n:total}</div>`).join('')}else lg.hidden=true;
-  if(total){if(!(S.tab=='rooms'&&S.roomOpen))viewer.setCutPlanes([]);if(fit&&agg.length)try{const bx=new THREE.Box3();let n=0;for(const g of agg)for(const id of g.selection){if(n++>600)break;bx.union(bounds(g.model,id))}if(bx.isEmpty())viewer.fitToView(agg);else{bx.expandByScalar(.6*T.s);const c=bx.getCenter(new THREE.Vector3()),sz=bx.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*.9+sz.z;viewer.navigation.setView(new THREE.Vector3(c.x-d*.5,c.y-d*.65,c.z+d*.75),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,bx)}}catch(e){console.warn(e)}}
-  say(total?(total-miss).toLocaleString('en-GB')+' objects highlighted'+(miss?', '+miss+' not in the 3D model':'')+'.':'Nothing selected. Pick rows or groups in a list.')}
+  if(total){if(fit&&agg.length&&!cut)try{const bx=new THREE.Box3();let n=0;for(const g of agg)for(const id of g.selection){if(n++>600)break;bx.union(bounds(g.model,id))}if(bx.isEmpty())viewer.fitToView(agg);else{bx.expandByScalar(.6*T.s);const c=bx.getCenter(new THREE.Vector3()),sz=bx.getSize(new THREE.Vector3()),d=Math.max(sz.x,sz.y)*.9+sz.z;viewer.navigation.setView(new THREE.Vector3(c.x-d*.5,c.y-d*.65,c.z+d*.75),c);viewer.navigation.setWorldUpVector(new THREE.Vector3(0,0,1));viewer.navigation.fitBounds(true,bx)}}catch(e){console.warn(e)}}
+  say((total?(total-miss).toLocaleString('en-GB')+' objects highlighted'+(miss?', '+miss+' not in the 3D model':'')+'.':'Nothing selected.')+(cut?' Section: '+(cut.room!=null?'room '+D.rooms[cut.room].no:FLN[cut.floor])+'.':''))}
  async function focus(k,i){if(!viewer)return;const[code,guid]=refOf(k,i);if(!guid)return;try{if(!models[code])await load(code)}catch(e){return}const id=g2id[code][guid];if(id==null)return;const m=models[code];
   mute=true;viewer.impl.selector.setAggregateSelection([{model:m,ids:[id]}]);mute=false;viewer.fitToView([{model:m,selection:[id]}])}
  function onPick(ev){if(mute)return;const s=ev.selections&&ev.selections[0];if(!s||!s.dbIdArray.length)return;const m=s.model,code=m._code,it=m.getInstanceTree();let id=s.dbIdArray[0],g=null;
   for(let k=0;k<8&&id;k++){g=id2g[code][id];if(g&&(code!='AR-01'?aIdx[g]!=null:dIdx[g]!=null))break;g=null;id=it.getNodeParentId(id)}
   if(!g)return;if(code=='AR-01')doorPass(dIdx[g],true);else assetPass(aIdx[g],true)}
- document.addEventListener('click',e=>{const id=e.target.id;if(id=='vload')init();else if(id=='vall'){viewer&&viewer.setCutPlanes([]);viewer&&viewer.fitToView()}
-  else if(id=='vceil'){ceil=!ceil;e.target.setAttribute('aria-pressed',ceil);if(S.room!=null&&S.roomOpen)room(S.room)}});
- return{init,room,all,apply,focus,resize(){viewer&&setTimeout(()=>viewer.resize(),50)}}})();
+ document.addEventListener('click',e=>{const id=e.target.id;if(id=='vload')init();else if(id=='vall')all();else if(id=='vmodels')modelSheet();
+  else if(id=='vceil'){low=!low;e.target.setAttribute('aria-pressed',low);recut()}});
+ return{init,room,floor,all,apply,focus,toggle,loadSet,resize(){viewer&&setTimeout(()=>viewer.resize(),50)}}})();
 /* ---------- start ---------- */
 (async function(){const gm=$('#gmsg');
  try{const t=await A.init();if(!t){$('#signin').hidden=false;$('#signin').onclick=()=>A.login();return}
